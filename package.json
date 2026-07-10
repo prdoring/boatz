@@ -1,0 +1,18 @@
+{
+  "name": "boatz",
+  "version": "0.1.0",
+  "description": "A reusable, data-driven 2D game engine (vector art, VFX, sequences, sound, editors). No build step — runs directly in the browser. Ships with the Critter Garden example game.",
+  "license": "MIT",
+  "author": "Patrick <prdoring@gmail.com>",
+  "type": "module",
+  "scripts": {
+    "start": "node server/main.js",
+    "dev": "node --watch server/main.js",
+    "test": "node --import ./tests/helpers/register-loader.js --test --test-reporter spec tests/*.test.js",
+    "test:dot": "node --import ./tests/helpers/register-loader.js --test --test-reporter dot tests/*.test.js",
+    "smoke": "node scripts/browser-smoke.mjs"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

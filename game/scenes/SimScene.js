@@ -426,8 +426,8 @@ export class SimScene extends Scene {
     const home = this.sim.islandsById.get(s.homeId);
     const dest = s.destId != null ? this.sim.islandsById.get(s.destId) : null;
     const cap = s.captain;
-    const lines = [{ text: cap ? `Capt. ${cap.name}` : (home ? `${home.name} ship` : 'Merchant ship'), bold: true }];
-    if (cap) lines.push({ text: `${cap.rank} · ${cap.personality} · ${home ? home.name : '—'}`, color: 'rgba(190, 210, 220, 0.85)' });
+    const lines = [{ text: s.name || (cap ? `Capt. ${cap.name}` : (home ? `${home.name} ship` : 'Merchant ship')), bold: true }];
+    if (cap) lines.push({ text: `Capt. ${cap.name} · ${cap.rank} · ${home ? home.name : '—'}`, color: 'rgba(190, 210, 220, 0.85)' });
     lines.push({ text: REASON_LABEL[s.reason] || 'Idle', color: '#c8b3ff' });
     if (dest && s.state === 'sailing') lines.push({ text: `→ ${dest.name}  (~${s.eta}s)` });
     const rel = s.state === 'sailing' ? windRelation(s.heading, this.sim.wind) : null;

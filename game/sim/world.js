@@ -14,6 +14,7 @@ import { initReputation } from './reputation.js';
 import { initWind } from './wind.js';
 import { makeCaptain } from './captains.js';
 import { makeMagistrate } from './magistrate.js';
+import { shipName } from './naming.js';
 import { GOLD, PEOPLE } from './resources.js';
 
 /** Prepare derived lookups on the (cloned) economy so systems stay allocation-free. */
@@ -78,6 +79,7 @@ export function buildWorld({ economy, roster, seed = 1337 }) {
     for (let i = 0; i < tuning.START_SHIPS_PER_ISLAND; i++) {
       const s = createShip(world.nextEntityId++, isl, tuning);
       s.captain = makeCaptain(world); // every ship is run by a named, improving captain
+      s.name = shipName(world);
       world.ships.push(s);
     }
   }

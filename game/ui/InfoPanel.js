@@ -96,7 +96,7 @@ export class InfoPanel extends Panel {
 
   /** The Story tab: the clicked entity's chronicle — action · why · result, newest first. */
   _story(ctx, sel, c) {
-    const title = sel.kind === 'ship' ? shipLabel(sel.id, this.getContext().shipsById, this.getContext().islandsById) : sel.data.name;
+    const title = sel.kind === 'ship' ? (sel.data.name || shipLabel(sel.id, this.getContext().shipsById, this.getContext().islandsById)) : sel.data.name;
     this._titleRow(ctx, title, { label: 'Chronicle', color: '#c8b3ff' }, c);
     const gh = this.getContext().getHistory;
     const entries = gh ? gh(sel.kind, sel.id) : [];
@@ -200,7 +200,7 @@ export class InfoPanel extends Panel {
   _ship(ctx, id, s, c) {
     const ctxt = this.getContext();
     const st = { label: STATE[s.state] || cap(s.state), color: STATE_COLOR[s.state] || PALETTE.panelDim };
-    this._titleRow(ctx, shipLabel(id, ctxt.shipsById, ctxt.islandsById), st, c);
+    this._titleRow(ctx, s.name || shipLabel(id, ctxt.shipsById, ctxt.islandsById), st, c);
     this._subtitle(ctx, `${cap(s.type)} · home ${name(ctxt.islandsById, s.homeId)}`, c);
 
     // Errand banner.

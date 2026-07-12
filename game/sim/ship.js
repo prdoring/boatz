@@ -11,6 +11,7 @@ import { observeAndGossip } from './beliefs.js';
 import { windMult, upwindness } from './wind.js';
 import { makeCaptain, skill01, awardVoyageXp, navProfile } from './captains.js';
 import { provisionCrew, deviationTarget } from './crew.js';
+import { shipName } from './naming.js';
 
 export function createShip(idNum, home, tuning) {
   return {
@@ -26,6 +27,7 @@ export function createShip(idNum, home, tuning) {
     infected: false, // carries plague between ports (cleared on returning home)
     knows: {},       // price book carried between ports — { islandId: { good: { mid, day } } } (beliefs.js)
     captain: null,   // { name, xp } — assigned by the world/spawn (captains.js); skill drives wind decisions
+    name: null,      // vessel name (naming.js), assigned alongside the captain
     voyage: null,
     targetX: home.x, targetY: home.y,
     leg: null,       // current course as waypoints [{x,y}…] ending at the destination (tacking = a dogleg)
@@ -45,8 +47,9 @@ export function spawnShip(world, home) {
   const s = createShip(world.nextEntityId++, home, world.rules);
   s.cargo.Gold = 0;
   s.captain = makeCaptain(world); // a fresh captain takes the new vessel
+  s.name = shipName(world);
   world.ships.push(s);
-  logEvent(world, 'launch', `${home.name} launched a new ship under Capt. ${s.captain.name}`, { islandId: home.id });
+  logEvent(world, 'launch', `${home.name} launched ${s.name} under Capt. ${s.captain.name}`, { islandId: home.id, shipId: s.id });
   return s;
 }
 

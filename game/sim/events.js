@@ -78,7 +78,7 @@ export function maybeSink(world, ship, distance) {
   if (homeFleet <= 1) return false;
   if (streamFloat(world, 'sink') >= t.SINK_PER_1000 * distance / 1000) return false;
   const home = world.islandsById.get(ship.homeId);
-  logEvent(world, 'wreck', `A ${home ? home.name : 'merchant'} ship was lost at sea`, { x: ship.x, y: ship.y });
+  logEvent(world, 'wreck', `${ship.name || 'A merchant ship'} foundered and sank${home ? ' — a ' + home.name + ' vessel' : ''}.`, { x: ship.x, y: ship.y });
   ship._sunk = true; // cargo (goods + coin + migrants) goes down with it
   return true;
 }

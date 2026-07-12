@@ -345,6 +345,38 @@ export class WorldRenderer {
     ctx.restore();
   }
 
+  /** Named storm cells — dark swirling clouds drifting over the sea. Drawn under the ships so a
+   *  vessel caught inside is still visible fighting the weather. Culled by the view bounds. */
+  drawStorms(storms, bounds, now) {
+    if (!storms || !storms.length) return;
+    const ctx = this.ctx;
+    const zoom = this.camera.getZoom?.() ?? 1;
+    for (const st of storms) {
+      if (!inBounds(st.x, st.y, st.r, bounds)) continue;
+      const { sx, sy } = this.camera.worldToScreen(st.x, st.y);
+      const r = st.r * zoom;
+      ctx.save();
+      const grad = ctx.createRadialGradient(sx, sy, r * 0.1, sx, sy, r);
+      grad.addColorStop(0, 'rgba(38,46,62,0.52)');
+      grad.addColorStop(0.7, 'rgba(48,56,74,0.34)');
+      grad.addColorStop(1, 'rgba(60,70,90,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.fill();
+      // slow-rotating swirl arcs
+      ctx.strokeStyle = 'rgba(206,216,232,0.38)';
+      ctx.lineWidth = 2;
+      const rot = now * 0.0006;
+      for (let i = 0; i < 3; i++) { const a = rot + i * (Math.PI * 2 / 3); ctx.beginPath(); ctx.arc(sx, sy, r * 0.55, a, a + Math.PI * 0.8); ctx.stroke(); }
+      // occasional lightning flicker
+      if ((Math.sin(now * 0.02 + sx) > 0.94)) { ctx.globalAlpha = 0.5; ctx.fillStyle = '#dfe7f2'; ctx.beginPath(); ctx.arc(sx, sy, r * 0.9, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1; }
+      ctx.fillStyle = 'rgba(222,230,242,0.9)';
+      ctx.font = `${Math.round(Math.max(11, r * 0.13))}px system-ui, sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('⛈ Storm ' + st.name, sx, sy - r - 8);
+      ctx.restore();
+    }
+  }
+
   /** The black flag: a dark disc + skull that hovers over a pirate vessel — menacing, and
    *  clamped to a minimum screen size so a raider is trackable across the map at any zoom. */
   _pirateMark(wx, wy, r, now) {

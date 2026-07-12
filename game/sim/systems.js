@@ -12,6 +12,7 @@ import { piracy } from './piracy.js';
 import { antipiracy } from './antipiracy.js';
 import { crew } from './crew.js';
 import { wind } from './wind.js';
+import { weather } from './weather.js';
 import { upkeep } from './upkeep.js';
 import { reputation } from './reputation.js';
 import { events } from './events.js';
@@ -21,6 +22,7 @@ import { contracts } from './contracts.js';
 
 export const SIM_SYSTEMS = [
   applyIntents,
+  weather,    // seasons (production swing) + named storms + prevailing trade winds — before wind
   wind,       // drift the global wind before ships read it for movement/decisions
   produceBase,
   produceGoods,

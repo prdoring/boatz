@@ -7,7 +7,7 @@ import { ServerLoop } from '../engine/net/ServerLoop.js';
 import { serialize, deserialize } from '../engine/net/protocol.js';
 import { M, SPEEDS, PROTOCOL_VERSION } from '../game/protocol.js';
 import { buildWorld, stepWorld, worldTotals } from '../game/sim/world.js';
-import { snapshotShips, snapshotEconomy, snapshotLayout, windSnapshot } from '../game/sim/snapshot.js';
+import { snapshotShips, snapshotEconomy, snapshotLayout, windSnapshot, stormsSnapshot } from '../game/sim/snapshot.js';
 import { generateRoster } from '../game/sim/roster.js';
 import economyRaw from '../data/economy.json' with { type: 'json' };
 
@@ -43,6 +43,8 @@ export function attachSimServer(server, { tickMs = TICK_MS, seed = 0xB0A7, roste
       type: M.STATE_SHIPS, tick, full: true, sentAt: Date.now(),
       simTime: world.simTime, speed: world.speed, paused: world.paused,
       wind: windSnapshot(world),
+      storms: stormsSnapshot(world),
+      season: world.season || null,
       entities: snapshotShips(world),
     });
   }
@@ -86,6 +88,8 @@ export function attachSimServer(server, { tickMs = TICK_MS, seed = 0xB0A7, roste
       type: M.STATE_SHIPS, tick: loop.tick, full: true, sentAt: Date.now(),
       simTime: world.simTime, speed: world.speed, paused: world.paused,
       wind: windSnapshot(world),
+      storms: stormsSnapshot(world),
+      season: world.season || null,
       entities: snapshotShips(world),
     });
     ws.on('message', (data) => {

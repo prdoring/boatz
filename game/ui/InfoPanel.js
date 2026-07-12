@@ -40,6 +40,7 @@ const EVENT_TEXT_COLOR = {
   bounty: '#ffd166', privateer: '#6fa8d8', hunted: '#8ee6a0', hunterlost: '#e0863a', standdown: '#8fb6c6',
   aid: '#7fe0b0', betray: '#ff5b30', embargo: '#e0863a',
   contract: '#e8c15a', contractdone: '#8ee6a0',
+  storm: '#9fb2cc', stormloss: '#8fb6c6', season: '#c8b3ff',
 };
 
 export class InfoPanel extends Panel {

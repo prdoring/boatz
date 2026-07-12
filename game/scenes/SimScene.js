@@ -28,7 +28,9 @@ const EVENT_COLOR = {
   bounty: '#ffd166', privateer: '#6fa8d8', hunted: '#8ee6a0', hunterlost: '#e0863a', standdown: '#8fb6c6',
   aid: '#7fe0b0', betray: '#ff5b30', embargo: '#e0863a',
   contract: '#e8c15a', contractdone: '#8ee6a0',
+  storm: '#9fb2cc', stormloss: '#8fb6c6', season: '#c8b3ff',
 };
+const SEASON_ICON = { Spring: '🌱', Summer: '☀', Autumn: '🍂', Winter: '❄' };
 const NEWS_ROWS = 9; // how many recent events the ticker shows
 
 // Short human labels for a ship's voyage purpose (the hover tooltip / quick glance).
@@ -328,6 +330,7 @@ export class SimScene extends Scene {
       worldRenderer.beginFrame();
       worldRenderer.drawIslands(econ.islands, bounds, now, highlightIsland);
       worldRenderer.drawWakes(effects.getTrails(), now);
+      worldRenderer.drawStorms(this.sim.storms, bounds, now); // named tempests, under the ships
       worldRenderer.drawShips(world.entities, this.sim.islandsById, bounds, now, highlightHome);
       worldRenderer.drawEffects(effects, now); // shipwreck splashes + debris
       if (this._selection) worldRenderer.drawSelection(this._selection, now);
@@ -567,10 +570,12 @@ export class SimScene extends Scene {
     ctx.lineTo(tipX - Math.cos(pa - 0.5) * ah, tipY - Math.sin(pa - 0.5) * ah);
     ctx.lineTo(tipX - Math.cos(pa + 0.5) * ah, tipY - Math.sin(pa + 0.5) * ah);
     ctx.closePath(); ctx.fill();
-    // Label to the right of the dial.
+    // Label to the right of the dial; the season sits just beneath it.
     ctx.fillStyle = PALETTE.hud; ctx.font = '12px system-ui, sans-serif';
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.fillText(`${windWord(w.str)} wind → ${compass8(w.dir)}`, cx + R + 9, cy);
+    ctx.fillText(`${windWord(w.str)} wind → ${compass8(w.dir)}`, cx + R + 9, cy - 6);
+    const s = this.sim.season;
+    if (s) { ctx.fillStyle = PALETTE.hudDim; ctx.font = '11px system-ui, sans-serif'; ctx.fillText(`${SEASON_ICON[s.name] || '·'} ${s.name}`, cx + R + 9, cy + 8); }
     ctx.restore();
   }
 

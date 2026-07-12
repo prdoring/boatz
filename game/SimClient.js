@@ -36,6 +36,8 @@ export class SimClient {
     this.mapH = OCEAN.height;
 
     this.wind = { dir: 0, str: 0 }; // global wind (dir it blows toward, strength 0..1)
+    this.storms = [];              // active named storm cells { id, name, x, y, r }
+    this.season = null;            // { idx, name, day } — the turning year
     this.selected = null;          // { kind:'island'|'ship', id }
     this.status = 'connecting';    // 'connecting' | 'live' | 'disconnected'
     this.clientId = null;
@@ -88,6 +90,8 @@ export class SimClient {
     if (typeof m.speed === 'number') this.clock.speed = m.speed;
     if (typeof m.paused === 'boolean') this.clock.paused = m.paused;
     if (m.wind) this.wind = m.wind;
+    if (m.storms) this.storms = m.storms;
+    if (m.season) this.season = m.season;
     if (this.status !== 'disconnected') this.status = 'live';
   }
 

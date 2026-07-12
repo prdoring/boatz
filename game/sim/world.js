@@ -12,6 +12,7 @@ import { createShip } from './ship.js';
 import { SIM_SYSTEMS } from './systems.js';
 import { initReputation } from './reputation.js';
 import { initWind } from './wind.js';
+import { initWeather } from './weather.js';
 import { makeCaptain } from './captains.js';
 import { makeMagistrate } from './magistrate.js';
 import { shipName } from './naming.js';
@@ -99,7 +100,8 @@ export function buildWorld({ economy, roster, seed = 1337 }) {
 
   // Seed every pair's reputation just above/below neutral (the diplomatic layer).
   initReputation(world, tuning.REP_INIT_SPREAD);
-  initWind(world); // one drifting global wind vector
+  initWeather(world); // season + storms (before wind, which reads the prevailing trade winds)
+  initWind(world);    // one drifting global wind vector, biased by the season's prevailing set
 
 
 

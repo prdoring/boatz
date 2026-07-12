@@ -11,6 +11,7 @@
 // seamanship bonus, so experience turns bad wind from a wall into a manageable slog.
 
 import { streamFloat } from './rng.js';
+import { prevailingWind } from './weather.js';
 
 const TAU = Math.PI * 2;
 
@@ -19,6 +20,15 @@ function rollTarget(world) {
   const turn = (streamFloat(world, 'wind') * 2 - 1) * r.WIND_TURN; // ± swing off current heading
   w.tDir = w.dir + turn;
   w.tStr = r.WIND_STR_MIN + streamFloat(world, 'wind') * (1 - r.WIND_STR_MIN);
+  // TRADE WINDS: pull the new target toward the season's prevailing set, so the sea has a
+  // seasonal bias a captain can plan around (weather.js supplies it; absent → pure drift).
+  const pv = prevailingWind(world);
+  if (pv) {
+    const pull = r.SEASON_WIND_PULL || 0;
+    let d = pv.dir - w.tDir; d = Math.atan2(Math.sin(d), Math.cos(d));
+    w.tDir += d * pull;
+    w.tStr = w.tStr * (1 - pull) + pv.str * pull;
+  }
   // Jitter the interval so shifts don't land on a fixed cadence.
   w.nextShift = world.simTime + r.WIND_SHIFT_SECONDS * (0.6 + 0.8 * streamFloat(world, 'wind'));
 }

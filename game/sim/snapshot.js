@@ -126,6 +126,12 @@ export function windSnapshot(world) {
   return w ? { dir: round2(w.dir), str: round2(w.str) } : { dir: 0, str: 0 };
 }
 
+/** Active storms for the ships-message header (they move, so they ride the frequent channel). */
+export function stormsSnapshot(world) {
+  if (!world.storms || !world.storms.length) return [];
+  return world.storms.map((s) => ({ id: s.id, name: s.name, x: Math.round(s.x), y: Math.round(s.y), r: Math.round(s.r) }));
+}
+
 /** Static island layout for the WELCOME message (positions never change). */
 export function snapshotLayout(world) {
   return world.islands.map((i) => ({ id: i.id, x: i.x, y: i.y, name: i.name, type: i.type, color: i.color, k: i.k }));

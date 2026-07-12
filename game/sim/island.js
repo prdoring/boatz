@@ -68,5 +68,7 @@ export function effectiveRate(island, res, tuning) {
   // Event modifiers: blight cripples the afflicted resource; plague slows all labour.
   if (island.blight && island.blight.res === res) rate *= tuning.BLIGHT_SEVERITY;
   if (island.plague) rate *= tuning.PLAGUE_PROD_PENALTY;
+  // Seasonal swing (weather.js sets _prodMult): a bumper autumn, a lean winter.
+  if (island._prodMult) rate *= island._prodMult;
   return rate;
 }

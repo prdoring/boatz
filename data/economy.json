@@ -115,6 +115,25 @@
     "TACK_THRESHOLD": 0.28,
     "TACK_MIN_SKILL": 0.3,
     "TACK_OFFSET_FRAC": 0.3,
+
+    "SEASON_DAYS": 15,
+    "FOOD_RAWS": ["Grain", "Meat"],
+    "SEASONS": [
+      { "name": "Spring", "food": 1.18, "prod": 1.04, "stormRate": 0.8,  "windStr": 0.50, "windDir": 0.0 },
+      { "name": "Summer", "food": 1.00, "prod": 1.00, "stormRate": 0.5,  "windStr": 0.40, "windDir": 1.5708 },
+      { "name": "Autumn", "food": 1.28, "prod": 1.02, "stormRate": 1.35, "windStr": 0.62, "windDir": 3.1416 },
+      { "name": "Winter", "food": 0.78, "prod": 0.86, "stormRate": 1.9,  "windStr": 0.80, "windDir": 4.7124 }
+    ],
+    "SEASON_WIND_PULL": 0.4,
+    "STORM_BASE_RATE": 0.35,
+    "STORM_MAX": 5,
+    "STORM_RADIUS_MIN": 240,
+    "STORM_RADIUS_MAX": 480,
+    "STORM_SPEED": 24,
+    "STORM_LIFE_DAYS": 2.5,
+    "STORM_SINK_PER_DAY": 0.4,
+    "STORM_NAMES": ["Bartholomew", "Cyrus", "Delia", "Ember", "Fenwick", "Grendel", "Hesper", "Iris", "Jorah", "Kestrel", "Lorne", "Mordecai", "Nerissa", "Osric", "Perdita", "Quill", "Ravenna", "Sorrel", "Tempest", "Ulric", "Vesper", "Wraith", "Xanthe", "Yorick", "Zephyra"],
+
     "WAIT_MIN_SKILL": 0.45,
     "WAIT_UPWIND_THRESHOLD": 0.35,
     "WAIT_MAX_SECONDS": 25,

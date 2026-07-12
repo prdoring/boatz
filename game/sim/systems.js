@@ -1,0 +1,32 @@
+// The ordered SIM pipeline. `world.js` runs this list once per fixed 0.05s substep.
+// Order matters: intents (player commands) → production → consumption/population →
+// pricing → dispatch (assign goals) → ship (move/trade). PURE.
+
+import { applyIntents } from './intents.js';
+import { produceBase, produceGoods } from './production.js';
+import { population } from './population.js';
+import { pricing } from './pricing.js';
+import { dispatch } from './trade.js';
+import { ship } from './ship.js';
+import { crew } from './crew.js';
+import { wind } from './wind.js';
+import { upkeep } from './upkeep.js';
+import { reputation } from './reputation.js';
+import { events } from './events.js';
+import { governance } from './magistrate.js';
+
+export const SIM_SYSTEMS = [
+  applyIntents,
+  wind,       // drift the global wind before ships read it for movement/decisions
+  produceBase,
+  produceGoods,
+  population,
+  pricing,
+  dispatch,
+  ship,
+  crew,       // provisioning/morale/mutiny for at-sea ships, after movement (reads arrivals/docks)
+  upkeep,     // gold flow (income/upkeep sinks) + spoilage, after production/trade/movement
+  reputation, // daily decay of diplomatic opinions (trade itself updates them in ship.js)
+  events,     // daily shocks: blight, plague lifecycle/mortality (wrecks fire in ship.js)
+  governance, // island loyalty + magistrate + rebellion (production/income halt via effectiveRate/upkeep)
+];

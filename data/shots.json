@@ -1,102 +1,4803 @@
 {
-  "_doc": "Predefined game states the shot harness renders to images for visual review. `render` points at the game's renderShot seam (loaded by the harness via dynamic import, so the engine never hardcodes a game path). Each shot: { id, scene, viewport:{w,h} in logical px, now? ms for animation phase, seed?, camera?, state }. `state` is opaque game state the engine never reads.",
+  "_doc": "Predefined sim states rendered by the shot harness.",
   "render": "/game/shots.js",
   "shots": [
     {
-      "id": "title",
-      "scene": "title",
-      "viewport": { "w": 900, "h": 600 },
-      "now": 0
-    },
-    {
-      "id": "garden-calm",
-      "scene": "garden",
-      "viewport": { "w": 900, "h": 600 },
+      "id": "sim-map",
+      "scene": "sim",
+      "viewport": {
+        "w": 1200,
+        "h": 820
+      },
       "now": 1200,
       "state": {
-        "camera": { "x": 1200, "y": 900, "zoom": 1 },
-        "critters": [
-          { "x": 1080, "y": 820, "species": "blob", "state": "idle" },
-          { "x": 1250, "y": 950, "species": "sprout", "state": "idle" },
-          { "x": 1330, "y": 760, "species": "blob", "state": "happy" }
+        "camera": {
+          "x": 4800,
+          "y": 3400,
+          "zoom": 0.11
+        },
+        "islands": [
+          {
+            "id": "silverpeak",
+            "x": 2746,
+            "y": 5059,
+            "name": "Silverpeak",
+            "type": "mining",
+            "color": "#c9cdd6",
+            "primary": "PreciousMetal",
+            "secondary": "Iron",
+            "produces": [
+              "LuxuryGoods"
+            ],
+            "k": 94,
+            "population": 67,
+            "civ": 0.31
+          },
+          {
+            "id": "anvilfield",
+            "x": 8398,
+            "y": 4765,
+            "name": "Keelpeak",
+            "type": "shipyard",
+            "color": "#b08a5a",
+            "primary": "Iron",
+            "secondary": "Wood",
+            "produces": [
+              "Weapons",
+              "Ships"
+            ],
+            "k": 98,
+            "population": 40,
+            "civ": 0.58
+          },
+          {
+            "id": "droverhaven",
+            "x": 9007,
+            "y": 4157,
+            "name": "Droverhaven",
+            "type": "ranch",
+            "color": "#cf9b6a",
+            "primary": "Meat",
+            "secondary": "Grain",
+            "produces": [
+              "Food"
+            ],
+            "k": 129,
+            "population": 48,
+            "civ": 0.8
+          },
+          {
+            "id": "maplecove",
+            "x": 8419,
+            "y": 4993,
+            "name": "Maplecove",
+            "type": "forest",
+            "color": "#6cbf5a",
+            "primary": "Wood",
+            "secondary": "Iron",
+            "produces": [
+              "Weapons"
+            ],
+            "k": 112,
+            "population": 56,
+            "civ": 0.67
+          },
+          {
+            "id": "barleycrag",
+            "x": 7656,
+            "y": 4187,
+            "name": "Barleycrag",
+            "type": "plantation",
+            "color": "#d9c25a",
+            "primary": "Grain",
+            "secondary": "Wood",
+            "produces": [
+              "Ale",
+              "Food"
+            ],
+            "k": 133,
+            "population": 72,
+            "civ": 0.56,
+            "blight": "Grain"
+          },
+          {
+            "id": "harvestholm",
+            "x": 7570,
+            "y": 4744,
+            "name": "Harvestholm",
+            "type": "plantation",
+            "color": "#d9c25a",
+            "primary": "Grain",
+            "secondary": "Meat",
+            "produces": [
+              "Food"
+            ],
+            "k": 140,
+            "population": 125,
+            "civ": 0.34
+          },
+          {
+            "id": "elmvale",
+            "x": 9177,
+            "y": 4713,
+            "name": "Elmvale",
+            "type": "forest",
+            "color": "#6cbf5a",
+            "primary": "Wood",
+            "secondary": "Grain",
+            "produces": [
+              "Ale",
+              "Food"
+            ],
+            "k": 125,
+            "population": 61,
+            "civ": 0.77
+          },
+          {
+            "id": "forgereach",
+            "x": 8566,
+            "y": 4636,
+            "name": "Forgereach",
+            "type": "mining",
+            "color": "#8e9aa6",
+            "primary": "Iron",
+            "secondary": "Wood",
+            "produces": [
+              "Weapons"
+            ],
+            "k": 95,
+            "population": 73,
+            "civ": 0.41
+          },
+          {
+            "id": "meadowridge",
+            "x": 4273,
+            "y": 4253,
+            "name": "Meadowridge",
+            "type": "plantation",
+            "color": "#d9c25a",
+            "primary": "Grain",
+            "secondary": "Wood",
+            "produces": [
+              "Ale",
+              "Food"
+            ],
+            "k": 125,
+            "population": 91,
+            "civ": 0.71
+          },
+          {
+            "id": "thornlanding",
+            "x": 4402,
+            "y": 4136,
+            "name": "Harborcliff",
+            "type": "shipyard",
+            "color": "#b08a5a",
+            "primary": "Wood",
+            "secondary": "Iron",
+            "produces": [
+              "Weapons",
+              "Ships"
+            ],
+            "k": 99,
+            "population": 57,
+            "civ": 0.57
+          },
+          {
+            "id": "cattlehold",
+            "x": 7182,
+            "y": 1728,
+            "name": "Cattlehold",
+            "type": "ranch",
+            "color": "#cf9b6a",
+            "primary": "Meat",
+            "secondary": "Fiber",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 132,
+            "population": 64,
+            "civ": 0.5
+          },
+          {
+            "id": "brightcliff",
+            "x": 6639,
+            "y": 1659,
+            "name": "Brightcliff",
+            "type": "mining",
+            "color": "#c9cdd6",
+            "primary": "PreciousMetal",
+            "secondary": "Fiber",
+            "produces": [
+              "LuxuryGoods",
+              "Clothing"
+            ],
+            "k": 92,
+            "population": 76,
+            "civ": 0.83
+          },
+          {
+            "id": "grovewatch",
+            "x": 7629,
+            "y": 1756,
+            "name": "Grovewatch",
+            "type": "forest",
+            "color": "#6cbf5a",
+            "primary": "Wood",
+            "secondary": "Fiber",
+            "produces": [
+              "Clothing"
+            ],
+            "k": 122,
+            "population": 114,
+            "civ": 0.81
+          },
+          {
+            "id": "pearlstrand",
+            "x": 6869,
+            "y": 1773,
+            "name": "Pearlstrand",
+            "type": "mining",
+            "color": "#c9cdd6",
+            "primary": "PreciousMetal",
+            "secondary": "Grain",
+            "produces": [
+              "LuxuryGoods",
+              "Food"
+            ],
+            "k": 95,
+            "population": 62,
+            "civ": 0.5,
+            "plague": true
+          },
+          {
+            "id": "elkpoint",
+            "x": 3105,
+            "y": 1613,
+            "name": "Elkpoint",
+            "type": "ranch",
+            "color": "#cf9b6a",
+            "primary": "Meat",
+            "secondary": "Grain",
+            "produces": [
+              "Food"
+            ],
+            "k": 132,
+            "population": 123,
+            "civ": 0.27
+          },
+          {
+            "id": "harvestmoor",
+            "x": 2472,
+            "y": 1582,
+            "name": "Harvestmoor",
+            "type": "plantation",
+            "color": "#d9c25a",
+            "primary": "Grain",
+            "secondary": "Fiber",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 136,
+            "population": 112,
+            "civ": 0.26
+          },
+          {
+            "id": "furrowport",
+            "x": 2738,
+            "y": 2090,
+            "name": "Furrowport",
+            "type": "plantation",
+            "color": "#d9c25a",
+            "primary": "Grain",
+            "secondary": "Meat",
+            "produces": [
+              "Food"
+            ],
+            "k": 142,
+            "population": 45,
+            "civ": 0.22
+          },
+          {
+            "id": "stagford",
+            "x": 3609,
+            "y": 1306,
+            "name": "Stagford",
+            "type": "ranch",
+            "color": "#cf9b6a",
+            "primary": "Meat",
+            "secondary": "Wood",
+            "produces": [
+              "Food"
+            ],
+            "k": 131,
+            "population": 58,
+            "civ": 0.4
+          },
+          {
+            "id": "huntwick",
+            "x": 2636,
+            "y": 3709,
+            "name": "Huntwick",
+            "type": "ranch",
+            "color": "#cf9b6a",
+            "primary": "Meat",
+            "secondary": "Grain",
+            "produces": [
+              "Food"
+            ],
+            "k": 127,
+            "population": 83,
+            "civ": 0.82
+          },
+          {
+            "id": "herdstead",
+            "x": 2490,
+            "y": 3197,
+            "name": "Herdstead",
+            "type": "ranch",
+            "color": "#cf9b6a",
+            "primary": "Meat",
+            "secondary": "Iron",
+            "produces": [
+              "Food"
+            ],
+            "k": 134,
+            "population": 101,
+            "civ": 0.26
+          },
+          {
+            "id": "flaxbay",
+            "x": 3009,
+            "y": 3758,
+            "name": "Flaxbay",
+            "type": "plantation",
+            "color": "#b6c96a",
+            "primary": "Fiber",
+            "secondary": "Grain",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 133,
+            "population": 43,
+            "civ": 0.64
+          },
+          {
+            "id": "weaverfell",
+            "x": 3183,
+            "y": 3522,
+            "name": "Weaverfell",
+            "type": "plantation",
+            "color": "#b6c96a",
+            "primary": "Fiber",
+            "secondary": "Meat",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 134,
+            "population": 64,
+            "civ": 0.46
+          },
+          {
+            "id": "ryeshoal",
+            "x": 2860,
+            "y": 4324,
+            "name": "Ryeshoal",
+            "type": "plantation",
+            "color": "#d9c25a",
+            "primary": "Grain",
+            "secondary": "Wood",
+            "produces": [
+              "Ale",
+              "Food"
+            ],
+            "k": 142,
+            "population": 123,
+            "civ": 0.65,
+            "blight": "Grain"
+          },
+          {
+            "id": "pearlmere",
+            "x": 8572,
+            "y": 2175,
+            "name": "Pearlmere",
+            "type": "mining",
+            "color": "#c9cdd6",
+            "primary": "PreciousMetal",
+            "secondary": "Iron",
+            "produces": [
+              "LuxuryGoods"
+            ],
+            "k": 90,
+            "population": 75,
+            "civ": 0.44
+          },
+          {
+            "id": "orepeak",
+            "x": 8829,
+            "y": 2442,
+            "name": "Orepeak",
+            "type": "mining",
+            "color": "#8e9aa6",
+            "primary": "Iron",
+            "secondary": "PreciousMetal",
+            "produces": [
+              "LuxuryGoods"
+            ],
+            "k": 108,
+            "population": 99,
+            "civ": 0.05
+          },
+          {
+            "id": "threadfield",
+            "x": 8261,
+            "y": 2693,
+            "name": "Threadfield",
+            "type": "plantation",
+            "color": "#b6c96a",
+            "primary": "Fiber",
+            "secondary": "Grain",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 129,
+            "population": 120,
+            "civ": 0.7
+          },
+          {
+            "id": "coalhaven",
+            "x": 9255,
+            "y": 2342,
+            "name": "Dockshoal",
+            "type": "shipyard",
+            "color": "#b08a5a",
+            "primary": "Iron",
+            "secondary": "Wood",
+            "produces": [
+              "Weapons",
+              "Ships"
+            ],
+            "k": 98,
+            "population": 52,
+            "civ": 0.15
+          },
+          {
+            "id": "gemcove",
+            "x": 4474,
+            "y": 2115,
+            "name": "Gemcove",
+            "type": "mining",
+            "color": "#c9cdd6",
+            "primary": "PreciousMetal",
+            "secondary": "Meat",
+            "produces": [
+              "LuxuryGoods",
+              "Food"
+            ],
+            "k": 93,
+            "population": 30,
+            "civ": 0.2
+          },
+          {
+            "id": "quartzcrag",
+            "x": 4491,
+            "y": 1531,
+            "name": "Quartzcrag",
+            "type": "mining",
+            "color": "#c9cdd6",
+            "primary": "PreciousMetal",
+            "secondary": "Fiber",
+            "produces": [
+              "LuxuryGoods",
+              "Clothing"
+            ],
+            "k": 95,
+            "population": 58,
+            "civ": 0.8
+          },
+          {
+            "id": "fleeceholm",
+            "x": 4269,
+            "y": 1885,
+            "name": "Fleeceholm",
+            "type": "plantation",
+            "color": "#b6c96a",
+            "primary": "Fiber",
+            "secondary": "PreciousMetal",
+            "produces": [
+              "LuxuryGoods",
+              "Clothing"
+            ],
+            "k": 137,
+            "population": 122,
+            "civ": 0.77
+          },
+          {
+            "id": "flaxvale",
+            "x": 7108,
+            "y": 4597,
+            "name": "Flaxvale",
+            "type": "plantation",
+            "color": "#b6c96a",
+            "primary": "Fiber",
+            "secondary": "Grain",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 138,
+            "population": 117,
+            "civ": 0.18
+          },
+          {
+            "id": "weaverreach",
+            "x": 6786,
+            "y": 4228,
+            "name": "Weaverreach",
+            "type": "plantation",
+            "color": "#b6c96a",
+            "primary": "Fiber",
+            "secondary": "Meat",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 142,
+            "population": 99,
+            "civ": 0.56
+          },
+          {
+            "id": "cottonridge",
+            "x": 6425,
+            "y": 3136,
+            "name": "Cottonridge",
+            "type": "plantation",
+            "color": "#b6c96a",
+            "primary": "Fiber",
+            "secondary": "Wood",
+            "produces": [
+              "Clothing"
+            ],
+            "k": 142,
+            "population": 75,
+            "civ": 0.69
+          },
+          {
+            "id": "woollanding",
+            "x": 6467,
+            "y": 3665,
+            "name": "Woollanding",
+            "type": "plantation",
+            "color": "#b6c96a",
+            "primary": "Fiber",
+            "secondary": "Grain",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 128,
+            "population": 92,
+            "civ": 0.08
+          },
+          {
+            "id": "cedarhold",
+            "x": 5835,
+            "y": 3192,
+            "name": "Mastlanding",
+            "type": "shipyard",
+            "color": "#b08a5a",
+            "primary": "Wood",
+            "secondary": "Iron",
+            "produces": [
+              "Weapons",
+              "Ships"
+            ],
+            "k": 109,
+            "population": 67,
+            "civ": 0.52
+          },
+          {
+            "id": "onyxcliff",
+            "x": 5862,
+            "y": 4780,
+            "name": "Onyxcliff",
+            "type": "mining",
+            "color": "#c9cdd6",
+            "primary": "PreciousMetal",
+            "secondary": "Iron",
+            "produces": [
+              "LuxuryGoods"
+            ],
+            "k": 102,
+            "population": 57,
+            "civ": 0.67
+          },
+          {
+            "id": "coalwatch",
+            "x": 5890,
+            "y": 5371,
+            "name": "Coalwatch",
+            "type": "mining",
+            "color": "#8e9aa6",
+            "primary": "Iron",
+            "secondary": "Meat",
+            "produces": [
+              "Food"
+            ],
+            "k": 99,
+            "population": 60,
+            "civ": 0.53
+          },
+          {
+            "id": "stagstrand",
+            "x": 5108,
+            "y": 4806,
+            "name": "Stagstrand",
+            "type": "ranch",
+            "color": "#cf9b6a",
+            "primary": "Meat",
+            "secondary": "Grain",
+            "produces": [
+              "Food"
+            ],
+            "k": 136,
+            "population": 55,
+            "civ": 0.17
+          },
+          {
+            "id": "meadowpoint",
+            "x": 5699,
+            "y": 5016,
+            "name": "Meadowpoint",
+            "type": "plantation",
+            "color": "#d9c25a",
+            "primary": "Grain",
+            "secondary": "Iron",
+            "produces": [
+              "Food"
+            ],
+            "k": 127,
+            "population": 76,
+            "civ": 0.19,
+            "plague": true
+          },
+          {
+            "id": "fleecemoor",
+            "x": 5921,
+            "y": 5051,
+            "name": "Fleecemoor",
+            "type": "plantation",
+            "color": "#b6c96a",
+            "primary": "Fiber",
+            "secondary": "Meat",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 133,
+            "population": 40,
+            "civ": 0.43
+          },
+          {
+            "id": "oakport",
+            "x": 5687,
+            "y": 1794,
+            "name": "Oakport",
+            "type": "forest",
+            "color": "#6cbf5a",
+            "primary": "Wood",
+            "secondary": "Grain",
+            "produces": [
+              "Ale",
+              "Food"
+            ],
+            "k": 122,
+            "population": 46,
+            "civ": 0.1
+          },
+          {
+            "id": "timberford",
+            "x": 5475,
+            "y": 2040,
+            "name": "Anchorbay",
+            "type": "shipyard",
+            "color": "#b08a5a",
+            "primary": "Wood",
+            "secondary": "Iron",
+            "produces": [
+              "Weapons",
+              "Ships"
+            ],
+            "k": 111,
+            "population": 43,
+            "civ": 0.23,
+            "blight": "Wood"
+          },
+          {
+            "id": "droverwick",
+            "x": 5084,
+            "y": 2050,
+            "name": "Droverwick",
+            "type": "ranch",
+            "color": "#cf9b6a",
+            "primary": "Meat",
+            "secondary": "Fiber",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 141,
+            "population": 88,
+            "civ": 0.76
+          },
+          {
+            "id": "maplestead",
+            "x": 5037,
+            "y": 1754,
+            "name": "Maplestead",
+            "type": "forest",
+            "color": "#6cbf5a",
+            "primary": "Wood",
+            "secondary": "PreciousMetal",
+            "produces": [
+              "LuxuryGoods"
+            ],
+            "k": 126,
+            "population": 113,
+            "civ": 0.38
+          },
+          {
+            "id": "elkbay",
+            "x": 2007,
+            "y": 2237,
+            "name": "Elkbay",
+            "type": "ranch",
+            "color": "#cf9b6a",
+            "primary": "Meat",
+            "secondary": "Grain",
+            "produces": [
+              "Food"
+            ],
+            "k": 127,
+            "population": 90,
+            "civ": 0.76
+          },
+          {
+            "id": "threadfell",
+            "x": 1514,
+            "y": 2547,
+            "name": "Threadfell",
+            "type": "plantation",
+            "color": "#b6c96a",
+            "primary": "Fiber",
+            "secondary": "Grain",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 138,
+            "population": 98,
+            "civ": 0.26
+          },
+          {
+            "id": "opalshoal",
+            "x": 1892,
+            "y": 1749,
+            "name": "Opalshoal",
+            "type": "mining",
+            "color": "#c9cdd6",
+            "primary": "PreciousMetal",
+            "secondary": "Grain",
+            "produces": [
+              "LuxuryGoods",
+              "Food"
+            ],
+            "k": 101,
+            "population": 64,
+            "civ": 0.45
+          },
+          {
+            "id": "forgemere",
+            "x": 1207,
+            "y": 1077,
+            "name": "Forgemere",
+            "type": "mining",
+            "color": "#8e9aa6",
+            "primary": "Iron",
+            "secondary": "Wood",
+            "produces": [
+              "Weapons"
+            ],
+            "k": 105,
+            "population": 77,
+            "civ": 0.49
+          },
+          {
+            "id": "emberpeak",
+            "x": 513,
+            "y": 688,
+            "name": "Emberpeak",
+            "type": "mining",
+            "color": "#8e9aa6",
+            "primary": "Iron",
+            "secondary": "Grain",
+            "produces": [
+              "Food"
+            ],
+            "k": 99,
+            "population": 71,
+            "civ": 0.25
+          },
+          {
+            "id": "fieldfield",
+            "x": 636,
+            "y": 1220,
+            "name": "Fieldfield",
+            "type": "plantation",
+            "color": "#d9c25a",
+            "primary": "Grain",
+            "secondary": "Meat",
+            "produces": [
+              "Food"
+            ],
+            "k": 142,
+            "population": 131,
+            "civ": 0.61
+          },
+          {
+            "id": "grainhaven",
+            "x": 913,
+            "y": 1438,
+            "name": "Grainhaven",
+            "type": "plantation",
+            "color": "#d9c25a",
+            "primary": "Grain",
+            "secondary": "Wood",
+            "produces": [
+              "Ale",
+              "Food"
+            ],
+            "k": 140,
+            "population": 46,
+            "civ": 0.53
+          },
+          {
+            "id": "ramcove",
+            "x": 2012,
+            "y": 1122,
+            "name": "Ramcove",
+            "type": "ranch",
+            "color": "#cf9b6a",
+            "primary": "Meat",
+            "secondary": "Wood",
+            "produces": [
+              "Food"
+            ],
+            "k": 133,
+            "population": 61,
+            "civ": 0.59
+          },
+          {
+            "id": "slagcrag",
+            "x": 1107,
+            "y": 4020,
+            "name": "Slagcrag",
+            "type": "mining",
+            "color": "#8e9aa6",
+            "primary": "Iron",
+            "secondary": "Wood",
+            "produces": [
+              "Weapons"
+            ],
+            "k": 107,
+            "population": 100,
+            "civ": 0.79
+          },
+          {
+            "id": "mapleholm",
+            "x": 905,
+            "y": 4112,
+            "name": "Mapleholm",
+            "type": "forest",
+            "color": "#6cbf5a",
+            "primary": "Wood",
+            "secondary": "Iron",
+            "produces": [
+              "Weapons"
+            ],
+            "k": 121,
+            "population": 80,
+            "civ": 0.5
+          },
+          {
+            "id": "barleyvale",
+            "x": 1030,
+            "y": 5286,
+            "name": "Barleyvale",
+            "type": "plantation",
+            "color": "#d9c25a",
+            "primary": "Grain",
+            "secondary": "Fiber",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 137,
+            "population": 85,
+            "civ": 0.54
+          },
+          {
+            "id": "onyxreach",
+            "x": 1351,
+            "y": 5787,
+            "name": "Onyxreach",
+            "type": "mining",
+            "color": "#c9cdd6",
+            "primary": "PreciousMetal",
+            "secondary": "Fiber",
+            "produces": [
+              "LuxuryGoods",
+              "Clothing"
+            ],
+            "k": 99,
+            "population": 38,
+            "civ": 0.31
+          },
+          {
+            "id": "opalridge",
+            "x": 628,
+            "y": 5070,
+            "name": "Opalridge",
+            "type": "mining",
+            "color": "#c9cdd6",
+            "primary": "PreciousMetal",
+            "secondary": "Iron",
+            "produces": [
+              "LuxuryGoods"
+            ],
+            "k": 94,
+            "population": 74,
+            "civ": 0.35
+          },
+          {
+            "id": "forgelanding",
+            "x": 854,
+            "y": 5557,
+            "name": "Forgelanding",
+            "type": "mining",
+            "color": "#8e9aa6",
+            "primary": "Iron",
+            "secondary": "Fiber",
+            "produces": [
+              "Clothing"
+            ],
+            "k": 95,
+            "population": 87,
+            "civ": 0.11
+          },
+          {
+            "id": "emberhold",
+            "x": 660,
+            "y": 5442,
+            "name": "Emberhold",
+            "type": "mining",
+            "color": "#8e9aa6",
+            "primary": "Iron",
+            "secondary": "Wood",
+            "produces": [
+              "Weapons"
+            ],
+            "k": 100,
+            "population": 33,
+            "civ": 0.75
+          },
+          {
+            "id": "thorncliff",
+            "x": 7732,
+            "y": 3398,
+            "name": "Thorncliff",
+            "type": "forest",
+            "color": "#6cbf5a",
+            "primary": "Wood",
+            "secondary": "Grain",
+            "produces": [
+              "Ale",
+              "Food"
+            ],
+            "k": 120,
+            "population": 54,
+            "civ": 0.2
+          }
         ],
-        "props": [
-          { "artId": "flower", "x": 1150, "y": 1080, "r": 26, "color": "#e88ab0" },
-          { "artId": "rock", "x": 1380, "y": 700, "r": 40, "color": "#6a7079" },
-          { "artId": "sign", "x": 980, "y": 900, "r": 40, "color": "#b98a4a" }
+        "ships": {
+          "h0": {
+            "x": 8374,
+            "y": 4729,
+            "heading": -0.02,
+            "state": "sailing",
+            "type": "ship",
+            "homeId": "harvestholm",
+            "destId": "elmvale",
+            "reason": "trade",
+            "eta": 12,
+            "route": [
+              "elmvale"
+            ],
+            "cap": 100,
+            "used": 60,
+            "cargo": {
+              "Grain": 30,
+              "Clothing": 24
+            },
+            "gold": 200,
+            "sick": false
+          },
+          "h1": {
+            "x": 7220,
+            "y": 3259,
+            "heading": -1.803,
+            "state": "sailing",
+            "type": "ship",
+            "homeId": "harvestholm",
+            "destId": "pearlstrand",
+            "reason": "trade",
+            "eta": 12,
+            "route": [
+              "pearlstrand"
+            ],
+            "cap": 100,
+            "used": 60,
+            "cargo": {
+              "Grain": 30,
+              "Clothing": 24
+            },
+            "gold": 200,
+            "sick": false
+          },
+          "h2": {
+            "x": 5377,
+            "y": 4133,
+            "heading": -2.87,
+            "state": "sailing",
+            "type": "ship",
+            "homeId": "harvestholm",
+            "destId": "weaverfell",
+            "reason": "trade",
+            "eta": 12,
+            "route": [
+              "weaverfell"
+            ],
+            "cap": 100,
+            "used": 60,
+            "cargo": {
+              "Grain": 30,
+              "Clothing": 24
+            },
+            "gold": 200,
+            "sick": false
+          },
+          "h3": {
+            "x": 7178,
+            "y": 4486,
+            "heading": -2.56,
+            "state": "sailing",
+            "type": "ship",
+            "homeId": "harvestholm",
+            "destId": "weaverreach",
+            "reason": "trade",
+            "eta": 12,
+            "route": [
+              "weaverreach"
+            ],
+            "cap": 100,
+            "used": 60,
+            "cargo": {
+              "Grain": 30,
+              "Clothing": 24
+            },
+            "gold": 200,
+            "sick": false
+          },
+          "s2": {
+            "x": 7570,
+            "y": 4744,
+            "heading": 3.14,
+            "state": "docked",
+            "type": "ship",
+            "homeId": "cattlehold",
+            "destId": "harvestholm",
+            "reason": "food",
+            "eta": 0,
+            "route": [
+              "harvestholm"
+            ],
+            "cap": 100,
+            "used": 12,
+            "cargo": {
+              "Weapons": 12
+            },
+            "gold": 60,
+            "sick": true
+          },
+          "s1": {
+            "x": 9677,
+            "y": 5013,
+            "heading": -2.814,
+            "state": "sailing",
+            "type": "ship",
+            "homeId": "elmvale",
+            "destId": "forgereach",
+            "reason": "trade",
+            "eta": 12,
+            "route": [
+              "forgereach",
+              "maplecove"
+            ],
+            "cap": 100,
+            "used": 82,
+            "cargo": {
+              "Ale": 44,
+              "Grain": 38
+            },
+            "gold": 260,
+            "sick": false
+          }
+        },
+        "events": [
+          {
+            "day": 34,
+            "kind": "blight",
+            "text": "Blight strikes Barleycrag's Grain"
+          },
+          {
+            "day": 35,
+            "kind": "wreck",
+            "text": "A Forgereach ship was lost at sea"
+          },
+          {
+            "day": 36,
+            "kind": "plague",
+            "text": "Plague breaks out on Harvestholm"
+          },
+          {
+            "day": 38,
+            "kind": "recover",
+            "text": "Flaxbay's fields recover"
+          },
+          {
+            "day": 39,
+            "kind": "wreck",
+            "text": "A Brightcliff ship was lost at sea"
+          },
+          {
+            "day": 40,
+            "kind": "blight",
+            "text": "Blight strikes Ryeshoal's Grain"
+          }
         ]
       }
     },
     {
-      "id": "garden-busy",
-      "scene": "garden",
-      "viewport": { "w": 1000, "h": 640 },
-      "now": 2400,
+      "id": "sim-island",
+      "scene": "sim",
+      "viewport": {
+        "w": 1200,
+        "h": 820
+      },
+      "now": 1400,
       "state": {
-        "camera": { "x": 1200, "y": 900, "zoom": 0.9 },
-        "warmupFrames": 30,
-        "critters": [
-          { "x": 1120, "y": 880, "species": "blob", "state": "linked" },
-          { "x": 1260, "y": 940, "species": "sprout", "state": "linked" },
-          { "x": 900, "y": 720, "species": "blob", "state": "happy" },
-          { "x": 1480, "y": 760, "species": "sprout", "state": "idle" },
-          { "x": 1000, "y": 1080, "species": "sprout", "state": "happy" },
-          { "x": 1560, "y": 1040, "species": "blob", "state": "idle" },
-          { "x": 760, "y": 980, "species": "blob", "state": "idle" },
-          { "x": 1380, "y": 1120, "species": "sprout", "state": "idle" },
-          { "x": 1300, "y": 640, "species": "blob", "state": "happy" }
+        "camera": {
+          "x": 4800,
+          "y": 3400,
+          "zoom": 0.18
+        },
+        "select": {
+          "kind": "island",
+          "id": "harvestholm"
+        },
+        "islands": [
+          {
+            "id": "silverpeak",
+            "x": 2746,
+            "y": 5059,
+            "name": "Silverpeak",
+            "type": "mining",
+            "color": "#c9cdd6",
+            "primary": "PreciousMetal",
+            "secondary": "Iron",
+            "produces": [
+              "LuxuryGoods"
+            ],
+            "k": 94,
+            "population": 67,
+            "civ": 0.31
+          },
+          {
+            "id": "anvilfield",
+            "x": 8398,
+            "y": 4765,
+            "name": "Keelpeak",
+            "type": "shipyard",
+            "color": "#b08a5a",
+            "primary": "Iron",
+            "secondary": "Wood",
+            "produces": [
+              "Weapons",
+              "Ships"
+            ],
+            "k": 98,
+            "population": 40,
+            "civ": 0.58
+          },
+          {
+            "id": "droverhaven",
+            "x": 9007,
+            "y": 4157,
+            "name": "Droverhaven",
+            "type": "ranch",
+            "color": "#cf9b6a",
+            "primary": "Meat",
+            "secondary": "Grain",
+            "produces": [
+              "Food"
+            ],
+            "k": 129,
+            "population": 48,
+            "civ": 0.8
+          },
+          {
+            "id": "maplecove",
+            "x": 8419,
+            "y": 4993,
+            "name": "Maplecove",
+            "type": "forest",
+            "color": "#6cbf5a",
+            "primary": "Wood",
+            "secondary": "Iron",
+            "produces": [
+              "Weapons"
+            ],
+            "k": 112,
+            "population": 56,
+            "civ": 0.67
+          },
+          {
+            "id": "barleycrag",
+            "x": 7656,
+            "y": 4187,
+            "name": "Barleycrag",
+            "type": "plantation",
+            "color": "#d9c25a",
+            "primary": "Grain",
+            "secondary": "Wood",
+            "produces": [
+              "Ale",
+              "Food"
+            ],
+            "k": 133,
+            "population": 72,
+            "civ": 0.56,
+            "blight": "Grain"
+          },
+          {
+            "id": "harvestholm",
+            "x": 7570,
+            "y": 4744,
+            "name": "Harvestholm",
+            "type": "plantation",
+            "color": "#d9c25a",
+            "primary": "Grain",
+            "secondary": "Meat",
+            "produces": [
+              "Food"
+            ],
+            "k": 140,
+            "population": 132,
+            "civ": 0.66,
+            "gold": 5200,
+            "plague": true,
+            "stock": {
+              "Grain": 1500,
+              "Wood": 120,
+              "Meat": 410,
+              "Fiber": 60,
+              "Iron": 40,
+              "PreciousMetal": 12,
+              "Food": 520,
+              "Ale": 80,
+              "Clothing": 130,
+              "Weapons": 20,
+              "LuxuryGoods": 45,
+              "Ships": 0
+            },
+            "buy": {
+              "Grain": 1.4,
+              "Wood": 3.1,
+              "Meat": 2.2,
+              "Fiber": 3.3,
+              "Iron": 6.4,
+              "PreciousMetal": 15.5,
+              "Food": 2.9,
+              "Ale": 8.2,
+              "Clothing": 10.1,
+              "Weapons": 20.5,
+              "LuxuryGoods": 41,
+              "Ships": 1210
+            },
+            "sell": {
+              "Grain": 1.7,
+              "Wood": 3.8,
+              "Meat": 2.7,
+              "Fiber": 4,
+              "Iron": 7.8,
+              "PreciousMetal": 19,
+              "Food": 3.5,
+              "Ale": 10,
+              "Clothing": 12.3,
+              "Weapons": 25,
+              "LuxuryGoods": 49,
+              "Ships": 1390
+            },
+            "dockedShipIds": [
+              "s2"
+            ],
+            "allies": [
+              {
+                "id": "anvilfield",
+                "v": 0.82
+              },
+              {
+                "id": "maplecove",
+                "v": 0.64
+              }
+            ],
+            "rivals": [
+              {
+                "id": "droverhaven",
+                "v": -0.58
+              },
+              {
+                "id": "meadowridge",
+                "v": -0.44
+              }
+            ]
+          },
+          {
+            "id": "elmvale",
+            "x": 9177,
+            "y": 4713,
+            "name": "Elmvale",
+            "type": "forest",
+            "color": "#6cbf5a",
+            "primary": "Wood",
+            "secondary": "Grain",
+            "produces": [
+              "Ale",
+              "Food"
+            ],
+            "k": 125,
+            "population": 61,
+            "civ": 0.77
+          },
+          {
+            "id": "forgereach",
+            "x": 8566,
+            "y": 4636,
+            "name": "Forgereach",
+            "type": "mining",
+            "color": "#8e9aa6",
+            "primary": "Iron",
+            "secondary": "Wood",
+            "produces": [
+              "Weapons"
+            ],
+            "k": 95,
+            "population": 73,
+            "civ": 0.41
+          },
+          {
+            "id": "meadowridge",
+            "x": 4273,
+            "y": 4253,
+            "name": "Meadowridge",
+            "type": "plantation",
+            "color": "#d9c25a",
+            "primary": "Grain",
+            "secondary": "Wood",
+            "produces": [
+              "Ale",
+              "Food"
+            ],
+            "k": 125,
+            "population": 91,
+            "civ": 0.71
+          },
+          {
+            "id": "thornlanding",
+            "x": 4402,
+            "y": 4136,
+            "name": "Harborcliff",
+            "type": "shipyard",
+            "color": "#b08a5a",
+            "primary": "Wood",
+            "secondary": "Iron",
+            "produces": [
+              "Weapons",
+              "Ships"
+            ],
+            "k": 99,
+            "population": 57,
+            "civ": 0.57
+          },
+          {
+            "id": "cattlehold",
+            "x": 7182,
+            "y": 1728,
+            "name": "Cattlehold",
+            "type": "ranch",
+            "color": "#cf9b6a",
+            "primary": "Meat",
+            "secondary": "Fiber",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 132,
+            "population": 64,
+            "civ": 0.5
+          },
+          {
+            "id": "brightcliff",
+            "x": 6639,
+            "y": 1659,
+            "name": "Brightcliff",
+            "type": "mining",
+            "color": "#c9cdd6",
+            "primary": "PreciousMetal",
+            "secondary": "Fiber",
+            "produces": [
+              "LuxuryGoods",
+              "Clothing"
+            ],
+            "k": 92,
+            "population": 76,
+            "civ": 0.83
+          },
+          {
+            "id": "grovewatch",
+            "x": 7629,
+            "y": 1756,
+            "name": "Grovewatch",
+            "type": "forest",
+            "color": "#6cbf5a",
+            "primary": "Wood",
+            "secondary": "Fiber",
+            "produces": [
+              "Clothing"
+            ],
+            "k": 122,
+            "population": 114,
+            "civ": 0.81
+          },
+          {
+            "id": "pearlstrand",
+            "x": 6869,
+            "y": 1773,
+            "name": "Pearlstrand",
+            "type": "mining",
+            "color": "#c9cdd6",
+            "primary": "PreciousMetal",
+            "secondary": "Grain",
+            "produces": [
+              "LuxuryGoods",
+              "Food"
+            ],
+            "k": 95,
+            "population": 62,
+            "civ": 0.5,
+            "plague": true
+          },
+          {
+            "id": "elkpoint",
+            "x": 3105,
+            "y": 1613,
+            "name": "Elkpoint",
+            "type": "ranch",
+            "color": "#cf9b6a",
+            "primary": "Meat",
+            "secondary": "Grain",
+            "produces": [
+              "Food"
+            ],
+            "k": 132,
+            "population": 123,
+            "civ": 0.27
+          },
+          {
+            "id": "harvestmoor",
+            "x": 2472,
+            "y": 1582,
+            "name": "Harvestmoor",
+            "type": "plantation",
+            "color": "#d9c25a",
+            "primary": "Grain",
+            "secondary": "Fiber",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 136,
+            "population": 112,
+            "civ": 0.26
+          },
+          {
+            "id": "furrowport",
+            "x": 2738,
+            "y": 2090,
+            "name": "Furrowport",
+            "type": "plantation",
+            "color": "#d9c25a",
+            "primary": "Grain",
+            "secondary": "Meat",
+            "produces": [
+              "Food"
+            ],
+            "k": 142,
+            "population": 45,
+            "civ": 0.22
+          },
+          {
+            "id": "stagford",
+            "x": 3609,
+            "y": 1306,
+            "name": "Stagford",
+            "type": "ranch",
+            "color": "#cf9b6a",
+            "primary": "Meat",
+            "secondary": "Wood",
+            "produces": [
+              "Food"
+            ],
+            "k": 131,
+            "population": 58,
+            "civ": 0.4
+          },
+          {
+            "id": "huntwick",
+            "x": 2636,
+            "y": 3709,
+            "name": "Huntwick",
+            "type": "ranch",
+            "color": "#cf9b6a",
+            "primary": "Meat",
+            "secondary": "Grain",
+            "produces": [
+              "Food"
+            ],
+            "k": 127,
+            "population": 83,
+            "civ": 0.82
+          },
+          {
+            "id": "herdstead",
+            "x": 2490,
+            "y": 3197,
+            "name": "Herdstead",
+            "type": "ranch",
+            "color": "#cf9b6a",
+            "primary": "Meat",
+            "secondary": "Iron",
+            "produces": [
+              "Food"
+            ],
+            "k": 134,
+            "population": 101,
+            "civ": 0.26
+          },
+          {
+            "id": "flaxbay",
+            "x": 3009,
+            "y": 3758,
+            "name": "Flaxbay",
+            "type": "plantation",
+            "color": "#b6c96a",
+            "primary": "Fiber",
+            "secondary": "Grain",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 133,
+            "population": 43,
+            "civ": 0.64
+          },
+          {
+            "id": "weaverfell",
+            "x": 3183,
+            "y": 3522,
+            "name": "Weaverfell",
+            "type": "plantation",
+            "color": "#b6c96a",
+            "primary": "Fiber",
+            "secondary": "Meat",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 134,
+            "population": 64,
+            "civ": 0.46
+          },
+          {
+            "id": "ryeshoal",
+            "x": 2860,
+            "y": 4324,
+            "name": "Ryeshoal",
+            "type": "plantation",
+            "color": "#d9c25a",
+            "primary": "Grain",
+            "secondary": "Wood",
+            "produces": [
+              "Ale",
+              "Food"
+            ],
+            "k": 142,
+            "population": 123,
+            "civ": 0.65,
+            "blight": "Grain"
+          },
+          {
+            "id": "pearlmere",
+            "x": 8572,
+            "y": 2175,
+            "name": "Pearlmere",
+            "type": "mining",
+            "color": "#c9cdd6",
+            "primary": "PreciousMetal",
+            "secondary": "Iron",
+            "produces": [
+              "LuxuryGoods"
+            ],
+            "k": 90,
+            "population": 75,
+            "civ": 0.44
+          },
+          {
+            "id": "orepeak",
+            "x": 8829,
+            "y": 2442,
+            "name": "Orepeak",
+            "type": "mining",
+            "color": "#8e9aa6",
+            "primary": "Iron",
+            "secondary": "PreciousMetal",
+            "produces": [
+              "LuxuryGoods"
+            ],
+            "k": 108,
+            "population": 99,
+            "civ": 0.05
+          },
+          {
+            "id": "threadfield",
+            "x": 8261,
+            "y": 2693,
+            "name": "Threadfield",
+            "type": "plantation",
+            "color": "#b6c96a",
+            "primary": "Fiber",
+            "secondary": "Grain",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 129,
+            "population": 120,
+            "civ": 0.7
+          },
+          {
+            "id": "coalhaven",
+            "x": 9255,
+            "y": 2342,
+            "name": "Dockshoal",
+            "type": "shipyard",
+            "color": "#b08a5a",
+            "primary": "Iron",
+            "secondary": "Wood",
+            "produces": [
+              "Weapons",
+              "Ships"
+            ],
+            "k": 98,
+            "population": 52,
+            "civ": 0.15
+          },
+          {
+            "id": "gemcove",
+            "x": 4474,
+            "y": 2115,
+            "name": "Gemcove",
+            "type": "mining",
+            "color": "#c9cdd6",
+            "primary": "PreciousMetal",
+            "secondary": "Meat",
+            "produces": [
+              "LuxuryGoods",
+              "Food"
+            ],
+            "k": 93,
+            "population": 30,
+            "civ": 0.2
+          },
+          {
+            "id": "quartzcrag",
+            "x": 4491,
+            "y": 1531,
+            "name": "Quartzcrag",
+            "type": "mining",
+            "color": "#c9cdd6",
+            "primary": "PreciousMetal",
+            "secondary": "Fiber",
+            "produces": [
+              "LuxuryGoods",
+              "Clothing"
+            ],
+            "k": 95,
+            "population": 58,
+            "civ": 0.8
+          },
+          {
+            "id": "fleeceholm",
+            "x": 4269,
+            "y": 1885,
+            "name": "Fleeceholm",
+            "type": "plantation",
+            "color": "#b6c96a",
+            "primary": "Fiber",
+            "secondary": "PreciousMetal",
+            "produces": [
+              "LuxuryGoods",
+              "Clothing"
+            ],
+            "k": 137,
+            "population": 122,
+            "civ": 0.77
+          },
+          {
+            "id": "flaxvale",
+            "x": 7108,
+            "y": 4597,
+            "name": "Flaxvale",
+            "type": "plantation",
+            "color": "#b6c96a",
+            "primary": "Fiber",
+            "secondary": "Grain",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 138,
+            "population": 117,
+            "civ": 0.18
+          },
+          {
+            "id": "weaverreach",
+            "x": 6786,
+            "y": 4228,
+            "name": "Weaverreach",
+            "type": "plantation",
+            "color": "#b6c96a",
+            "primary": "Fiber",
+            "secondary": "Meat",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 142,
+            "population": 99,
+            "civ": 0.56
+          },
+          {
+            "id": "cottonridge",
+            "x": 6425,
+            "y": 3136,
+            "name": "Cottonridge",
+            "type": "plantation",
+            "color": "#b6c96a",
+            "primary": "Fiber",
+            "secondary": "Wood",
+            "produces": [
+              "Clothing"
+            ],
+            "k": 142,
+            "population": 75,
+            "civ": 0.69
+          },
+          {
+            "id": "woollanding",
+            "x": 6467,
+            "y": 3665,
+            "name": "Woollanding",
+            "type": "plantation",
+            "color": "#b6c96a",
+            "primary": "Fiber",
+            "secondary": "Grain",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 128,
+            "population": 92,
+            "civ": 0.08
+          },
+          {
+            "id": "cedarhold",
+            "x": 5835,
+            "y": 3192,
+            "name": "Mastlanding",
+            "type": "shipyard",
+            "color": "#b08a5a",
+            "primary": "Wood",
+            "secondary": "Iron",
+            "produces": [
+              "Weapons",
+              "Ships"
+            ],
+            "k": 109,
+            "population": 67,
+            "civ": 0.52
+          },
+          {
+            "id": "onyxcliff",
+            "x": 5862,
+            "y": 4780,
+            "name": "Onyxcliff",
+            "type": "mining",
+            "color": "#c9cdd6",
+            "primary": "PreciousMetal",
+            "secondary": "Iron",
+            "produces": [
+              "LuxuryGoods"
+            ],
+            "k": 102,
+            "population": 57,
+            "civ": 0.67
+          },
+          {
+            "id": "coalwatch",
+            "x": 5890,
+            "y": 5371,
+            "name": "Coalwatch",
+            "type": "mining",
+            "color": "#8e9aa6",
+            "primary": "Iron",
+            "secondary": "Meat",
+            "produces": [
+              "Food"
+            ],
+            "k": 99,
+            "population": 60,
+            "civ": 0.53
+          },
+          {
+            "id": "stagstrand",
+            "x": 5108,
+            "y": 4806,
+            "name": "Stagstrand",
+            "type": "ranch",
+            "color": "#cf9b6a",
+            "primary": "Meat",
+            "secondary": "Grain",
+            "produces": [
+              "Food"
+            ],
+            "k": 136,
+            "population": 55,
+            "civ": 0.17
+          },
+          {
+            "id": "meadowpoint",
+            "x": 5699,
+            "y": 5016,
+            "name": "Meadowpoint",
+            "type": "plantation",
+            "color": "#d9c25a",
+            "primary": "Grain",
+            "secondary": "Iron",
+            "produces": [
+              "Food"
+            ],
+            "k": 127,
+            "population": 76,
+            "civ": 0.19,
+            "plague": true
+          },
+          {
+            "id": "fleecemoor",
+            "x": 5921,
+            "y": 5051,
+            "name": "Fleecemoor",
+            "type": "plantation",
+            "color": "#b6c96a",
+            "primary": "Fiber",
+            "secondary": "Meat",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 133,
+            "population": 40,
+            "civ": 0.43
+          },
+          {
+            "id": "oakport",
+            "x": 5687,
+            "y": 1794,
+            "name": "Oakport",
+            "type": "forest",
+            "color": "#6cbf5a",
+            "primary": "Wood",
+            "secondary": "Grain",
+            "produces": [
+              "Ale",
+              "Food"
+            ],
+            "k": 122,
+            "population": 46,
+            "civ": 0.1
+          },
+          {
+            "id": "timberford",
+            "x": 5475,
+            "y": 2040,
+            "name": "Anchorbay",
+            "type": "shipyard",
+            "color": "#b08a5a",
+            "primary": "Wood",
+            "secondary": "Iron",
+            "produces": [
+              "Weapons",
+              "Ships"
+            ],
+            "k": 111,
+            "population": 43,
+            "civ": 0.23,
+            "blight": "Wood"
+          },
+          {
+            "id": "droverwick",
+            "x": 5084,
+            "y": 2050,
+            "name": "Droverwick",
+            "type": "ranch",
+            "color": "#cf9b6a",
+            "primary": "Meat",
+            "secondary": "Fiber",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 141,
+            "population": 88,
+            "civ": 0.76
+          },
+          {
+            "id": "maplestead",
+            "x": 5037,
+            "y": 1754,
+            "name": "Maplestead",
+            "type": "forest",
+            "color": "#6cbf5a",
+            "primary": "Wood",
+            "secondary": "PreciousMetal",
+            "produces": [
+              "LuxuryGoods"
+            ],
+            "k": 126,
+            "population": 113,
+            "civ": 0.38
+          },
+          {
+            "id": "elkbay",
+            "x": 2007,
+            "y": 2237,
+            "name": "Elkbay",
+            "type": "ranch",
+            "color": "#cf9b6a",
+            "primary": "Meat",
+            "secondary": "Grain",
+            "produces": [
+              "Food"
+            ],
+            "k": 127,
+            "population": 90,
+            "civ": 0.76
+          },
+          {
+            "id": "threadfell",
+            "x": 1514,
+            "y": 2547,
+            "name": "Threadfell",
+            "type": "plantation",
+            "color": "#b6c96a",
+            "primary": "Fiber",
+            "secondary": "Grain",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 138,
+            "population": 98,
+            "civ": 0.26
+          },
+          {
+            "id": "opalshoal",
+            "x": 1892,
+            "y": 1749,
+            "name": "Opalshoal",
+            "type": "mining",
+            "color": "#c9cdd6",
+            "primary": "PreciousMetal",
+            "secondary": "Grain",
+            "produces": [
+              "LuxuryGoods",
+              "Food"
+            ],
+            "k": 101,
+            "population": 64,
+            "civ": 0.45
+          },
+          {
+            "id": "forgemere",
+            "x": 1207,
+            "y": 1077,
+            "name": "Forgemere",
+            "type": "mining",
+            "color": "#8e9aa6",
+            "primary": "Iron",
+            "secondary": "Wood",
+            "produces": [
+              "Weapons"
+            ],
+            "k": 105,
+            "population": 77,
+            "civ": 0.49
+          },
+          {
+            "id": "emberpeak",
+            "x": 513,
+            "y": 688,
+            "name": "Emberpeak",
+            "type": "mining",
+            "color": "#8e9aa6",
+            "primary": "Iron",
+            "secondary": "Grain",
+            "produces": [
+              "Food"
+            ],
+            "k": 99,
+            "population": 71,
+            "civ": 0.25
+          },
+          {
+            "id": "fieldfield",
+            "x": 636,
+            "y": 1220,
+            "name": "Fieldfield",
+            "type": "plantation",
+            "color": "#d9c25a",
+            "primary": "Grain",
+            "secondary": "Meat",
+            "produces": [
+              "Food"
+            ],
+            "k": 142,
+            "population": 131,
+            "civ": 0.61
+          },
+          {
+            "id": "grainhaven",
+            "x": 913,
+            "y": 1438,
+            "name": "Grainhaven",
+            "type": "plantation",
+            "color": "#d9c25a",
+            "primary": "Grain",
+            "secondary": "Wood",
+            "produces": [
+              "Ale",
+              "Food"
+            ],
+            "k": 140,
+            "population": 46,
+            "civ": 0.53
+          },
+          {
+            "id": "ramcove",
+            "x": 2012,
+            "y": 1122,
+            "name": "Ramcove",
+            "type": "ranch",
+            "color": "#cf9b6a",
+            "primary": "Meat",
+            "secondary": "Wood",
+            "produces": [
+              "Food"
+            ],
+            "k": 133,
+            "population": 61,
+            "civ": 0.59
+          },
+          {
+            "id": "slagcrag",
+            "x": 1107,
+            "y": 4020,
+            "name": "Slagcrag",
+            "type": "mining",
+            "color": "#8e9aa6",
+            "primary": "Iron",
+            "secondary": "Wood",
+            "produces": [
+              "Weapons"
+            ],
+            "k": 107,
+            "population": 100,
+            "civ": 0.79
+          },
+          {
+            "id": "mapleholm",
+            "x": 905,
+            "y": 4112,
+            "name": "Mapleholm",
+            "type": "forest",
+            "color": "#6cbf5a",
+            "primary": "Wood",
+            "secondary": "Iron",
+            "produces": [
+              "Weapons"
+            ],
+            "k": 121,
+            "population": 80,
+            "civ": 0.5
+          },
+          {
+            "id": "barleyvale",
+            "x": 1030,
+            "y": 5286,
+            "name": "Barleyvale",
+            "type": "plantation",
+            "color": "#d9c25a",
+            "primary": "Grain",
+            "secondary": "Fiber",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 137,
+            "population": 85,
+            "civ": 0.54
+          },
+          {
+            "id": "onyxreach",
+            "x": 1351,
+            "y": 5787,
+            "name": "Onyxreach",
+            "type": "mining",
+            "color": "#c9cdd6",
+            "primary": "PreciousMetal",
+            "secondary": "Fiber",
+            "produces": [
+              "LuxuryGoods",
+              "Clothing"
+            ],
+            "k": 99,
+            "population": 38,
+            "civ": 0.31
+          },
+          {
+            "id": "opalridge",
+            "x": 628,
+            "y": 5070,
+            "name": "Opalridge",
+            "type": "mining",
+            "color": "#c9cdd6",
+            "primary": "PreciousMetal",
+            "secondary": "Iron",
+            "produces": [
+              "LuxuryGoods"
+            ],
+            "k": 94,
+            "population": 74,
+            "civ": 0.35
+          },
+          {
+            "id": "forgelanding",
+            "x": 854,
+            "y": 5557,
+            "name": "Forgelanding",
+            "type": "mining",
+            "color": "#8e9aa6",
+            "primary": "Iron",
+            "secondary": "Fiber",
+            "produces": [
+              "Clothing"
+            ],
+            "k": 95,
+            "population": 87,
+            "civ": 0.11
+          },
+          {
+            "id": "emberhold",
+            "x": 660,
+            "y": 5442,
+            "name": "Emberhold",
+            "type": "mining",
+            "color": "#8e9aa6",
+            "primary": "Iron",
+            "secondary": "Wood",
+            "produces": [
+              "Weapons"
+            ],
+            "k": 100,
+            "population": 33,
+            "civ": 0.75
+          },
+          {
+            "id": "thorncliff",
+            "x": 7732,
+            "y": 3398,
+            "name": "Thorncliff",
+            "type": "forest",
+            "color": "#6cbf5a",
+            "primary": "Wood",
+            "secondary": "Grain",
+            "produces": [
+              "Ale",
+              "Food"
+            ],
+            "k": 120,
+            "population": 54,
+            "civ": 0.2
+          }
         ],
-        "pairs": [[0, 1]],
-        "props": [
-          { "artId": "flower", "x": 820, "y": 1180, "r": 26, "color": "#e88ab0" },
-          { "artId": "rock", "x": 1620, "y": 640, "r": 40, "color": "#6a7079" },
-          { "artId": "sign", "x": 1180, "y": 1240, "r": 40, "color": "#b98a4a" }
+        "ships": {
+          "h0": {
+            "x": 8374,
+            "y": 4729,
+            "heading": -0.02,
+            "state": "sailing",
+            "type": "ship",
+            "homeId": "harvestholm",
+            "destId": "elmvale",
+            "reason": "trade",
+            "eta": 12,
+            "route": [
+              "elmvale"
+            ],
+            "cap": 100,
+            "used": 60,
+            "cargo": {
+              "Grain": 30,
+              "Clothing": 24
+            },
+            "gold": 200,
+            "sick": false
+          },
+          "h1": {
+            "x": 7220,
+            "y": 3259,
+            "heading": -1.803,
+            "state": "sailing",
+            "type": "ship",
+            "homeId": "harvestholm",
+            "destId": "pearlstrand",
+            "reason": "trade",
+            "eta": 12,
+            "route": [
+              "pearlstrand"
+            ],
+            "cap": 100,
+            "used": 60,
+            "cargo": {
+              "Grain": 30,
+              "Clothing": 24
+            },
+            "gold": 200,
+            "sick": false
+          },
+          "h2": {
+            "x": 5377,
+            "y": 4133,
+            "heading": -2.87,
+            "state": "sailing",
+            "type": "ship",
+            "homeId": "harvestholm",
+            "destId": "weaverfell",
+            "reason": "trade",
+            "eta": 12,
+            "route": [
+              "weaverfell"
+            ],
+            "cap": 100,
+            "used": 60,
+            "cargo": {
+              "Grain": 30,
+              "Clothing": 24
+            },
+            "gold": 200,
+            "sick": false
+          },
+          "h3": {
+            "x": 7178,
+            "y": 4486,
+            "heading": -2.56,
+            "state": "sailing",
+            "type": "ship",
+            "homeId": "harvestholm",
+            "destId": "weaverreach",
+            "reason": "trade",
+            "eta": 12,
+            "route": [
+              "weaverreach"
+            ],
+            "cap": 100,
+            "used": 60,
+            "cargo": {
+              "Grain": 30,
+              "Clothing": 24
+            },
+            "gold": 200,
+            "sick": false
+          },
+          "s2": {
+            "x": 7570,
+            "y": 4744,
+            "heading": 3.14,
+            "state": "docked",
+            "type": "ship",
+            "homeId": "cattlehold",
+            "destId": "harvestholm",
+            "reason": "food",
+            "eta": 0,
+            "route": [
+              "harvestholm"
+            ],
+            "cap": 100,
+            "used": 12,
+            "cargo": {
+              "Weapons": 12
+            },
+            "gold": 60,
+            "sick": true
+          },
+          "s1": {
+            "x": 9677,
+            "y": 5013,
+            "heading": -2.814,
+            "state": "sailing",
+            "type": "ship",
+            "homeId": "elmvale",
+            "destId": "forgereach",
+            "reason": "trade",
+            "eta": 12,
+            "route": [
+              "forgereach",
+              "maplecove"
+            ],
+            "cap": 100,
+            "used": 82,
+            "cargo": {
+              "Ale": 44,
+              "Grain": 38
+            },
+            "gold": 260,
+            "sick": false
+          }
+        },
+        "events": [
+          {
+            "day": 34,
+            "kind": "blight",
+            "text": "Blight strikes Barleycrag's Grain"
+          },
+          {
+            "day": 35,
+            "kind": "wreck",
+            "text": "A Forgereach ship was lost at sea"
+          },
+          {
+            "day": 36,
+            "kind": "plague",
+            "text": "Plague breaks out on Harvestholm"
+          },
+          {
+            "day": 38,
+            "kind": "recover",
+            "text": "Flaxbay's fields recover"
+          },
+          {
+            "day": 39,
+            "kind": "wreck",
+            "text": "A Brightcliff ship was lost at sea"
+          },
+          {
+            "day": 40,
+            "kind": "blight",
+            "text": "Blight strikes Ryeshoal's Grain"
+          }
         ]
       }
     },
     {
-      "id": "critters",
-      "scene": "garden",
-      "viewport": { "w": 760, "h": 520 },
-      "now": 800,
+      "id": "sim-ship",
+      "scene": "sim",
+      "viewport": {
+        "w": 1120,
+        "h": 840
+      },
+      "now": 1600,
       "state": {
-        "camera": { "x": 1200, "y": 900, "zoom": 1.5 },
-        "critters": [
-          { "x": 1110, "y": 820, "species": "blob", "state": "idle" },
-          { "x": 1290, "y": 820, "species": "sprout", "state": "happy" },
-          { "x": 1110, "y": 980, "species": "blob", "state": "happy" },
-          { "x": 1290, "y": 980, "species": "sprout", "state": "idle" }
+        "camera": {
+          "x": 9427,
+          "y": 4863,
+          "zoom": 1.1
+        },
+        "select": {
+          "kind": "ship",
+          "id": "s1"
+        },
+        "islands": [
+          {
+            "id": "silverpeak",
+            "x": 2746,
+            "y": 5059,
+            "name": "Silverpeak",
+            "type": "mining",
+            "color": "#c9cdd6",
+            "primary": "PreciousMetal",
+            "secondary": "Iron",
+            "produces": [
+              "LuxuryGoods"
+            ],
+            "k": 94,
+            "population": 67,
+            "civ": 0.31
+          },
+          {
+            "id": "anvilfield",
+            "x": 8398,
+            "y": 4765,
+            "name": "Keelpeak",
+            "type": "shipyard",
+            "color": "#b08a5a",
+            "primary": "Iron",
+            "secondary": "Wood",
+            "produces": [
+              "Weapons",
+              "Ships"
+            ],
+            "k": 98,
+            "population": 40,
+            "civ": 0.58
+          },
+          {
+            "id": "droverhaven",
+            "x": 9007,
+            "y": 4157,
+            "name": "Droverhaven",
+            "type": "ranch",
+            "color": "#cf9b6a",
+            "primary": "Meat",
+            "secondary": "Grain",
+            "produces": [
+              "Food"
+            ],
+            "k": 129,
+            "population": 48,
+            "civ": 0.8
+          },
+          {
+            "id": "maplecove",
+            "x": 8419,
+            "y": 4993,
+            "name": "Maplecove",
+            "type": "forest",
+            "color": "#6cbf5a",
+            "primary": "Wood",
+            "secondary": "Iron",
+            "produces": [
+              "Weapons"
+            ],
+            "k": 112,
+            "population": 56,
+            "civ": 0.67
+          },
+          {
+            "id": "barleycrag",
+            "x": 7656,
+            "y": 4187,
+            "name": "Barleycrag",
+            "type": "plantation",
+            "color": "#d9c25a",
+            "primary": "Grain",
+            "secondary": "Wood",
+            "produces": [
+              "Ale",
+              "Food"
+            ],
+            "k": 133,
+            "population": 72,
+            "civ": 0.56,
+            "blight": "Grain"
+          },
+          {
+            "id": "harvestholm",
+            "x": 7570,
+            "y": 4744,
+            "name": "Harvestholm",
+            "type": "plantation",
+            "color": "#d9c25a",
+            "primary": "Grain",
+            "secondary": "Meat",
+            "produces": [
+              "Food"
+            ],
+            "k": 140,
+            "population": 125,
+            "civ": 0.34
+          },
+          {
+            "id": "elmvale",
+            "x": 9177,
+            "y": 4713,
+            "name": "Elmvale",
+            "type": "forest",
+            "color": "#6cbf5a",
+            "primary": "Wood",
+            "secondary": "Grain",
+            "produces": [
+              "Ale",
+              "Food"
+            ],
+            "k": 125,
+            "population": 61,
+            "civ": 0.77
+          },
+          {
+            "id": "forgereach",
+            "x": 8566,
+            "y": 4636,
+            "name": "Forgereach",
+            "type": "mining",
+            "color": "#8e9aa6",
+            "primary": "Iron",
+            "secondary": "Wood",
+            "produces": [
+              "Weapons"
+            ],
+            "k": 95,
+            "population": 73,
+            "civ": 0.41
+          },
+          {
+            "id": "meadowridge",
+            "x": 4273,
+            "y": 4253,
+            "name": "Meadowridge",
+            "type": "plantation",
+            "color": "#d9c25a",
+            "primary": "Grain",
+            "secondary": "Wood",
+            "produces": [
+              "Ale",
+              "Food"
+            ],
+            "k": 125,
+            "population": 91,
+            "civ": 0.71
+          },
+          {
+            "id": "thornlanding",
+            "x": 4402,
+            "y": 4136,
+            "name": "Harborcliff",
+            "type": "shipyard",
+            "color": "#b08a5a",
+            "primary": "Wood",
+            "secondary": "Iron",
+            "produces": [
+              "Weapons",
+              "Ships"
+            ],
+            "k": 99,
+            "population": 57,
+            "civ": 0.57
+          },
+          {
+            "id": "cattlehold",
+            "x": 7182,
+            "y": 1728,
+            "name": "Cattlehold",
+            "type": "ranch",
+            "color": "#cf9b6a",
+            "primary": "Meat",
+            "secondary": "Fiber",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 132,
+            "population": 64,
+            "civ": 0.5
+          },
+          {
+            "id": "brightcliff",
+            "x": 6639,
+            "y": 1659,
+            "name": "Brightcliff",
+            "type": "mining",
+            "color": "#c9cdd6",
+            "primary": "PreciousMetal",
+            "secondary": "Fiber",
+            "produces": [
+              "LuxuryGoods",
+              "Clothing"
+            ],
+            "k": 92,
+            "population": 76,
+            "civ": 0.83
+          },
+          {
+            "id": "grovewatch",
+            "x": 7629,
+            "y": 1756,
+            "name": "Grovewatch",
+            "type": "forest",
+            "color": "#6cbf5a",
+            "primary": "Wood",
+            "secondary": "Fiber",
+            "produces": [
+              "Clothing"
+            ],
+            "k": 122,
+            "population": 114,
+            "civ": 0.81
+          },
+          {
+            "id": "pearlstrand",
+            "x": 6869,
+            "y": 1773,
+            "name": "Pearlstrand",
+            "type": "mining",
+            "color": "#c9cdd6",
+            "primary": "PreciousMetal",
+            "secondary": "Grain",
+            "produces": [
+              "LuxuryGoods",
+              "Food"
+            ],
+            "k": 95,
+            "population": 62,
+            "civ": 0.5,
+            "plague": true
+          },
+          {
+            "id": "elkpoint",
+            "x": 3105,
+            "y": 1613,
+            "name": "Elkpoint",
+            "type": "ranch",
+            "color": "#cf9b6a",
+            "primary": "Meat",
+            "secondary": "Grain",
+            "produces": [
+              "Food"
+            ],
+            "k": 132,
+            "population": 123,
+            "civ": 0.27
+          },
+          {
+            "id": "harvestmoor",
+            "x": 2472,
+            "y": 1582,
+            "name": "Harvestmoor",
+            "type": "plantation",
+            "color": "#d9c25a",
+            "primary": "Grain",
+            "secondary": "Fiber",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 136,
+            "population": 112,
+            "civ": 0.26
+          },
+          {
+            "id": "furrowport",
+            "x": 2738,
+            "y": 2090,
+            "name": "Furrowport",
+            "type": "plantation",
+            "color": "#d9c25a",
+            "primary": "Grain",
+            "secondary": "Meat",
+            "produces": [
+              "Food"
+            ],
+            "k": 142,
+            "population": 45,
+            "civ": 0.22
+          },
+          {
+            "id": "stagford",
+            "x": 3609,
+            "y": 1306,
+            "name": "Stagford",
+            "type": "ranch",
+            "color": "#cf9b6a",
+            "primary": "Meat",
+            "secondary": "Wood",
+            "produces": [
+              "Food"
+            ],
+            "k": 131,
+            "population": 58,
+            "civ": 0.4
+          },
+          {
+            "id": "huntwick",
+            "x": 2636,
+            "y": 3709,
+            "name": "Huntwick",
+            "type": "ranch",
+            "color": "#cf9b6a",
+            "primary": "Meat",
+            "secondary": "Grain",
+            "produces": [
+              "Food"
+            ],
+            "k": 127,
+            "population": 83,
+            "civ": 0.82
+          },
+          {
+            "id": "herdstead",
+            "x": 2490,
+            "y": 3197,
+            "name": "Herdstead",
+            "type": "ranch",
+            "color": "#cf9b6a",
+            "primary": "Meat",
+            "secondary": "Iron",
+            "produces": [
+              "Food"
+            ],
+            "k": 134,
+            "population": 101,
+            "civ": 0.26
+          },
+          {
+            "id": "flaxbay",
+            "x": 3009,
+            "y": 3758,
+            "name": "Flaxbay",
+            "type": "plantation",
+            "color": "#b6c96a",
+            "primary": "Fiber",
+            "secondary": "Grain",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 133,
+            "population": 43,
+            "civ": 0.64
+          },
+          {
+            "id": "weaverfell",
+            "x": 3183,
+            "y": 3522,
+            "name": "Weaverfell",
+            "type": "plantation",
+            "color": "#b6c96a",
+            "primary": "Fiber",
+            "secondary": "Meat",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 134,
+            "population": 64,
+            "civ": 0.46
+          },
+          {
+            "id": "ryeshoal",
+            "x": 2860,
+            "y": 4324,
+            "name": "Ryeshoal",
+            "type": "plantation",
+            "color": "#d9c25a",
+            "primary": "Grain",
+            "secondary": "Wood",
+            "produces": [
+              "Ale",
+              "Food"
+            ],
+            "k": 142,
+            "population": 123,
+            "civ": 0.65,
+            "blight": "Grain"
+          },
+          {
+            "id": "pearlmere",
+            "x": 8572,
+            "y": 2175,
+            "name": "Pearlmere",
+            "type": "mining",
+            "color": "#c9cdd6",
+            "primary": "PreciousMetal",
+            "secondary": "Iron",
+            "produces": [
+              "LuxuryGoods"
+            ],
+            "k": 90,
+            "population": 75,
+            "civ": 0.44
+          },
+          {
+            "id": "orepeak",
+            "x": 8829,
+            "y": 2442,
+            "name": "Orepeak",
+            "type": "mining",
+            "color": "#8e9aa6",
+            "primary": "Iron",
+            "secondary": "PreciousMetal",
+            "produces": [
+              "LuxuryGoods"
+            ],
+            "k": 108,
+            "population": 99,
+            "civ": 0.05
+          },
+          {
+            "id": "threadfield",
+            "x": 8261,
+            "y": 2693,
+            "name": "Threadfield",
+            "type": "plantation",
+            "color": "#b6c96a",
+            "primary": "Fiber",
+            "secondary": "Grain",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 129,
+            "population": 120,
+            "civ": 0.7
+          },
+          {
+            "id": "coalhaven",
+            "x": 9255,
+            "y": 2342,
+            "name": "Dockshoal",
+            "type": "shipyard",
+            "color": "#b08a5a",
+            "primary": "Iron",
+            "secondary": "Wood",
+            "produces": [
+              "Weapons",
+              "Ships"
+            ],
+            "k": 98,
+            "population": 52,
+            "civ": 0.15
+          },
+          {
+            "id": "gemcove",
+            "x": 4474,
+            "y": 2115,
+            "name": "Gemcove",
+            "type": "mining",
+            "color": "#c9cdd6",
+            "primary": "PreciousMetal",
+            "secondary": "Meat",
+            "produces": [
+              "LuxuryGoods",
+              "Food"
+            ],
+            "k": 93,
+            "population": 30,
+            "civ": 0.2
+          },
+          {
+            "id": "quartzcrag",
+            "x": 4491,
+            "y": 1531,
+            "name": "Quartzcrag",
+            "type": "mining",
+            "color": "#c9cdd6",
+            "primary": "PreciousMetal",
+            "secondary": "Fiber",
+            "produces": [
+              "LuxuryGoods",
+              "Clothing"
+            ],
+            "k": 95,
+            "population": 58,
+            "civ": 0.8
+          },
+          {
+            "id": "fleeceholm",
+            "x": 4269,
+            "y": 1885,
+            "name": "Fleeceholm",
+            "type": "plantation",
+            "color": "#b6c96a",
+            "primary": "Fiber",
+            "secondary": "PreciousMetal",
+            "produces": [
+              "LuxuryGoods",
+              "Clothing"
+            ],
+            "k": 137,
+            "population": 122,
+            "civ": 0.77
+          },
+          {
+            "id": "flaxvale",
+            "x": 7108,
+            "y": 4597,
+            "name": "Flaxvale",
+            "type": "plantation",
+            "color": "#b6c96a",
+            "primary": "Fiber",
+            "secondary": "Grain",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 138,
+            "population": 117,
+            "civ": 0.18
+          },
+          {
+            "id": "weaverreach",
+            "x": 6786,
+            "y": 4228,
+            "name": "Weaverreach",
+            "type": "plantation",
+            "color": "#b6c96a",
+            "primary": "Fiber",
+            "secondary": "Meat",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 142,
+            "population": 99,
+            "civ": 0.56
+          },
+          {
+            "id": "cottonridge",
+            "x": 6425,
+            "y": 3136,
+            "name": "Cottonridge",
+            "type": "plantation",
+            "color": "#b6c96a",
+            "primary": "Fiber",
+            "secondary": "Wood",
+            "produces": [
+              "Clothing"
+            ],
+            "k": 142,
+            "population": 75,
+            "civ": 0.69
+          },
+          {
+            "id": "woollanding",
+            "x": 6467,
+            "y": 3665,
+            "name": "Woollanding",
+            "type": "plantation",
+            "color": "#b6c96a",
+            "primary": "Fiber",
+            "secondary": "Grain",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 128,
+            "population": 92,
+            "civ": 0.08
+          },
+          {
+            "id": "cedarhold",
+            "x": 5835,
+            "y": 3192,
+            "name": "Mastlanding",
+            "type": "shipyard",
+            "color": "#b08a5a",
+            "primary": "Wood",
+            "secondary": "Iron",
+            "produces": [
+              "Weapons",
+              "Ships"
+            ],
+            "k": 109,
+            "population": 67,
+            "civ": 0.52
+          },
+          {
+            "id": "onyxcliff",
+            "x": 5862,
+            "y": 4780,
+            "name": "Onyxcliff",
+            "type": "mining",
+            "color": "#c9cdd6",
+            "primary": "PreciousMetal",
+            "secondary": "Iron",
+            "produces": [
+              "LuxuryGoods"
+            ],
+            "k": 102,
+            "population": 57,
+            "civ": 0.67
+          },
+          {
+            "id": "coalwatch",
+            "x": 5890,
+            "y": 5371,
+            "name": "Coalwatch",
+            "type": "mining",
+            "color": "#8e9aa6",
+            "primary": "Iron",
+            "secondary": "Meat",
+            "produces": [
+              "Food"
+            ],
+            "k": 99,
+            "population": 60,
+            "civ": 0.53
+          },
+          {
+            "id": "stagstrand",
+            "x": 5108,
+            "y": 4806,
+            "name": "Stagstrand",
+            "type": "ranch",
+            "color": "#cf9b6a",
+            "primary": "Meat",
+            "secondary": "Grain",
+            "produces": [
+              "Food"
+            ],
+            "k": 136,
+            "population": 55,
+            "civ": 0.17
+          },
+          {
+            "id": "meadowpoint",
+            "x": 5699,
+            "y": 5016,
+            "name": "Meadowpoint",
+            "type": "plantation",
+            "color": "#d9c25a",
+            "primary": "Grain",
+            "secondary": "Iron",
+            "produces": [
+              "Food"
+            ],
+            "k": 127,
+            "population": 76,
+            "civ": 0.19,
+            "plague": true
+          },
+          {
+            "id": "fleecemoor",
+            "x": 5921,
+            "y": 5051,
+            "name": "Fleecemoor",
+            "type": "plantation",
+            "color": "#b6c96a",
+            "primary": "Fiber",
+            "secondary": "Meat",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 133,
+            "population": 40,
+            "civ": 0.43
+          },
+          {
+            "id": "oakport",
+            "x": 5687,
+            "y": 1794,
+            "name": "Oakport",
+            "type": "forest",
+            "color": "#6cbf5a",
+            "primary": "Wood",
+            "secondary": "Grain",
+            "produces": [
+              "Ale",
+              "Food"
+            ],
+            "k": 122,
+            "population": 46,
+            "civ": 0.1
+          },
+          {
+            "id": "timberford",
+            "x": 5475,
+            "y": 2040,
+            "name": "Anchorbay",
+            "type": "shipyard",
+            "color": "#b08a5a",
+            "primary": "Wood",
+            "secondary": "Iron",
+            "produces": [
+              "Weapons",
+              "Ships"
+            ],
+            "k": 111,
+            "population": 43,
+            "civ": 0.23,
+            "blight": "Wood"
+          },
+          {
+            "id": "droverwick",
+            "x": 5084,
+            "y": 2050,
+            "name": "Droverwick",
+            "type": "ranch",
+            "color": "#cf9b6a",
+            "primary": "Meat",
+            "secondary": "Fiber",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 141,
+            "population": 88,
+            "civ": 0.76
+          },
+          {
+            "id": "maplestead",
+            "x": 5037,
+            "y": 1754,
+            "name": "Maplestead",
+            "type": "forest",
+            "color": "#6cbf5a",
+            "primary": "Wood",
+            "secondary": "PreciousMetal",
+            "produces": [
+              "LuxuryGoods"
+            ],
+            "k": 126,
+            "population": 113,
+            "civ": 0.38
+          },
+          {
+            "id": "elkbay",
+            "x": 2007,
+            "y": 2237,
+            "name": "Elkbay",
+            "type": "ranch",
+            "color": "#cf9b6a",
+            "primary": "Meat",
+            "secondary": "Grain",
+            "produces": [
+              "Food"
+            ],
+            "k": 127,
+            "population": 90,
+            "civ": 0.76
+          },
+          {
+            "id": "threadfell",
+            "x": 1514,
+            "y": 2547,
+            "name": "Threadfell",
+            "type": "plantation",
+            "color": "#b6c96a",
+            "primary": "Fiber",
+            "secondary": "Grain",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 138,
+            "population": 98,
+            "civ": 0.26
+          },
+          {
+            "id": "opalshoal",
+            "x": 1892,
+            "y": 1749,
+            "name": "Opalshoal",
+            "type": "mining",
+            "color": "#c9cdd6",
+            "primary": "PreciousMetal",
+            "secondary": "Grain",
+            "produces": [
+              "LuxuryGoods",
+              "Food"
+            ],
+            "k": 101,
+            "population": 64,
+            "civ": 0.45
+          },
+          {
+            "id": "forgemere",
+            "x": 1207,
+            "y": 1077,
+            "name": "Forgemere",
+            "type": "mining",
+            "color": "#8e9aa6",
+            "primary": "Iron",
+            "secondary": "Wood",
+            "produces": [
+              "Weapons"
+            ],
+            "k": 105,
+            "population": 77,
+            "civ": 0.49
+          },
+          {
+            "id": "emberpeak",
+            "x": 513,
+            "y": 688,
+            "name": "Emberpeak",
+            "type": "mining",
+            "color": "#8e9aa6",
+            "primary": "Iron",
+            "secondary": "Grain",
+            "produces": [
+              "Food"
+            ],
+            "k": 99,
+            "population": 71,
+            "civ": 0.25
+          },
+          {
+            "id": "fieldfield",
+            "x": 636,
+            "y": 1220,
+            "name": "Fieldfield",
+            "type": "plantation",
+            "color": "#d9c25a",
+            "primary": "Grain",
+            "secondary": "Meat",
+            "produces": [
+              "Food"
+            ],
+            "k": 142,
+            "population": 131,
+            "civ": 0.61
+          },
+          {
+            "id": "grainhaven",
+            "x": 913,
+            "y": 1438,
+            "name": "Grainhaven",
+            "type": "plantation",
+            "color": "#d9c25a",
+            "primary": "Grain",
+            "secondary": "Wood",
+            "produces": [
+              "Ale",
+              "Food"
+            ],
+            "k": 140,
+            "population": 46,
+            "civ": 0.53
+          },
+          {
+            "id": "ramcove",
+            "x": 2012,
+            "y": 1122,
+            "name": "Ramcove",
+            "type": "ranch",
+            "color": "#cf9b6a",
+            "primary": "Meat",
+            "secondary": "Wood",
+            "produces": [
+              "Food"
+            ],
+            "k": 133,
+            "population": 61,
+            "civ": 0.59
+          },
+          {
+            "id": "slagcrag",
+            "x": 1107,
+            "y": 4020,
+            "name": "Slagcrag",
+            "type": "mining",
+            "color": "#8e9aa6",
+            "primary": "Iron",
+            "secondary": "Wood",
+            "produces": [
+              "Weapons"
+            ],
+            "k": 107,
+            "population": 100,
+            "civ": 0.79
+          },
+          {
+            "id": "mapleholm",
+            "x": 905,
+            "y": 4112,
+            "name": "Mapleholm",
+            "type": "forest",
+            "color": "#6cbf5a",
+            "primary": "Wood",
+            "secondary": "Iron",
+            "produces": [
+              "Weapons"
+            ],
+            "k": 121,
+            "population": 80,
+            "civ": 0.5
+          },
+          {
+            "id": "barleyvale",
+            "x": 1030,
+            "y": 5286,
+            "name": "Barleyvale",
+            "type": "plantation",
+            "color": "#d9c25a",
+            "primary": "Grain",
+            "secondary": "Fiber",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 137,
+            "population": 85,
+            "civ": 0.54
+          },
+          {
+            "id": "onyxreach",
+            "x": 1351,
+            "y": 5787,
+            "name": "Onyxreach",
+            "type": "mining",
+            "color": "#c9cdd6",
+            "primary": "PreciousMetal",
+            "secondary": "Fiber",
+            "produces": [
+              "LuxuryGoods",
+              "Clothing"
+            ],
+            "k": 99,
+            "population": 38,
+            "civ": 0.31
+          },
+          {
+            "id": "opalridge",
+            "x": 628,
+            "y": 5070,
+            "name": "Opalridge",
+            "type": "mining",
+            "color": "#c9cdd6",
+            "primary": "PreciousMetal",
+            "secondary": "Iron",
+            "produces": [
+              "LuxuryGoods"
+            ],
+            "k": 94,
+            "population": 74,
+            "civ": 0.35
+          },
+          {
+            "id": "forgelanding",
+            "x": 854,
+            "y": 5557,
+            "name": "Forgelanding",
+            "type": "mining",
+            "color": "#8e9aa6",
+            "primary": "Iron",
+            "secondary": "Fiber",
+            "produces": [
+              "Clothing"
+            ],
+            "k": 95,
+            "population": 87,
+            "civ": 0.11
+          },
+          {
+            "id": "emberhold",
+            "x": 660,
+            "y": 5442,
+            "name": "Emberhold",
+            "type": "mining",
+            "color": "#8e9aa6",
+            "primary": "Iron",
+            "secondary": "Wood",
+            "produces": [
+              "Weapons"
+            ],
+            "k": 100,
+            "population": 33,
+            "civ": 0.75
+          },
+          {
+            "id": "thorncliff",
+            "x": 7732,
+            "y": 3398,
+            "name": "Thorncliff",
+            "type": "forest",
+            "color": "#6cbf5a",
+            "primary": "Wood",
+            "secondary": "Grain",
+            "produces": [
+              "Ale",
+              "Food"
+            ],
+            "k": 120,
+            "population": 54,
+            "civ": 0.2
+          }
+        ],
+        "ships": {
+          "h0": {
+            "x": 8374,
+            "y": 4729,
+            "heading": -0.02,
+            "state": "sailing",
+            "type": "ship",
+            "homeId": "harvestholm",
+            "destId": "elmvale",
+            "reason": "trade",
+            "eta": 12,
+            "route": [
+              "elmvale"
+            ],
+            "cap": 100,
+            "used": 60,
+            "cargo": {
+              "Grain": 30,
+              "Clothing": 24
+            },
+            "gold": 200,
+            "sick": false
+          },
+          "h1": {
+            "x": 7220,
+            "y": 3259,
+            "heading": -1.803,
+            "state": "sailing",
+            "type": "ship",
+            "homeId": "harvestholm",
+            "destId": "pearlstrand",
+            "reason": "trade",
+            "eta": 12,
+            "route": [
+              "pearlstrand"
+            ],
+            "cap": 100,
+            "used": 60,
+            "cargo": {
+              "Grain": 30,
+              "Clothing": 24
+            },
+            "gold": 200,
+            "sick": false
+          },
+          "h2": {
+            "x": 5377,
+            "y": 4133,
+            "heading": -2.87,
+            "state": "sailing",
+            "type": "ship",
+            "homeId": "harvestholm",
+            "destId": "weaverfell",
+            "reason": "trade",
+            "eta": 12,
+            "route": [
+              "weaverfell"
+            ],
+            "cap": 100,
+            "used": 60,
+            "cargo": {
+              "Grain": 30,
+              "Clothing": 24
+            },
+            "gold": 200,
+            "sick": false
+          },
+          "h3": {
+            "x": 7178,
+            "y": 4486,
+            "heading": -2.56,
+            "state": "sailing",
+            "type": "ship",
+            "homeId": "harvestholm",
+            "destId": "weaverreach",
+            "reason": "trade",
+            "eta": 12,
+            "route": [
+              "weaverreach"
+            ],
+            "cap": 100,
+            "used": 60,
+            "cargo": {
+              "Grain": 30,
+              "Clothing": 24
+            },
+            "gold": 200,
+            "sick": false
+          },
+          "s2": {
+            "x": 7570,
+            "y": 4744,
+            "heading": 3.14,
+            "state": "docked",
+            "type": "ship",
+            "homeId": "cattlehold",
+            "destId": "harvestholm",
+            "reason": "food",
+            "eta": 0,
+            "route": [
+              "harvestholm"
+            ],
+            "cap": 100,
+            "used": 12,
+            "cargo": {
+              "Weapons": 12
+            },
+            "gold": 60,
+            "sick": true
+          },
+          "s1": {
+            "x": 9677,
+            "y": 5013,
+            "heading": -2.814,
+            "state": "sailing",
+            "type": "ship",
+            "homeId": "elmvale",
+            "destId": "forgereach",
+            "reason": "trade",
+            "eta": 12,
+            "route": [
+              "forgereach",
+              "maplecove"
+            ],
+            "cap": 100,
+            "used": 82,
+            "cargo": {
+              "Ale": 44,
+              "Grain": 38
+            },
+            "gold": 260,
+            "sick": false
+          }
+        },
+        "events": [
+          {
+            "day": 34,
+            "kind": "blight",
+            "text": "Blight strikes Barleycrag's Grain"
+          },
+          {
+            "day": 35,
+            "kind": "wreck",
+            "text": "A Forgereach ship was lost at sea"
+          },
+          {
+            "day": 36,
+            "kind": "plague",
+            "text": "Plague breaks out on Harvestholm"
+          },
+          {
+            "day": 38,
+            "kind": "recover",
+            "text": "Flaxbay's fields recover"
+          },
+          {
+            "day": 39,
+            "kind": "wreck",
+            "text": "A Brightcliff ship was lost at sea"
+          },
+          {
+            "day": 40,
+            "kind": "blight",
+            "text": "Blight strikes Ryeshoal's Grain"
+          }
         ]
       }
     },
     {
-      "id": "beetle",
-      "scene": "garden",
-      "viewport": { "w": 900, "h": 420 },
-      "now": 900,
+      "id": "sim-clock",
+      "scene": "sim",
+      "viewport": {
+        "w": 1200,
+        "h": 820
+      },
+      "now": 1800,
       "state": {
-        "camera": { "x": 1230, "y": 900, "zoom": 1.5 },
-        "critters": [
-          { "x": 1040, "y": 900, "species": "beetle", "state": "idle", "animTime": { "*": 900 } },
-          { "x": 1160, "y": 900, "species": "beetle", "state": "happy", "animTime": { "*": 900, "happy": 180 } },
-          { "x": 1280, "y": 900, "species": "beetle", "state": "scared", "animTime": { "*": 900, "scared": 150 } },
-          { "x": 1400, "y": 900, "species": "beetle", "state": "linked", "animTime": { "*": 900, "linked": 700 } }
-        ]
-      }
-    },
-    {
-      "id": "props",
-      "scene": "garden",
-      "viewport": { "w": 760, "h": 420 },
-      "now": 600,
-      "state": {
-        "camera": { "x": 1220, "y": 900, "zoom": 1.3 },
-        "critters": [],
-        "props": [
-          { "artId": "flower", "x": 1040, "y": 900, "r": 30, "color": "#e88ab0" },
-          { "artId": "rock", "x": 1170, "y": 905, "r": 40, "color": "#6a7079" },
-          { "artId": "sign", "x": 1300, "y": 895, "r": 42, "color": "#b98a4a" },
-          { "artId": "logo", "x": 1430, "y": 900, "r": 48, "color": "#7cc6a0" }
+        "camera": {
+          "x": 4800,
+          "y": 3400,
+          "zoom": 0.11
+        },
+        "simTime": 210,
+        "speed": 3,
+        "paused": false,
+        "dayLength": 60,
+        "islands": [
+          {
+            "id": "silverpeak",
+            "x": 2746,
+            "y": 5059,
+            "name": "Silverpeak",
+            "type": "mining",
+            "color": "#c9cdd6",
+            "primary": "PreciousMetal",
+            "secondary": "Iron",
+            "produces": [
+              "LuxuryGoods"
+            ],
+            "k": 94,
+            "population": 67,
+            "civ": 0.31
+          },
+          {
+            "id": "anvilfield",
+            "x": 8398,
+            "y": 4765,
+            "name": "Keelpeak",
+            "type": "shipyard",
+            "color": "#b08a5a",
+            "primary": "Iron",
+            "secondary": "Wood",
+            "produces": [
+              "Weapons",
+              "Ships"
+            ],
+            "k": 98,
+            "population": 40,
+            "civ": 0.58
+          },
+          {
+            "id": "droverhaven",
+            "x": 9007,
+            "y": 4157,
+            "name": "Droverhaven",
+            "type": "ranch",
+            "color": "#cf9b6a",
+            "primary": "Meat",
+            "secondary": "Grain",
+            "produces": [
+              "Food"
+            ],
+            "k": 129,
+            "population": 48,
+            "civ": 0.8
+          },
+          {
+            "id": "maplecove",
+            "x": 8419,
+            "y": 4993,
+            "name": "Maplecove",
+            "type": "forest",
+            "color": "#6cbf5a",
+            "primary": "Wood",
+            "secondary": "Iron",
+            "produces": [
+              "Weapons"
+            ],
+            "k": 112,
+            "population": 56,
+            "civ": 0.67
+          },
+          {
+            "id": "barleycrag",
+            "x": 7656,
+            "y": 4187,
+            "name": "Barleycrag",
+            "type": "plantation",
+            "color": "#d9c25a",
+            "primary": "Grain",
+            "secondary": "Wood",
+            "produces": [
+              "Ale",
+              "Food"
+            ],
+            "k": 133,
+            "population": 72,
+            "civ": 0.56,
+            "blight": "Grain"
+          },
+          {
+            "id": "harvestholm",
+            "x": 7570,
+            "y": 4744,
+            "name": "Harvestholm",
+            "type": "plantation",
+            "color": "#d9c25a",
+            "primary": "Grain",
+            "secondary": "Meat",
+            "produces": [
+              "Food"
+            ],
+            "k": 140,
+            "population": 125,
+            "civ": 0.34
+          },
+          {
+            "id": "elmvale",
+            "x": 9177,
+            "y": 4713,
+            "name": "Elmvale",
+            "type": "forest",
+            "color": "#6cbf5a",
+            "primary": "Wood",
+            "secondary": "Grain",
+            "produces": [
+              "Ale",
+              "Food"
+            ],
+            "k": 125,
+            "population": 61,
+            "civ": 0.77
+          },
+          {
+            "id": "forgereach",
+            "x": 8566,
+            "y": 4636,
+            "name": "Forgereach",
+            "type": "mining",
+            "color": "#8e9aa6",
+            "primary": "Iron",
+            "secondary": "Wood",
+            "produces": [
+              "Weapons"
+            ],
+            "k": 95,
+            "population": 73,
+            "civ": 0.41
+          },
+          {
+            "id": "meadowridge",
+            "x": 4273,
+            "y": 4253,
+            "name": "Meadowridge",
+            "type": "plantation",
+            "color": "#d9c25a",
+            "primary": "Grain",
+            "secondary": "Wood",
+            "produces": [
+              "Ale",
+              "Food"
+            ],
+            "k": 125,
+            "population": 91,
+            "civ": 0.71
+          },
+          {
+            "id": "thornlanding",
+            "x": 4402,
+            "y": 4136,
+            "name": "Harborcliff",
+            "type": "shipyard",
+            "color": "#b08a5a",
+            "primary": "Wood",
+            "secondary": "Iron",
+            "produces": [
+              "Weapons",
+              "Ships"
+            ],
+            "k": 99,
+            "population": 57,
+            "civ": 0.57
+          },
+          {
+            "id": "cattlehold",
+            "x": 7182,
+            "y": 1728,
+            "name": "Cattlehold",
+            "type": "ranch",
+            "color": "#cf9b6a",
+            "primary": "Meat",
+            "secondary": "Fiber",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 132,
+            "population": 64,
+            "civ": 0.5
+          },
+          {
+            "id": "brightcliff",
+            "x": 6639,
+            "y": 1659,
+            "name": "Brightcliff",
+            "type": "mining",
+            "color": "#c9cdd6",
+            "primary": "PreciousMetal",
+            "secondary": "Fiber",
+            "produces": [
+              "LuxuryGoods",
+              "Clothing"
+            ],
+            "k": 92,
+            "population": 76,
+            "civ": 0.83
+          },
+          {
+            "id": "grovewatch",
+            "x": 7629,
+            "y": 1756,
+            "name": "Grovewatch",
+            "type": "forest",
+            "color": "#6cbf5a",
+            "primary": "Wood",
+            "secondary": "Fiber",
+            "produces": [
+              "Clothing"
+            ],
+            "k": 122,
+            "population": 114,
+            "civ": 0.81
+          },
+          {
+            "id": "pearlstrand",
+            "x": 6869,
+            "y": 1773,
+            "name": "Pearlstrand",
+            "type": "mining",
+            "color": "#c9cdd6",
+            "primary": "PreciousMetal",
+            "secondary": "Grain",
+            "produces": [
+              "LuxuryGoods",
+              "Food"
+            ],
+            "k": 95,
+            "population": 62,
+            "civ": 0.5,
+            "plague": true
+          },
+          {
+            "id": "elkpoint",
+            "x": 3105,
+            "y": 1613,
+            "name": "Elkpoint",
+            "type": "ranch",
+            "color": "#cf9b6a",
+            "primary": "Meat",
+            "secondary": "Grain",
+            "produces": [
+              "Food"
+            ],
+            "k": 132,
+            "population": 123,
+            "civ": 0.27
+          },
+          {
+            "id": "harvestmoor",
+            "x": 2472,
+            "y": 1582,
+            "name": "Harvestmoor",
+            "type": "plantation",
+            "color": "#d9c25a",
+            "primary": "Grain",
+            "secondary": "Fiber",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 136,
+            "population": 112,
+            "civ": 0.26
+          },
+          {
+            "id": "furrowport",
+            "x": 2738,
+            "y": 2090,
+            "name": "Furrowport",
+            "type": "plantation",
+            "color": "#d9c25a",
+            "primary": "Grain",
+            "secondary": "Meat",
+            "produces": [
+              "Food"
+            ],
+            "k": 142,
+            "population": 45,
+            "civ": 0.22
+          },
+          {
+            "id": "stagford",
+            "x": 3609,
+            "y": 1306,
+            "name": "Stagford",
+            "type": "ranch",
+            "color": "#cf9b6a",
+            "primary": "Meat",
+            "secondary": "Wood",
+            "produces": [
+              "Food"
+            ],
+            "k": 131,
+            "population": 58,
+            "civ": 0.4
+          },
+          {
+            "id": "huntwick",
+            "x": 2636,
+            "y": 3709,
+            "name": "Huntwick",
+            "type": "ranch",
+            "color": "#cf9b6a",
+            "primary": "Meat",
+            "secondary": "Grain",
+            "produces": [
+              "Food"
+            ],
+            "k": 127,
+            "population": 83,
+            "civ": 0.82
+          },
+          {
+            "id": "herdstead",
+            "x": 2490,
+            "y": 3197,
+            "name": "Herdstead",
+            "type": "ranch",
+            "color": "#cf9b6a",
+            "primary": "Meat",
+            "secondary": "Iron",
+            "produces": [
+              "Food"
+            ],
+            "k": 134,
+            "population": 101,
+            "civ": 0.26
+          },
+          {
+            "id": "flaxbay",
+            "x": 3009,
+            "y": 3758,
+            "name": "Flaxbay",
+            "type": "plantation",
+            "color": "#b6c96a",
+            "primary": "Fiber",
+            "secondary": "Grain",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 133,
+            "population": 43,
+            "civ": 0.64
+          },
+          {
+            "id": "weaverfell",
+            "x": 3183,
+            "y": 3522,
+            "name": "Weaverfell",
+            "type": "plantation",
+            "color": "#b6c96a",
+            "primary": "Fiber",
+            "secondary": "Meat",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 134,
+            "population": 64,
+            "civ": 0.46
+          },
+          {
+            "id": "ryeshoal",
+            "x": 2860,
+            "y": 4324,
+            "name": "Ryeshoal",
+            "type": "plantation",
+            "color": "#d9c25a",
+            "primary": "Grain",
+            "secondary": "Wood",
+            "produces": [
+              "Ale",
+              "Food"
+            ],
+            "k": 142,
+            "population": 123,
+            "civ": 0.65,
+            "blight": "Grain"
+          },
+          {
+            "id": "pearlmere",
+            "x": 8572,
+            "y": 2175,
+            "name": "Pearlmere",
+            "type": "mining",
+            "color": "#c9cdd6",
+            "primary": "PreciousMetal",
+            "secondary": "Iron",
+            "produces": [
+              "LuxuryGoods"
+            ],
+            "k": 90,
+            "population": 75,
+            "civ": 0.44
+          },
+          {
+            "id": "orepeak",
+            "x": 8829,
+            "y": 2442,
+            "name": "Orepeak",
+            "type": "mining",
+            "color": "#8e9aa6",
+            "primary": "Iron",
+            "secondary": "PreciousMetal",
+            "produces": [
+              "LuxuryGoods"
+            ],
+            "k": 108,
+            "population": 99,
+            "civ": 0.05
+          },
+          {
+            "id": "threadfield",
+            "x": 8261,
+            "y": 2693,
+            "name": "Threadfield",
+            "type": "plantation",
+            "color": "#b6c96a",
+            "primary": "Fiber",
+            "secondary": "Grain",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 129,
+            "population": 120,
+            "civ": 0.7
+          },
+          {
+            "id": "coalhaven",
+            "x": 9255,
+            "y": 2342,
+            "name": "Dockshoal",
+            "type": "shipyard",
+            "color": "#b08a5a",
+            "primary": "Iron",
+            "secondary": "Wood",
+            "produces": [
+              "Weapons",
+              "Ships"
+            ],
+            "k": 98,
+            "population": 52,
+            "civ": 0.15
+          },
+          {
+            "id": "gemcove",
+            "x": 4474,
+            "y": 2115,
+            "name": "Gemcove",
+            "type": "mining",
+            "color": "#c9cdd6",
+            "primary": "PreciousMetal",
+            "secondary": "Meat",
+            "produces": [
+              "LuxuryGoods",
+              "Food"
+            ],
+            "k": 93,
+            "population": 30,
+            "civ": 0.2
+          },
+          {
+            "id": "quartzcrag",
+            "x": 4491,
+            "y": 1531,
+            "name": "Quartzcrag",
+            "type": "mining",
+            "color": "#c9cdd6",
+            "primary": "PreciousMetal",
+            "secondary": "Fiber",
+            "produces": [
+              "LuxuryGoods",
+              "Clothing"
+            ],
+            "k": 95,
+            "population": 58,
+            "civ": 0.8
+          },
+          {
+            "id": "fleeceholm",
+            "x": 4269,
+            "y": 1885,
+            "name": "Fleeceholm",
+            "type": "plantation",
+            "color": "#b6c96a",
+            "primary": "Fiber",
+            "secondary": "PreciousMetal",
+            "produces": [
+              "LuxuryGoods",
+              "Clothing"
+            ],
+            "k": 137,
+            "population": 122,
+            "civ": 0.77
+          },
+          {
+            "id": "flaxvale",
+            "x": 7108,
+            "y": 4597,
+            "name": "Flaxvale",
+            "type": "plantation",
+            "color": "#b6c96a",
+            "primary": "Fiber",
+            "secondary": "Grain",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 138,
+            "population": 117,
+            "civ": 0.18
+          },
+          {
+            "id": "weaverreach",
+            "x": 6786,
+            "y": 4228,
+            "name": "Weaverreach",
+            "type": "plantation",
+            "color": "#b6c96a",
+            "primary": "Fiber",
+            "secondary": "Meat",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 142,
+            "population": 99,
+            "civ": 0.56
+          },
+          {
+            "id": "cottonridge",
+            "x": 6425,
+            "y": 3136,
+            "name": "Cottonridge",
+            "type": "plantation",
+            "color": "#b6c96a",
+            "primary": "Fiber",
+            "secondary": "Wood",
+            "produces": [
+              "Clothing"
+            ],
+            "k": 142,
+            "population": 75,
+            "civ": 0.69
+          },
+          {
+            "id": "woollanding",
+            "x": 6467,
+            "y": 3665,
+            "name": "Woollanding",
+            "type": "plantation",
+            "color": "#b6c96a",
+            "primary": "Fiber",
+            "secondary": "Grain",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 128,
+            "population": 92,
+            "civ": 0.08
+          },
+          {
+            "id": "cedarhold",
+            "x": 5835,
+            "y": 3192,
+            "name": "Mastlanding",
+            "type": "shipyard",
+            "color": "#b08a5a",
+            "primary": "Wood",
+            "secondary": "Iron",
+            "produces": [
+              "Weapons",
+              "Ships"
+            ],
+            "k": 109,
+            "population": 67,
+            "civ": 0.52
+          },
+          {
+            "id": "onyxcliff",
+            "x": 5862,
+            "y": 4780,
+            "name": "Onyxcliff",
+            "type": "mining",
+            "color": "#c9cdd6",
+            "primary": "PreciousMetal",
+            "secondary": "Iron",
+            "produces": [
+              "LuxuryGoods"
+            ],
+            "k": 102,
+            "population": 57,
+            "civ": 0.67
+          },
+          {
+            "id": "coalwatch",
+            "x": 5890,
+            "y": 5371,
+            "name": "Coalwatch",
+            "type": "mining",
+            "color": "#8e9aa6",
+            "primary": "Iron",
+            "secondary": "Meat",
+            "produces": [
+              "Food"
+            ],
+            "k": 99,
+            "population": 60,
+            "civ": 0.53
+          },
+          {
+            "id": "stagstrand",
+            "x": 5108,
+            "y": 4806,
+            "name": "Stagstrand",
+            "type": "ranch",
+            "color": "#cf9b6a",
+            "primary": "Meat",
+            "secondary": "Grain",
+            "produces": [
+              "Food"
+            ],
+            "k": 136,
+            "population": 55,
+            "civ": 0.17
+          },
+          {
+            "id": "meadowpoint",
+            "x": 5699,
+            "y": 5016,
+            "name": "Meadowpoint",
+            "type": "plantation",
+            "color": "#d9c25a",
+            "primary": "Grain",
+            "secondary": "Iron",
+            "produces": [
+              "Food"
+            ],
+            "k": 127,
+            "population": 76,
+            "civ": 0.19,
+            "plague": true
+          },
+          {
+            "id": "fleecemoor",
+            "x": 5921,
+            "y": 5051,
+            "name": "Fleecemoor",
+            "type": "plantation",
+            "color": "#b6c96a",
+            "primary": "Fiber",
+            "secondary": "Meat",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 133,
+            "population": 40,
+            "civ": 0.43
+          },
+          {
+            "id": "oakport",
+            "x": 5687,
+            "y": 1794,
+            "name": "Oakport",
+            "type": "forest",
+            "color": "#6cbf5a",
+            "primary": "Wood",
+            "secondary": "Grain",
+            "produces": [
+              "Ale",
+              "Food"
+            ],
+            "k": 122,
+            "population": 46,
+            "civ": 0.1
+          },
+          {
+            "id": "timberford",
+            "x": 5475,
+            "y": 2040,
+            "name": "Anchorbay",
+            "type": "shipyard",
+            "color": "#b08a5a",
+            "primary": "Wood",
+            "secondary": "Iron",
+            "produces": [
+              "Weapons",
+              "Ships"
+            ],
+            "k": 111,
+            "population": 43,
+            "civ": 0.23,
+            "blight": "Wood"
+          },
+          {
+            "id": "droverwick",
+            "x": 5084,
+            "y": 2050,
+            "name": "Droverwick",
+            "type": "ranch",
+            "color": "#cf9b6a",
+            "primary": "Meat",
+            "secondary": "Fiber",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 141,
+            "population": 88,
+            "civ": 0.76
+          },
+          {
+            "id": "maplestead",
+            "x": 5037,
+            "y": 1754,
+            "name": "Maplestead",
+            "type": "forest",
+            "color": "#6cbf5a",
+            "primary": "Wood",
+            "secondary": "PreciousMetal",
+            "produces": [
+              "LuxuryGoods"
+            ],
+            "k": 126,
+            "population": 113,
+            "civ": 0.38
+          },
+          {
+            "id": "elkbay",
+            "x": 2007,
+            "y": 2237,
+            "name": "Elkbay",
+            "type": "ranch",
+            "color": "#cf9b6a",
+            "primary": "Meat",
+            "secondary": "Grain",
+            "produces": [
+              "Food"
+            ],
+            "k": 127,
+            "population": 90,
+            "civ": 0.76
+          },
+          {
+            "id": "threadfell",
+            "x": 1514,
+            "y": 2547,
+            "name": "Threadfell",
+            "type": "plantation",
+            "color": "#b6c96a",
+            "primary": "Fiber",
+            "secondary": "Grain",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 138,
+            "population": 98,
+            "civ": 0.26
+          },
+          {
+            "id": "opalshoal",
+            "x": 1892,
+            "y": 1749,
+            "name": "Opalshoal",
+            "type": "mining",
+            "color": "#c9cdd6",
+            "primary": "PreciousMetal",
+            "secondary": "Grain",
+            "produces": [
+              "LuxuryGoods",
+              "Food"
+            ],
+            "k": 101,
+            "population": 64,
+            "civ": 0.45
+          },
+          {
+            "id": "forgemere",
+            "x": 1207,
+            "y": 1077,
+            "name": "Forgemere",
+            "type": "mining",
+            "color": "#8e9aa6",
+            "primary": "Iron",
+            "secondary": "Wood",
+            "produces": [
+              "Weapons"
+            ],
+            "k": 105,
+            "population": 77,
+            "civ": 0.49
+          },
+          {
+            "id": "emberpeak",
+            "x": 513,
+            "y": 688,
+            "name": "Emberpeak",
+            "type": "mining",
+            "color": "#8e9aa6",
+            "primary": "Iron",
+            "secondary": "Grain",
+            "produces": [
+              "Food"
+            ],
+            "k": 99,
+            "population": 71,
+            "civ": 0.25
+          },
+          {
+            "id": "fieldfield",
+            "x": 636,
+            "y": 1220,
+            "name": "Fieldfield",
+            "type": "plantation",
+            "color": "#d9c25a",
+            "primary": "Grain",
+            "secondary": "Meat",
+            "produces": [
+              "Food"
+            ],
+            "k": 142,
+            "population": 131,
+            "civ": 0.61
+          },
+          {
+            "id": "grainhaven",
+            "x": 913,
+            "y": 1438,
+            "name": "Grainhaven",
+            "type": "plantation",
+            "color": "#d9c25a",
+            "primary": "Grain",
+            "secondary": "Wood",
+            "produces": [
+              "Ale",
+              "Food"
+            ],
+            "k": 140,
+            "population": 46,
+            "civ": 0.53
+          },
+          {
+            "id": "ramcove",
+            "x": 2012,
+            "y": 1122,
+            "name": "Ramcove",
+            "type": "ranch",
+            "color": "#cf9b6a",
+            "primary": "Meat",
+            "secondary": "Wood",
+            "produces": [
+              "Food"
+            ],
+            "k": 133,
+            "population": 61,
+            "civ": 0.59
+          },
+          {
+            "id": "slagcrag",
+            "x": 1107,
+            "y": 4020,
+            "name": "Slagcrag",
+            "type": "mining",
+            "color": "#8e9aa6",
+            "primary": "Iron",
+            "secondary": "Wood",
+            "produces": [
+              "Weapons"
+            ],
+            "k": 107,
+            "population": 100,
+            "civ": 0.79
+          },
+          {
+            "id": "mapleholm",
+            "x": 905,
+            "y": 4112,
+            "name": "Mapleholm",
+            "type": "forest",
+            "color": "#6cbf5a",
+            "primary": "Wood",
+            "secondary": "Iron",
+            "produces": [
+              "Weapons"
+            ],
+            "k": 121,
+            "population": 80,
+            "civ": 0.5
+          },
+          {
+            "id": "barleyvale",
+            "x": 1030,
+            "y": 5286,
+            "name": "Barleyvale",
+            "type": "plantation",
+            "color": "#d9c25a",
+            "primary": "Grain",
+            "secondary": "Fiber",
+            "produces": [
+              "Clothing",
+              "Food"
+            ],
+            "k": 137,
+            "population": 85,
+            "civ": 0.54
+          },
+          {
+            "id": "onyxreach",
+            "x": 1351,
+            "y": 5787,
+            "name": "Onyxreach",
+            "type": "mining",
+            "color": "#c9cdd6",
+            "primary": "PreciousMetal",
+            "secondary": "Fiber",
+            "produces": [
+              "LuxuryGoods",
+              "Clothing"
+            ],
+            "k": 99,
+            "population": 38,
+            "civ": 0.31
+          },
+          {
+            "id": "opalridge",
+            "x": 628,
+            "y": 5070,
+            "name": "Opalridge",
+            "type": "mining",
+            "color": "#c9cdd6",
+            "primary": "PreciousMetal",
+            "secondary": "Iron",
+            "produces": [
+              "LuxuryGoods"
+            ],
+            "k": 94,
+            "population": 74,
+            "civ": 0.35
+          },
+          {
+            "id": "forgelanding",
+            "x": 854,
+            "y": 5557,
+            "name": "Forgelanding",
+            "type": "mining",
+            "color": "#8e9aa6",
+            "primary": "Iron",
+            "secondary": "Fiber",
+            "produces": [
+              "Clothing"
+            ],
+            "k": 95,
+            "population": 87,
+            "civ": 0.11
+          },
+          {
+            "id": "emberhold",
+            "x": 660,
+            "y": 5442,
+            "name": "Emberhold",
+            "type": "mining",
+            "color": "#8e9aa6",
+            "primary": "Iron",
+            "secondary": "Wood",
+            "produces": [
+              "Weapons"
+            ],
+            "k": 100,
+            "population": 33,
+            "civ": 0.75
+          },
+          {
+            "id": "thorncliff",
+            "x": 7732,
+            "y": 3398,
+            "name": "Thorncliff",
+            "type": "forest",
+            "color": "#6cbf5a",
+            "primary": "Wood",
+            "secondary": "Grain",
+            "produces": [
+              "Ale",
+              "Food"
+            ],
+            "k": 120,
+            "population": 54,
+            "civ": 0.2
+          }
+        ],
+        "ships": {
+          "h0": {
+            "x": 8374,
+            "y": 4729,
+            "heading": -0.02,
+            "state": "sailing",
+            "type": "ship",
+            "homeId": "harvestholm",
+            "destId": "elmvale",
+            "reason": "trade",
+            "eta": 12,
+            "route": [
+              "elmvale"
+            ],
+            "cap": 100,
+            "used": 60,
+            "cargo": {
+              "Grain": 30,
+              "Clothing": 24
+            },
+            "gold": 200,
+            "sick": false
+          },
+          "h1": {
+            "x": 7220,
+            "y": 3259,
+            "heading": -1.803,
+            "state": "sailing",
+            "type": "ship",
+            "homeId": "harvestholm",
+            "destId": "pearlstrand",
+            "reason": "trade",
+            "eta": 12,
+            "route": [
+              "pearlstrand"
+            ],
+            "cap": 100,
+            "used": 60,
+            "cargo": {
+              "Grain": 30,
+              "Clothing": 24
+            },
+            "gold": 200,
+            "sick": false
+          },
+          "h2": {
+            "x": 5377,
+            "y": 4133,
+            "heading": -2.87,
+            "state": "sailing",
+            "type": "ship",
+            "homeId": "harvestholm",
+            "destId": "weaverfell",
+            "reason": "trade",
+            "eta": 12,
+            "route": [
+              "weaverfell"
+            ],
+            "cap": 100,
+            "used": 60,
+            "cargo": {
+              "Grain": 30,
+              "Clothing": 24
+            },
+            "gold": 200,
+            "sick": false
+          },
+          "h3": {
+            "x": 7178,
+            "y": 4486,
+            "heading": -2.56,
+            "state": "sailing",
+            "type": "ship",
+            "homeId": "harvestholm",
+            "destId": "weaverreach",
+            "reason": "trade",
+            "eta": 12,
+            "route": [
+              "weaverreach"
+            ],
+            "cap": 100,
+            "used": 60,
+            "cargo": {
+              "Grain": 30,
+              "Clothing": 24
+            },
+            "gold": 200,
+            "sick": false
+          },
+          "s2": {
+            "x": 7570,
+            "y": 4744,
+            "heading": 3.14,
+            "state": "docked",
+            "type": "ship",
+            "homeId": "cattlehold",
+            "destId": "harvestholm",
+            "reason": "food",
+            "eta": 0,
+            "route": [
+              "harvestholm"
+            ],
+            "cap": 100,
+            "used": 12,
+            "cargo": {
+              "Weapons": 12
+            },
+            "gold": 60,
+            "sick": true
+          },
+          "s1": {
+            "x": 9677,
+            "y": 5013,
+            "heading": -2.814,
+            "state": "sailing",
+            "type": "ship",
+            "homeId": "elmvale",
+            "destId": "forgereach",
+            "reason": "trade",
+            "eta": 12,
+            "route": [
+              "forgereach",
+              "maplecove"
+            ],
+            "cap": 100,
+            "used": 82,
+            "cargo": {
+              "Ale": 44,
+              "Grain": 38
+            },
+            "gold": 260,
+            "sick": false
+          }
+        },
+        "events": [
+          {
+            "day": 34,
+            "kind": "blight",
+            "text": "Blight strikes Barleycrag's Grain"
+          },
+          {
+            "day": 35,
+            "kind": "wreck",
+            "text": "A Forgereach ship was lost at sea"
+          },
+          {
+            "day": 36,
+            "kind": "plague",
+            "text": "Plague breaks out on Harvestholm"
+          },
+          {
+            "day": 38,
+            "kind": "recover",
+            "text": "Flaxbay's fields recover"
+          },
+          {
+            "day": 39,
+            "kind": "wreck",
+            "text": "A Brightcliff ship was lost at sea"
+          },
+          {
+            "day": 40,
+            "kind": "blight",
+            "text": "Blight strikes Ryeshoal's Grain"
+          }
         ]
       }
     }

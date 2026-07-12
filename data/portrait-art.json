@@ -1,0 +1,165 @@
+{
+  "_doc": "Captain head-and-shoulders portrait parts, drawn by game/InkRenderer.js (brush-ink) and composed by game/PortraitRenderer.js. HEAD parts (heads/faces/hairs/facialHair/headgear) share one coordinate frame centred on the head (crown ~y-0.6, chin ~y0.56). SHOULDERS parts use their own frame (collar top ~y-0.5). Coords normalised to ~[-1,1]; `role` selects an ink colour (skin/hair/coat/accent/trim/metal/hat/ink). Faces are `lacy` so they draw as see-through detail over the head. A captain's parts are chosen deterministically in game/sim/captains.js.",
+
+  "heads": {
+    "weathered": { "shapes": [
+      { "type": "path", "role": "skin", "closed": true, "smooth": true, "setup": { "lineWidth": 3 },
+        "points": [[0,-0.6],[0.33,-0.42],[0.42,-0.06],[0.34,0.32],[0.16,0.54],[0,0.58],[-0.16,0.54],[-0.34,0.32],[-0.42,-0.06],[-0.33,-0.42]] },
+      { "type": "arc", "role": "skin", "cx": -0.42, "cy": 0.0, "radius": 0.1, "startAngle": "PI*0.5", "endAngle": "PI*1.5", "setup": { "lineWidth": 2 } },
+      { "type": "arc", "role": "skin", "cx": 0.42, "cy": 0.0, "radius": 0.1, "startAngle": "-PI*0.5", "endAngle": "PI*0.5", "setup": { "lineWidth": 2 } }
+    ] },
+    "square": { "shapes": [
+      { "type": "path", "role": "skin", "closed": true, "smooth": true, "setup": { "lineWidth": 3 },
+        "points": [[0,-0.6],[0.36,-0.44],[0.46,-0.08],[0.44,0.28],[0.32,0.5],[0,0.56],[-0.32,0.5],[-0.44,0.28],[-0.46,-0.08],[-0.36,-0.44]] },
+      { "type": "arc", "role": "skin", "cx": -0.46, "cy": 0.02, "radius": 0.1, "startAngle": "PI*0.5", "endAngle": "PI*1.5", "setup": { "lineWidth": 2 } },
+      { "type": "arc", "role": "skin", "cx": 0.46, "cy": 0.02, "radius": 0.1, "startAngle": "-PI*0.5", "endAngle": "PI*0.5", "setup": { "lineWidth": 2 } }
+    ] },
+    "lean": { "shapes": [
+      { "type": "path", "role": "skin", "closed": true, "smooth": true, "setup": { "lineWidth": 3 },
+        "points": [[0,-0.62],[0.28,-0.44],[0.36,-0.06],[0.3,0.34],[0.14,0.56],[0,0.62],[-0.14,0.56],[-0.3,0.34],[-0.36,-0.06],[-0.28,-0.44]] },
+      { "type": "arc", "role": "skin", "cx": -0.36, "cy": -0.02, "radius": 0.09, "startAngle": "PI*0.5", "endAngle": "PI*1.5", "setup": { "lineWidth": 2 } },
+      { "type": "arc", "role": "skin", "cx": 0.36, "cy": -0.02, "radius": 0.09, "startAngle": "-PI*0.5", "endAngle": "PI*0.5", "setup": { "lineWidth": 2 } }
+    ] }
+  },
+
+  "faces": {
+    "salt": { "lacy": true, "shapes": [
+      { "type": "lines", "role": "ink", "setup": { "lineWidth": 2.4 }, "segments": [[[-0.3,-0.16],[-0.08,-0.18]],[[0.3,-0.16],[0.08,-0.18]]] },
+      { "type": "circle", "role": "ink", "fill": true, "cx": -0.18, "cy": -0.04, "radius": 0.05 },
+      { "type": "circle", "role": "ink", "fill": true, "cx": 0.18, "cy": -0.04, "radius": 0.05 },
+      { "type": "path", "role": "ink", "smooth": true, "setup": { "lineWidth": 2 }, "points": [[-0.02,0.02],[-0.06,0.14],[0.04,0.16]] },
+      { "type": "path", "role": "ink", "smooth": true, "setup": { "lineWidth": 2.6 }, "points": [[-0.16,0.28],[0,0.29],[0.16,0.28]] }
+    ] },
+    "squint": { "lacy": true, "shapes": [
+      { "type": "lines", "role": "ink", "setup": { "lineWidth": 3 }, "segments": [[[-0.3,-0.14],[-0.06,-0.2]],[[0.3,-0.14],[0.06,-0.2]]] },
+      { "type": "lines", "role": "ink", "setup": { "lineWidth": 3 }, "segments": [[[-0.27,-0.03],[-0.09,-0.03]],[[0.27,-0.03],[0.09,-0.03]]] },
+      { "type": "path", "role": "ink", "smooth": true, "setup": { "lineWidth": 2 }, "points": [[-0.02,0.02],[-0.07,0.15],[0.05,0.17]] },
+      { "type": "path", "role": "ink", "smooth": true, "setup": { "lineWidth": 2.8 }, "points": [[-0.15,0.3],[0,0.24],[0.15,0.3]] }
+    ] },
+    "eyepatch": { "lacy": true, "shapes": [
+      { "type": "lines", "role": "ink", "setup": { "lineWidth": 2.4 }, "segments": [[[0.3,-0.16],[0.08,-0.18]]] },
+      { "type": "circle", "role": "ink", "fill": true, "cx": 0.18, "cy": -0.04, "radius": 0.05 },
+      { "type": "path", "role": "ink", "closed": true, "smooth": true, "fillSoft": true, "setup": { "lineWidth": 2.6 }, "points": [[-0.28,-0.1],[-0.08,-0.08],[-0.08,0.06],[-0.28,0.05]] },
+      { "type": "lines", "role": "ink", "setup": { "lineWidth": 2 }, "segments": [[[-0.3,-0.12],[0.32,-0.28]]] },
+      { "type": "path", "role": "ink", "smooth": true, "setup": { "lineWidth": 2 }, "points": [[0.0,0.02],[-0.05,0.14],[0.05,0.16]] },
+      { "type": "path", "role": "ink", "smooth": true, "setup": { "lineWidth": 2.6 }, "points": [[-0.15,0.29],[0,0.25],[0.15,0.29]] }
+    ] },
+    "jolly": { "lacy": true, "shapes": [
+      { "type": "lines", "role": "ink", "setup": { "lineWidth": 2.4 }, "segments": [[[-0.3,-0.2],[-0.06,-0.16]],[[0.3,-0.2],[0.06,-0.16]]] },
+      { "type": "circle", "role": "ink", "fill": true, "cx": -0.18, "cy": -0.02, "radius": 0.055 },
+      { "type": "circle", "role": "ink", "fill": true, "cx": 0.18, "cy": -0.02, "radius": 0.055 },
+      { "type": "path", "role": "ink", "closed": true, "smooth": true, "setup": { "lineWidth": 2 }, "points": [[-0.04,0.04],[-0.08,0.16],[0.02,0.18],[0.04,0.08]] },
+      { "type": "path", "role": "ink", "smooth": true, "setup": { "lineWidth": 2.8 }, "points": [[-0.19,0.24],[0,0.36],[0.19,0.24]] }
+    ] }
+  },
+
+  "hairs": {
+    "bald": { "shapes": [] },
+    "cropped": { "shapes": [
+      { "type": "path", "role": "hair", "closed": true, "smooth": true, "setup": { "lineWidth": 2.5 },
+        "points": [[-0.42,-0.1],[-0.44,-0.4],[-0.24,-0.62],[0,-0.68],[0.24,-0.62],[0.44,-0.4],[0.42,-0.1],[0.3,-0.32],[0.12,-0.42],[-0.12,-0.42],[-0.3,-0.32]] }
+    ] },
+    "ponytail": { "shapes": [
+      { "type": "path", "role": "hair", "closed": true, "smooth": true, "setup": { "lineWidth": 2.5 },
+        "points": [[0.34,0.28],[0.5,0.0],[0.46,-0.42],[0.2,-0.66],[0,-0.7],[-0.2,-0.66],[-0.46,-0.42],[-0.5,0.0],[-0.34,0.28],[-0.34,-0.14],[-0.2,-0.4],[0,-0.48],[0.2,-0.4],[0.34,-0.14]] },
+      { "type": "path", "role": "hair", "closed": true, "smooth": true, "setup": { "lineWidth": 2.5 },
+        "points": [[0.42,-0.28],[0.6,-0.1],[0.58,0.24],[0.46,0.2],[0.42,-0.04]] }
+    ] },
+    "longWavy": { "shapes": [
+      { "type": "path", "role": "hair", "closed": true, "smooth": true, "setup": { "lineWidth": 2.5 },
+        "points": [[-0.48,0.5],[-0.56,0.0],[-0.5,-0.44],[-0.22,-0.68],[0,-0.72],[0.22,-0.68],[0.5,-0.44],[0.56,0.0],[0.48,0.5],[0.4,0.2],[0.4,-0.2],[0.24,-0.42],[0,-0.5],[-0.24,-0.42],[-0.4,-0.2],[-0.4,0.2]] }
+    ] },
+    "receding": { "shapes": [
+      { "type": "path", "role": "hair", "closed": true, "smooth": true, "setup": { "lineWidth": 2.5 },
+        "points": [[-0.44,0.18],[-0.5,-0.28],[-0.36,-0.5],[-0.4,-0.2],[-0.34,0.02],[-0.4,0.14]] },
+      { "type": "path", "role": "hair", "closed": true, "smooth": true, "setup": { "lineWidth": 2.5 },
+        "points": [[0.44,0.18],[0.5,-0.28],[0.36,-0.5],[0.4,-0.2],[0.34,0.02],[0.4,0.14]] }
+    ] }
+  },
+
+  "facialHair": {
+    "cleanShaven": { "shapes": [] },
+    "mustache": { "shapes": [
+      { "type": "path", "role": "hair", "closed": true, "smooth": true, "setup": { "lineWidth": 2.5 },
+        "points": [[-0.24,0.2],[-0.1,0.16],[0,0.2],[0.1,0.16],[0.24,0.2],[0.16,0.28],[0,0.24],[-0.16,0.28]] }
+    ] },
+    "goatee": { "shapes": [
+      { "type": "path", "role": "hair", "closed": true, "smooth": true, "setup": { "lineWidth": 2.4 },
+        "points": [[-0.2,0.2],[0,0.16],[0.2,0.2],[0.14,0.26],[0,0.22],[-0.14,0.26]] },
+      { "type": "path", "role": "hair", "closed": true, "smooth": true, "setup": { "lineWidth": 2.4 },
+        "points": [[-0.14,0.34],[0,0.32],[0.14,0.34],[0.1,0.52],[0,0.58],[-0.1,0.52]] }
+    ] },
+    "fullBeard": { "shapes": [
+      { "type": "path", "role": "hair", "closed": true, "smooth": true, "setup": { "lineWidth": 2.5 },
+        "points": [[-0.4,-0.02],[-0.42,0.2],[-0.34,0.42],[-0.16,0.58],[0,0.62],[0.16,0.58],[0.34,0.42],[0.42,0.2],[0.4,-0.02],[0.24,0.12],[0.1,0.18],[-0.1,0.18],[-0.24,0.12]] }
+    ] },
+    "longBeard": { "shapes": [
+      { "type": "path", "role": "hair", "closed": true, "smooth": true, "setup": { "lineWidth": 2.5 },
+        "points": [[-0.42,-0.04],[-0.44,0.24],[-0.36,0.5],[-0.2,0.72],[-0.08,0.9],[0,0.98],[0.08,0.9],[0.2,0.72],[0.36,0.5],[0.44,0.24],[0.42,-0.04],[0.24,0.12],[0.1,0.18],[-0.1,0.18],[-0.24,0.12]] },
+      { "type": "path", "role": "hair", "smooth": true, "setup": { "lineWidth": 2 }, "points": [[-0.14,0.34],[0,0.4],[0.14,0.34]] }
+    ] }
+  },
+
+  "headgear": {
+    "bare": { "shapes": [] },
+    "bandana": { "shapes": [
+      { "type": "path", "role": "accent", "closed": true, "smooth": true, "setup": { "lineWidth": 2.5 },
+        "points": [[-0.46,-0.28],[-0.3,-0.5],[0,-0.56],[0.3,-0.5],[0.46,-0.28],[0.42,-0.16],[0.2,-0.28],[0,-0.32],[-0.2,-0.28],[-0.42,-0.16]] },
+      { "type": "path", "role": "accent", "closed": true, "smooth": true, "setup": { "lineWidth": 2.2 },
+        "points": [[-0.46,-0.24],[-0.62,-0.14],[-0.66,0.04],[-0.52,-0.02],[-0.44,-0.14]] },
+      { "type": "lines", "role": "ink", "setup": { "lineWidth": 1.6 }, "segments": [[[-0.34,-0.24],[-0.26,-0.4]],[[-0.04,-0.28],[-0.02,-0.44]],[[0.26,-0.26],[0.32,-0.4]]] }
+    ] },
+    "tricorn": { "shapes": [
+      { "type": "path", "role": "hat", "closed": true, "smooth": true, "setup": { "lineWidth": 3 },
+        "points": [[-0.36,-0.46],[-0.2,-0.62],[0,-0.66],[0.2,-0.62],[0.36,-0.46],[0.2,-0.5],[0,-0.54],[-0.2,-0.5]] },
+      { "type": "path", "role": "hat", "closed": true, "smooth": true, "setup": { "lineWidth": 3 },
+        "points": [[-0.64,-0.3],[-0.5,-0.48],[-0.26,-0.4],[0,-0.52],[0.26,-0.4],[0.5,-0.48],[0.64,-0.3],[0.36,-0.28],[0,-0.32],[-0.36,-0.28]] },
+      { "type": "path", "role": "trim", "smooth": true, "setup": { "lineWidth": 1.6 },
+        "points": [[-0.58,-0.32],[-0.28,-0.42],[0,-0.48],[0.28,-0.42],[0.58,-0.32]] }
+    ] },
+    "peakedCap": { "shapes": [
+      { "type": "path", "role": "hat", "closed": true, "smooth": true, "setup": { "lineWidth": 3 },
+        "points": [[-0.44,-0.34],[-0.46,-0.54],[-0.28,-0.66],[0,-0.7],[0.28,-0.66],[0.46,-0.54],[0.44,-0.34],[0.22,-0.42],[0,-0.44],[-0.22,-0.42]] },
+      { "type": "path", "role": "hat", "closed": true, "smooth": true, "setup": { "lineWidth": 2.6 },
+        "points": [[-0.5,-0.28],[-0.2,-0.34],[0.2,-0.34],[0.5,-0.28],[0.34,-0.2],[0,-0.24],[-0.34,-0.2]] },
+      { "type": "lines", "role": "trim", "setup": { "lineWidth": 2.4 }, "segments": [[[-0.42,-0.36],[0.42,-0.36]]] },
+      { "type": "circle", "role": "metal", "fill": true, "cx": 0, "cy": -0.46, "radius": 0.05 }
+    ] },
+    "knitCap": { "shapes": [
+      { "type": "path", "role": "accent", "closed": true, "smooth": true, "setup": { "lineWidth": 2.6 },
+        "points": [[-0.44,-0.14],[-0.46,-0.44],[-0.26,-0.64],[0,-0.7],[0.26,-0.64],[0.46,-0.44],[0.44,-0.14],[0.22,-0.26],[0,-0.3],[-0.22,-0.26]] },
+      { "type": "lines", "role": "ink", "setup": { "lineWidth": 1.4 }, "segments": [[[-0.4,-0.2],[-0.34,-0.5]],[[-0.13,-0.26],[-0.1,-0.62]],[[0.13,-0.26],[0.1,-0.62]],[[0.4,-0.2],[0.34,-0.5]]] }
+    ] }
+  },
+
+  "shoulders": {
+    "navalCoat": { "shapes": [
+      { "type": "path", "role": "coat", "closed": true, "smooth": true, "setup": { "lineWidth": 3 },
+        "points": [[-0.95,0.62],[-0.9,0.1],[-0.6,-0.28],[-0.24,-0.42],[0,-0.36],[0.24,-0.42],[0.6,-0.28],[0.9,0.1],[0.95,0.62]] },
+      { "type": "path", "role": "trim", "closed": true, "smooth": true, "setup": { "lineWidth": 2.4 },
+        "points": [[-0.24,-0.42],[0,-0.34],[-0.2,0.6],[-0.42,0.6],[-0.4,-0.1]] },
+      { "type": "path", "role": "trim", "closed": true, "smooth": true, "setup": { "lineWidth": 2.4 },
+        "points": [[0.24,-0.42],[0,-0.34],[0.2,0.6],[0.42,0.6],[0.4,-0.1]] },
+      { "type": "path", "role": "paper", "closed": true, "smooth": true, "fillSoft": true, "setup": { "lineWidth": 1.5 },
+        "points": [[-0.14,-0.34],[0.14,-0.34],[0.1,0.6],[-0.1,0.6]] },
+      { "type": "circle", "role": "metal", "fill": true, "cx": -0.3, "cy": 0.08, "radius": 0.045 },
+      { "type": "circle", "role": "metal", "fill": true, "cx": -0.3, "cy": 0.3, "radius": 0.045 },
+      { "type": "circle", "role": "metal", "fill": true, "cx": 0.3, "cy": 0.08, "radius": 0.045 },
+      { "type": "circle", "role": "metal", "fill": true, "cx": 0.3, "cy": 0.3, "radius": 0.045 }
+    ] },
+    "stripedShirt": { "shapes": [
+      { "type": "path", "role": "coat", "closed": true, "smooth": true, "setup": { "lineWidth": 3 },
+        "points": [[-0.9,0.62],[-0.86,0.12],[-0.54,-0.24],[-0.22,-0.4],[0,-0.34],[0.22,-0.4],[0.54,-0.24],[0.86,0.12],[0.9,0.62]] },
+      { "type": "lines", "role": "accent", "setup": { "lineWidth": 3 }, "segments": [[[-0.82,0.08],[0.82,0.08]],[[-0.86,0.28],[0.86,0.28]],[[-0.88,0.48],[0.88,0.48]]] }
+    ] },
+    "vest": { "shapes": [
+      { "type": "path", "role": "coat", "closed": true, "smooth": true, "setup": { "lineWidth": 3 },
+        "points": [[-0.92,0.62],[-0.88,0.1],[-0.56,-0.26],[-0.22,-0.4],[0,-0.34],[0.22,-0.4],[0.56,-0.26],[0.88,0.1],[0.92,0.62]] },
+      { "type": "path", "role": "paper", "closed": true, "smooth": true, "fillSoft": true, "setup": { "lineWidth": 1.5 },
+        "points": [[-0.22,-0.4],[0,-0.34],[0.22,-0.4],[0.12,0.6],[-0.12,0.6]] },
+      { "type": "path", "role": "ink", "smooth": true, "setup": { "lineWidth": 1.6 }, "points": [[0,-0.32],[0,0.58]] },
+      { "type": "circle", "role": "trim", "fill": true, "cx": 0, "cy": 0.1, "radius": 0.04 },
+      { "type": "circle", "role": "trim", "fill": true, "cx": 0, "cy": 0.34, "radius": 0.04 }
+    ] }
+  }
+}

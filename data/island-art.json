@@ -1,0 +1,222 @@
+{
+  "_doc": "BOATZ island art (top-down, bright stylized daytime). Keyed by island.type — WorldRenderer looks up art.islands[type] and falls back to `island`. Shared base per asset: a turquoise shallows halo, a sandy landmass, a plateau filled with the island's runtime `color` (so each isle is tinted by its roster color), a south-shore dock, and a palm (radial fronds = a palm seen from above). Each type adds a distinguishing motif (crop rows / trees / pasture / mine / slipway). Radius-relative coords ×58px. Extend by adding type assets; reserve `damaged`/etc. states later.",
+
+  "islands": {
+    "island": {
+      "name": "Island",
+      "states": ["idle"],
+      "setup": { "lineWidth": 2 },
+      "shapes": [
+        { "name": "Shallows", "type": "circle", "fill": true, "cx": 0, "cy": 0, "radius": 1.28,
+          "setup": { "fillColor": "#63cfe4", "alpha": 0.35, "shadowBlur": 18, "shadowColor": "#63cfe4" } },
+        { "name": "Sand", "type": "path", "fill": true, "stroke": true, "closed": true,
+          "points": [[-0.72, -0.34], [-0.48, -0.7], [0.02, -0.82], [0.54, -0.68], [0.8, -0.28], [0.86, 0.22], [0.58, 0.62], [0.14, 0.82], [-0.44, 0.72], [-0.8, 0.34]],
+          "setup": { "fillColor": "#f2ddaa", "strokeColor": "#e0c078", "lineWidth": 2, "shadowBlur": 6, "shadowColor": "rgba(20,40,55,0.18)" } },
+        { "name": "Grass", "type": "path", "fill": true, "stroke": true, "closed": true,
+          "points": [[-0.56, -0.26], [-0.36, -0.56], [0.02, -0.66], [0.44, -0.54], [0.64, -0.22], [0.68, 0.18], [0.46, 0.5], [0.1, 0.66], [-0.36, 0.58], [-0.64, 0.28]],
+          "setup": { "strokeColor": "rgba(30,60,30,0.18)", "lineWidth": 1 } },
+        { "name": "Rocks", "type": "group", "children": [
+          { "type": "circle", "fill": true, "stroke": true, "cx": 0.3, "cy": 0.24, "radiusAbs": 6, "setup": { "fillColor": "#9198a1", "strokeColor": "#6b7079", "lineWidth": 1 } },
+          { "type": "circle", "fill": true, "cx": 0.42, "cy": 0.32, "radiusAbs": 4, "setup": { "fillColor": "#828a94" } }
+        ] },
+        { "name": "Dock", "type": "group", "children": [
+          { "type": "roundedRect", "fill": true, "stroke": true, "x": 0.12, "y": 0.72, "width": 0.42, "height": 0.1, "cornerRadius": 0.03, "setup": { "fillColor": "#a9793f", "strokeColor": "#71481f", "lineWidth": 1.5 } },
+          { "type": "circle", "fill": true, "cx": 0.16, "cy": 0.84, "radiusAbs": 1.5, "setup": { "fillColor": "#5e3c1a" } },
+          { "type": "circle", "fill": true, "cx": 0.34, "cy": 0.84, "radiusAbs": 1.5, "setup": { "fillColor": "#5e3c1a" } },
+          { "type": "circle", "fill": true, "cx": 0.5, "cy": 0.84, "radiusAbs": 1.5, "setup": { "fillColor": "#5e3c1a" } }
+        ] },
+        { "name": "Palm", "type": "group", "cx": -0.18, "cy": -0.34, "children": [
+          { "type": "circle", "fill": true, "cx": 0.03, "cy": 0.05, "radiusAbs": 7, "setup": { "fillColor": "rgba(30,45,25,0.18)" } },
+          { "name": "fronds", "type": "group", "cx": 0, "cy": 0, "children": [
+            { "type": "radialRepeat", "count": 7, "cx": 0, "cy": 0, "radius": 0, "children": [
+              { "name": "leaf", "type": "path", "fill": true, "stroke": true, "closed": true, "points": [[0, -0.05], [0.16, -0.028], [0.23, 0], [0.16, 0.028], [0, 0.05]], "setup": { "fillColor": "#4faa5f", "strokeColor": "#37814a", "lineWidth": 1 } }
+            ] }
+          ] },
+          { "type": "circle", "fill": true, "cx": 0, "cy": 0, "radiusAbs": 2.6, "setup": { "fillColor": "#7a5230" } },
+          { "type": "circle", "fill": true, "cx": 0.05, "cy": 0.03, "radiusAbs": 1.4, "setup": { "fillColor": "#caa24a" } },
+          { "type": "circle", "fill": true, "cx": -0.05, "cy": 0.05, "radiusAbs": 1.4, "setup": { "fillColor": "#b98f3f" } }
+        ] }
+      ]
+    },
+
+    "plantation": {
+      "name": "Plantation",
+      "states": ["idle"],
+      "setup": { "lineWidth": 2 },
+      "shapes": [
+        { "name": "Shallows", "type": "circle", "fill": true, "cx": 0, "cy": 0, "radius": 1.28,
+          "setup": { "fillColor": "#63cfe4", "alpha": 0.35, "shadowBlur": 18, "shadowColor": "#63cfe4" } },
+        { "name": "Sand", "type": "path", "fill": true, "stroke": true, "closed": true,
+          "points": [[-0.72, -0.34], [-0.48, -0.7], [0.02, -0.82], [0.54, -0.68], [0.8, -0.28], [0.86, 0.22], [0.58, 0.62], [0.14, 0.82], [-0.44, 0.72], [-0.8, 0.34]],
+          "setup": { "fillColor": "#f2ddaa", "strokeColor": "#e0c078", "lineWidth": 2, "shadowBlur": 6, "shadowColor": "rgba(20,40,55,0.18)" } },
+        { "name": "Grass", "type": "path", "fill": true, "stroke": true, "closed": true,
+          "points": [[-0.56, -0.26], [-0.36, -0.56], [0.02, -0.66], [0.44, -0.54], [0.64, -0.22], [0.68, 0.18], [0.46, 0.5], [0.1, 0.66], [-0.36, 0.58], [-0.64, 0.28]],
+          "setup": { "strokeColor": "rgba(30,60,30,0.18)", "lineWidth": 1 } },
+        { "name": "Crops", "type": "lines", "stroke": true,
+          "setup": { "strokeColor": "#b6982f", "lineWidth": 2 },
+          "segments": [[[-0.38, -0.28], [0.42, -0.42]], [[-0.44, -0.1], [0.5, -0.24]], [[-0.48, 0.08], [0.48, -0.06]], [[-0.44, 0.26], [0.4, 0.12]]] },
+        { "name": "Dock", "type": "group", "children": [
+          { "type": "roundedRect", "fill": true, "stroke": true, "x": 0.12, "y": 0.72, "width": 0.42, "height": 0.1, "cornerRadius": 0.03, "setup": { "fillColor": "#a9793f", "strokeColor": "#71481f", "lineWidth": 1.5 } },
+          { "type": "circle", "fill": true, "cx": 0.16, "cy": 0.84, "radiusAbs": 1.5, "setup": { "fillColor": "#5e3c1a" } },
+          { "type": "circle", "fill": true, "cx": 0.34, "cy": 0.84, "radiusAbs": 1.5, "setup": { "fillColor": "#5e3c1a" } },
+          { "type": "circle", "fill": true, "cx": 0.5, "cy": 0.84, "radiusAbs": 1.5, "setup": { "fillColor": "#5e3c1a" } }
+        ] },
+        { "name": "Palm", "type": "group", "cx": -0.28, "cy": -0.38, "children": [
+          { "type": "circle", "fill": true, "cx": 0.03, "cy": 0.05, "radiusAbs": 7, "setup": { "fillColor": "rgba(30,45,25,0.18)" } },
+          { "name": "fronds", "type": "group", "cx": 0, "cy": 0, "children": [
+            { "type": "radialRepeat", "count": 7, "cx": 0, "cy": 0, "radius": 0, "children": [
+              { "name": "leaf", "type": "path", "fill": true, "stroke": true, "closed": true, "points": [[0, -0.05], [0.16, -0.028], [0.23, 0], [0.16, 0.028], [0, 0.05]], "setup": { "fillColor": "#4faa5f", "strokeColor": "#37814a", "lineWidth": 1 } }
+            ] }
+          ] },
+          { "type": "circle", "fill": true, "cx": 0, "cy": 0, "radiusAbs": 2.6, "setup": { "fillColor": "#7a5230" } },
+          { "type": "circle", "fill": true, "cx": 0.05, "cy": 0.03, "radiusAbs": 1.4, "setup": { "fillColor": "#caa24a" } }
+        ] }
+      ]
+    },
+
+    "ranch": {
+      "name": "Ranch",
+      "states": ["idle"],
+      "setup": { "lineWidth": 2 },
+      "shapes": [
+        { "name": "Shallows", "type": "circle", "fill": true, "cx": 0, "cy": 0, "radius": 1.28,
+          "setup": { "fillColor": "#63cfe4", "alpha": 0.35, "shadowBlur": 18, "shadowColor": "#63cfe4" } },
+        { "name": "Sand", "type": "path", "fill": true, "stroke": true, "closed": true,
+          "points": [[-0.72, -0.34], [-0.48, -0.7], [0.02, -0.82], [0.54, -0.68], [0.8, -0.28], [0.86, 0.22], [0.58, 0.62], [0.14, 0.82], [-0.44, 0.72], [-0.8, 0.34]],
+          "setup": { "fillColor": "#f2ddaa", "strokeColor": "#e0c078", "lineWidth": 2, "shadowBlur": 6, "shadowColor": "rgba(20,40,55,0.18)" } },
+        { "name": "Grass", "type": "path", "fill": true, "stroke": true, "closed": true,
+          "points": [[-0.56, -0.26], [-0.36, -0.56], [0.02, -0.66], [0.44, -0.54], [0.64, -0.22], [0.68, 0.18], [0.46, 0.5], [0.1, 0.66], [-0.36, 0.58], [-0.64, 0.28]],
+          "setup": { "strokeColor": "rgba(30,60,30,0.18)", "lineWidth": 1 } },
+        { "name": "Pasture", "type": "group", "children": [
+          { "type": "roundedRect", "stroke": true, "x": -0.42, "y": -0.06, "width": 0.8, "height": 0.5, "cornerRadius": 0.08, "setup": { "strokeColor": "#a9793f", "lineWidth": 2 } },
+          { "type": "circle", "fill": true, "cx": -0.2, "cy": 0.14, "radiusAbs": 4, "setup": { "fillColor": "#6b4a33" } },
+          { "type": "circle", "fill": true, "cx": 0.06, "cy": 0.26, "radiusAbs": 4, "setup": { "fillColor": "#7c5a40" } },
+          { "type": "circle", "fill": true, "cx": 0.2, "cy": 0.06, "radiusAbs": 3.4, "setup": { "fillColor": "#5c3f2c" } }
+        ] },
+        { "name": "Dock", "type": "group", "children": [
+          { "type": "roundedRect", "fill": true, "stroke": true, "x": 0.12, "y": 0.72, "width": 0.42, "height": 0.1, "cornerRadius": 0.03, "setup": { "fillColor": "#a9793f", "strokeColor": "#71481f", "lineWidth": 1.5 } },
+          { "type": "circle", "fill": true, "cx": 0.16, "cy": 0.84, "radiusAbs": 1.5, "setup": { "fillColor": "#5e3c1a" } },
+          { "type": "circle", "fill": true, "cx": 0.34, "cy": 0.84, "radiusAbs": 1.5, "setup": { "fillColor": "#5e3c1a" } }
+        ] },
+        { "name": "Palm", "type": "group", "cx": 0.34, "cy": -0.42, "children": [
+          { "type": "circle", "fill": true, "cx": 0.03, "cy": 0.05, "radiusAbs": 7, "setup": { "fillColor": "rgba(30,45,25,0.18)" } },
+          { "name": "fronds", "type": "group", "cx": 0, "cy": 0, "children": [
+            { "type": "radialRepeat", "count": 7, "cx": 0, "cy": 0, "radius": 0, "children": [
+              { "name": "leaf", "type": "path", "fill": true, "stroke": true, "closed": true, "points": [[0, -0.05], [0.16, -0.028], [0.23, 0], [0.16, 0.028], [0, 0.05]], "setup": { "fillColor": "#4faa5f", "strokeColor": "#37814a", "lineWidth": 1 } }
+            ] }
+          ] },
+          { "type": "circle", "fill": true, "cx": 0, "cy": 0, "radiusAbs": 2.6, "setup": { "fillColor": "#7a5230" } }
+        ] }
+      ]
+    },
+
+    "forest": {
+      "name": "Forest",
+      "states": ["idle"],
+      "setup": { "lineWidth": 2 },
+      "shapes": [
+        { "name": "Shallows", "type": "circle", "fill": true, "cx": 0, "cy": 0, "radius": 1.28,
+          "setup": { "fillColor": "#63cfe4", "alpha": 0.35, "shadowBlur": 18, "shadowColor": "#63cfe4" } },
+        { "name": "Sand", "type": "path", "fill": true, "stroke": true, "closed": true,
+          "points": [[-0.72, -0.34], [-0.48, -0.7], [0.02, -0.82], [0.54, -0.68], [0.8, -0.28], [0.86, 0.22], [0.58, 0.62], [0.14, 0.82], [-0.44, 0.72], [-0.8, 0.34]],
+          "setup": { "fillColor": "#f2ddaa", "strokeColor": "#e0c078", "lineWidth": 2, "shadowBlur": 6, "shadowColor": "rgba(20,40,55,0.18)" } },
+        { "name": "Grass", "type": "path", "fill": true, "stroke": true, "closed": true,
+          "points": [[-0.56, -0.26], [-0.36, -0.56], [0.02, -0.66], [0.44, -0.54], [0.64, -0.22], [0.68, 0.18], [0.46, 0.5], [0.1, 0.66], [-0.36, 0.58], [-0.64, 0.28]],
+          "setup": { "strokeColor": "rgba(30,60,30,0.2)", "lineWidth": 1 } },
+        { "name": "Trees", "type": "group", "children": [
+          { "type": "circle", "fill": true, "stroke": true, "cx": 0.2, "cy": 0.18, "radiusAbs": 7, "setup": { "fillColor": "#3f8f4f", "strokeColor": "#2f6f3c", "lineWidth": 1 } },
+          { "type": "circle", "fill": true, "stroke": true, "cx": 0.42, "cy": 0.3, "radiusAbs": 5.5, "setup": { "fillColor": "#469a56", "strokeColor": "#2f6f3c", "lineWidth": 1 } },
+          { "type": "circle", "fill": true, "stroke": true, "cx": 0.36, "cy": 0.02, "radiusAbs": 5, "setup": { "fillColor": "#3f8f4f", "strokeColor": "#2f6f3c", "lineWidth": 1 } },
+          { "type": "circle", "fill": true, "cx": 0.12, "cy": 0.38, "radiusAbs": 4.5, "setup": { "fillColor": "#4aa25b" } }
+        ] },
+        { "name": "Dock", "type": "group", "children": [
+          { "type": "roundedRect", "fill": true, "stroke": true, "x": 0.12, "y": 0.72, "width": 0.42, "height": 0.1, "cornerRadius": 0.03, "setup": { "fillColor": "#a9793f", "strokeColor": "#71481f", "lineWidth": 1.5 } },
+          { "type": "circle", "fill": true, "cx": 0.16, "cy": 0.84, "radiusAbs": 1.5, "setup": { "fillColor": "#5e3c1a" } },
+          { "type": "circle", "fill": true, "cx": 0.34, "cy": 0.84, "radiusAbs": 1.5, "setup": { "fillColor": "#5e3c1a" } }
+        ] },
+        { "name": "Palm", "type": "group", "cx": -0.3, "cy": -0.3, "children": [
+          { "type": "circle", "fill": true, "cx": 0.03, "cy": 0.05, "radiusAbs": 8, "setup": { "fillColor": "rgba(30,45,25,0.2)" } },
+          { "name": "fronds", "type": "group", "cx": 0, "cy": 0, "children": [
+            { "type": "radialRepeat", "count": 8, "cx": 0, "cy": 0, "radius": 0, "children": [
+              { "name": "leaf", "type": "path", "fill": true, "stroke": true, "closed": true, "points": [[0, -0.055], [0.18, -0.03], [0.26, 0], [0.18, 0.03], [0, 0.055]], "setup": { "fillColor": "#41924f", "strokeColor": "#2f6f3c", "lineWidth": 1 } }
+            ] }
+          ] },
+          { "type": "circle", "fill": true, "cx": 0, "cy": 0, "radiusAbs": 2.8, "setup": { "fillColor": "#6b4a2c" } }
+        ] }
+      ]
+    },
+
+    "mining": {
+      "name": "Mine",
+      "states": ["idle"],
+      "setup": { "lineWidth": 2 },
+      "shapes": [
+        { "name": "Shallows", "type": "circle", "fill": true, "cx": 0, "cy": 0, "radius": 1.28,
+          "setup": { "fillColor": "#63cfe4", "alpha": 0.35, "shadowBlur": 18, "shadowColor": "#63cfe4" } },
+        { "name": "Sand", "type": "path", "fill": true, "stroke": true, "closed": true,
+          "points": [[-0.72, -0.34], [-0.48, -0.7], [0.02, -0.82], [0.54, -0.68], [0.8, -0.28], [0.86, 0.22], [0.58, 0.62], [0.14, 0.82], [-0.44, 0.72], [-0.8, 0.34]],
+          "setup": { "fillColor": "#f2ddaa", "strokeColor": "#e0c078", "lineWidth": 2, "shadowBlur": 6, "shadowColor": "rgba(20,40,55,0.18)" } },
+        { "name": "Grass", "type": "path", "fill": true, "stroke": true, "closed": true,
+          "points": [[-0.56, -0.26], [-0.36, -0.56], [0.02, -0.66], [0.44, -0.54], [0.64, -0.22], [0.68, 0.18], [0.46, 0.5], [0.1, 0.66], [-0.36, 0.58], [-0.64, 0.28]],
+          "setup": { "strokeColor": "rgba(40,45,55,0.22)", "lineWidth": 1 } },
+        { "name": "Mine", "type": "group", "children": [
+          { "type": "circle", "fill": true, "cx": 0.02, "cy": 0.04, "radiusAbs": 9, "setup": { "fillColor": "#565b63" } },
+          { "type": "circle", "fill": true, "cx": 0.02, "cy": 0.04, "radiusAbs": 5, "setup": { "fillColor": "#3a3e44" } },
+          { "type": "lines", "stroke": true, "setup": { "strokeColor": "#6b4a2c", "lineWidth": 2 }, "segments": [[[-0.16, -0.12], [0.18, 0.24]], [[0.18, -0.12], [-0.16, 0.24]]] },
+          { "type": "circle", "fill": true, "cx": 0.3, "cy": 0.28, "radiusAbs": 4, "setup": { "fillColor": "#7f858d" } },
+          { "type": "circle", "fill": true, "cx": -0.3, "cy": 0.2, "radiusAbs": 3, "setup": { "fillColor": "#9198a1" } }
+        ] },
+        { "name": "Dock", "type": "group", "children": [
+          { "type": "roundedRect", "fill": true, "stroke": true, "x": 0.12, "y": 0.72, "width": 0.42, "height": 0.1, "cornerRadius": 0.03, "setup": { "fillColor": "#a9793f", "strokeColor": "#71481f", "lineWidth": 1.5 } },
+          { "type": "circle", "fill": true, "cx": 0.16, "cy": 0.84, "radiusAbs": 1.5, "setup": { "fillColor": "#5e3c1a" } },
+          { "type": "circle", "fill": true, "cx": 0.34, "cy": 0.84, "radiusAbs": 1.5, "setup": { "fillColor": "#5e3c1a" } }
+        ] },
+        { "name": "Palm", "type": "group", "cx": -0.34, "cy": -0.36, "children": [
+          { "type": "circle", "fill": true, "cx": 0.03, "cy": 0.05, "radiusAbs": 6, "setup": { "fillColor": "rgba(30,45,25,0.18)" } },
+          { "name": "fronds", "type": "group", "cx": 0, "cy": 0, "children": [
+            { "type": "radialRepeat", "count": 7, "cx": 0, "cy": 0, "radius": 0, "children": [
+              { "name": "leaf", "type": "path", "fill": true, "stroke": true, "closed": true, "points": [[0, -0.045], [0.14, -0.026], [0.2, 0], [0.14, 0.026], [0, 0.045]], "setup": { "fillColor": "#4faa5f", "strokeColor": "#37814a", "lineWidth": 1 } }
+            ] }
+          ] },
+          { "type": "circle", "fill": true, "cx": 0, "cy": 0, "radiusAbs": 2.4, "setup": { "fillColor": "#7a5230" } }
+        ] }
+      ]
+    },
+
+    "shipyard": {
+      "name": "Shipyard",
+      "states": ["idle"],
+      "setup": { "lineWidth": 2 },
+      "shapes": [
+        { "name": "Shallows", "type": "circle", "fill": true, "cx": 0, "cy": 0, "radius": 1.32,
+          "setup": { "fillColor": "#63cfe4", "alpha": 0.38, "shadowBlur": 18, "shadowColor": "#63cfe4" } },
+        { "name": "Sand", "type": "path", "fill": true, "stroke": true, "closed": true,
+          "points": [[-0.72, -0.34], [-0.48, -0.7], [0.02, -0.82], [0.54, -0.68], [0.8, -0.28], [0.86, 0.22], [0.58, 0.62], [0.14, 0.82], [-0.44, 0.72], [-0.8, 0.34]],
+          "setup": { "fillColor": "#f2ddaa", "strokeColor": "#e0c078", "lineWidth": 2, "shadowBlur": 6, "shadowColor": "rgba(20,40,55,0.18)" } },
+        { "name": "Grass", "type": "path", "fill": true, "stroke": true, "closed": true,
+          "points": [[-0.56, -0.26], [-0.36, -0.56], [0.02, -0.66], [0.44, -0.54], [0.64, -0.22], [0.68, 0.18], [0.46, 0.5], [0.1, 0.66], [-0.36, 0.58], [-0.64, 0.28]],
+          "setup": { "strokeColor": "rgba(60,45,30,0.2)", "lineWidth": 1 } },
+        { "name": "Slipway", "type": "lines", "stroke": true, "setup": { "strokeColor": "#9c7a4a", "lineWidth": 2 },
+          "segments": [[[-0.34, -0.05], [-0.2, 0.78]], [[-0.05, -0.05], [0.05, 0.78]]] },
+        { "name": "Hull", "type": "path", "fill": true, "stroke": true, "closed": true,
+          "points": [[-0.2, -0.16], [-0.08, 0.02], [-0.06, 0.34], [-0.2, 0.5], [-0.34, 0.34], [-0.32, 0.02]],
+          "setup": { "fillColor": "#c8a06a", "strokeColor": "#7c5324", "lineWidth": 1.5 } },
+        { "name": "Keel", "type": "lines", "stroke": true, "setup": { "strokeColor": "#7c5324", "lineWidth": 1.5 }, "segments": [[[-0.2, -0.14], [-0.2, 0.48]]] },
+        { "name": "Dock", "type": "group", "children": [
+          { "type": "roundedRect", "fill": true, "stroke": true, "x": 0.2, "y": 0.72, "width": 0.44, "height": 0.11, "cornerRadius": 0.03, "setup": { "fillColor": "#a9793f", "strokeColor": "#71481f", "lineWidth": 1.5 } },
+          { "type": "circle", "fill": true, "cx": 0.26, "cy": 0.85, "radiusAbs": 1.5, "setup": { "fillColor": "#5e3c1a" } },
+          { "type": "circle", "fill": true, "cx": 0.46, "cy": 0.85, "radiusAbs": 1.5, "setup": { "fillColor": "#5e3c1a" } }
+        ] },
+        { "name": "Palm", "type": "group", "cx": 0.4, "cy": -0.34, "children": [
+          { "type": "circle", "fill": true, "cx": 0.03, "cy": 0.05, "radiusAbs": 6, "setup": { "fillColor": "rgba(30,45,25,0.18)" } },
+          { "name": "fronds", "type": "group", "cx": 0, "cy": 0, "children": [
+            { "type": "radialRepeat", "count": 7, "cx": 0, "cy": 0, "radius": 0, "children": [
+              { "name": "leaf", "type": "path", "fill": true, "stroke": true, "closed": true, "points": [[0, -0.045], [0.14, -0.026], [0.2, 0], [0.14, 0.026], [0, 0.045]], "setup": { "fillColor": "#4faa5f", "strokeColor": "#37814a", "lineWidth": 1 } }
+            ] }
+          ] },
+          { "type": "circle", "fill": true, "cx": 0, "cy": 0, "radiusAbs": 2.4, "setup": { "fillColor": "#7a5230" } }
+        ] }
+      ]
+    }
+  }
+}

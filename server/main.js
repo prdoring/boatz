@@ -10,6 +10,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { PORT, HOST, EDITOR_PASSWORD, DIRS, MIME, MAX_BACKUPS, getSaveAllowlist } from './config.js';
 import { handleSaveData, handleManageCollection, readBody } from './saveData.js';
+import { attachSimServer } from './simHost.js'; // side-effect-free import; opens no socket until called
 
 // Per-process session token. The auth cookie carries THIS, never the password,
 // so the secret never round-trips through the browser. Regenerated each start.
@@ -230,8 +231,13 @@ const server = http.createServer(requestHandler);
 // (tests import requestHandler and drive their own ephemeral server).
 const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isMain) {
+  // The authoritative economy simulation + its WebSocket server, sharing this HTTP
+  // port. Browser viewers connect with `new NetworkClient()` (same host/port).
+  const sim = attachSimServer(server);
+
   server.listen(PORT, HOST, () => {
     console.log(`Pat_Engine running → http://localhost:${PORT}/  (editor: /editor)  [bound ${HOST}:${PORT}]`);
+    console.log(`Simulation: ${sim.world.islands.length} islands, ${sim.world.ships.length} ships (server-authoritative) — sea #${sim.world.rosterSeed}`);
     if (EDITOR_PASSWORD) console.log('Editor auth: ENABLED');
   });
 
@@ -243,6 +249,7 @@ if (isMain) {
   for (const sig of ['SIGINT', 'SIGTERM']) {
     process.on(sig, () => {
       console.log(`\n${sig} — shutting down.`);
+      sim.stop();
       server.close(() => process.exit(0));
       setTimeout(() => process.exit(0), 2000).unref();
     });

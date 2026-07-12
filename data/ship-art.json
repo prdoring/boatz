@@ -1,0 +1,30 @@
+{
+  "_doc": "BOATZ trade-ship art (top-down, bow pointing +x — WorldRenderer rotates by heading = atan2(dy,dx)). The `ship` asset is the fallback for every ship type (sloop/brig/galleon reserved). The SAIL fill uses the runtime `color` (the ship's home-port color) so trade lanes read at a glance; the hull colors are fixed here. States: idle (in port) / sailing (full sail) / docked — the sail furls (dims) when not sailing. `damaged`/`sinking` states are reserved for later.",
+
+  "ships": {
+    "ship": {
+      "name": "Trade Ship",
+      "states": ["idle", "sailing", "docked"],
+      "setup": { "lineWidth": 2 },
+      "transitionDuration": 220,
+      "shapes": [
+        { "name": "Hull", "type": "path", "fill": true, "stroke": true, "closed": true,
+          "points": [[1.0, 0.0], [0.55, -0.36], [-0.6, -0.46], [-0.95, -0.28], [-0.95, 0.28], [-0.6, 0.46], [0.55, 0.36]],
+          "setup": { "fillColor": "#c9a26c", "strokeColor": "#7c5324", "lineWidth": 2, "shadowBlur": 3, "shadowColor": "rgba(20,40,55,0.35)" } },
+        { "name": "Deck", "type": "path", "fill": true, "closed": true,
+          "points": [[0.72, 0.0], [0.42, -0.24], [-0.44, -0.32], [-0.68, -0.18], [-0.68, 0.18], [-0.44, 0.32], [0.42, 0.24]],
+          "setup": { "fillColor": "#e6cc94" } },
+        { "name": "Sail", "type": "path", "fill": true, "stroke": true, "closed": true,
+          "points": [[0.52, 0.0], [-0.04, -0.5], [-0.34, 0.0], [-0.04, 0.5]],
+          "setup": { "shadowBlur": 4, "shadowColor": "rgba(20,40,55,0.30)", "strokeColor": "rgba(40,60,70,0.45)", "lineWidth": 1, "alpha": 0.96 },
+          "states": {
+            "idle": { "setup": { "alpha": 0.42, "shadowBlur": 1 } },
+            "docked": { "setup": { "alpha": 0.55, "shadowBlur": 1 } }
+          }
+        },
+        { "name": "Mast", "type": "circle", "fill": true, "cx": -0.04, "cy": 0.0, "radiusAbs": 2.1,
+          "setup": { "fillColor": "#4a3420" } }
+      ]
+    }
+  }
+}

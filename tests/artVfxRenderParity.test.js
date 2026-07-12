@@ -85,7 +85,7 @@ test('vfx phased render is deterministic and progress-responsive', () => {
 // the shared engine entry point, never a private reimplementation.
 test('editor preview + game both draw art through drawUnifiedArt', () => {
   const read = (rel) => readFileSync(fileURLToPath(new URL(rel, import.meta.url)), 'utf8');
-  for (const rel of ['../editors/art/preview/preview.js', '../game/GardenRenderer.js']) {
+  for (const rel of ['../editors/art/preview/preview.js', '../game/WorldRenderer.js']) {
     assert.match(read(rel), /drawUnifiedArt\(/, `${rel} must call drawUnifiedArt`);
   }
 });
@@ -95,5 +95,5 @@ test('editor VFX preview + game both draw effects through the VFX interpreter/re
   // VFX editor imports the interpreter entry points directly…
   assert.match(read('../editors/vfx/vfxEditor.js'), /VFXInterpreter\.js/, 'vfx editor must use VFXInterpreter');
   // …and the game draws effects via EffectsRenderer (which wraps the same interpreter).
-  assert.match(read('../game/GardenRenderer.js'), /effectsRenderer\.|EffectsRenderer/, 'game must use EffectsRenderer');
+  assert.match(read('../game/WorldRenderer.js'), /effectsRenderer\.|EffectsRenderer/, 'game must use EffectsRenderer');
 });

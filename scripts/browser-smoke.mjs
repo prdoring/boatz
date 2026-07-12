@@ -20,6 +20,7 @@ import os from 'node:os';
 import path from 'node:path';
 import WebSocket from 'ws';
 import { requestHandler } from '../server/main.js';
+import { attachSimServer } from '../server/simHost.js';
 
 const SETTLE_MS = 1600;       // let the app boot, mount, run a few RAF frames + audio init
 const LOAD_TIMEOUT_MS = 15000;
@@ -149,8 +150,11 @@ async function main() {
     process.exit(0);
   }
 
-  // 1) Host the app in-process on an ephemeral port.
+  // 1) Host the app in-process on an ephemeral port, WITH the authoritative sim +
+  //    its WebSocket server (as `npm start` does) so the game page actually connects
+  //    and renders live islands/ships — any render/net error then surfaces here.
   const server = http.createServer(requestHandler);
+  const sim = attachSimServer(server);
   await new Promise(r => server.listen(0, '127.0.0.1', r));
   const port = server.address().port;
   const origin = `http://127.0.0.1:${port}`;
@@ -229,6 +233,7 @@ async function main() {
     page?.close();
     cdp?.close();
     try { proc.kill(); } catch { /* ignore */ }
+    try { sim.stop(); } catch { /* ignore */ }
     await new Promise(r => server.close(r));
     try { rmSync(userDataDir, { recursive: true, force: true }); } catch { /* ignore */ }
   }

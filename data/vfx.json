@@ -232,6 +232,61 @@
       "colorOuter": "#5a4a20",
       "glowBlur": 6
     },
+    "shipWake": {
+      "type": "taperedTrail",
+      "maxLength": 22,
+      "pointLifetime": 900,
+      "baseWidth": 5,
+      "tipWidth": 0.5,
+      "colorInner": "#f2fbff",
+      "colorOuter": "#4fb8d0",
+      "glowBlur": 4
+    },
+    "shipWreck": {
+      "type": "phased",
+      "duration": 1500,
+      "defaultScale": 30,
+      "debris": [ { "count": 11, "speed": 65, "lifetime": 950, "size": 2.5, "color": "#dceef5" } ],
+      "phases": [
+        { "name": "splash", "start": 0, "end": 0.4, "layers": [
+          { "primitive": "filledCircle", "radius": { "from": 0.1, "to": 0.55 }, "color": "#eafaff", "alpha": { "from": 0.85, "to": 0 }, "shadow": { "color": "#eafaff", "blur": 16 } }
+        ] },
+        { "name": "ring", "start": 0, "end": 1, "layers": [
+          { "primitive": "strokeRing", "radius": { "from": 0.05, "to": 1 }, "color": "#bfe6f2", "lineWidth": { "from": 3, "to": 0.5 }, "alpha": { "from": 0.7, "to": 0 }, "shadow": { "color": "#bfe6f2", "blur": 8 } }
+        ] }
+      ]
+    },
+    "selectionRing": {
+      "type": "phased",
+      "lifecycle": "persistent",
+      "defaultScale": 1,
+      "phases": [
+        {
+          "name": "ring",
+          "start": 0,
+          "end": 1,
+          "layers": [
+            {
+              "primitive": "strokeRing",
+              "radius": { "base": 1.0, "amplitude": 0.05, "freq": 0.0016 },
+              "color": "#fff2b0",
+              "lineWidth": 3,
+              "alpha": { "base": 0.85, "amplitude": 0.15, "freq": 0.0016 },
+              "shadow": { "color": "#fff2b0", "blur": 12 }
+            },
+            {
+              "primitive": "dashedRing",
+              "radius": { "base": 1.18, "amplitude": 0.05, "freq": 0.0016 },
+              "color": "#ffd166",
+              "lineWidth": 2,
+              "dashPattern": [4, 7],
+              "alpha": { "base": 0.55, "amplitude": 0.2, "freq": 0.0016 },
+              "shadow": { "color": "#ffd166", "blur": 6 }
+            }
+          ]
+        }
+      ]
+    },
     "tether": {
       "type": "wiggleBeam",
       "segments": 14,

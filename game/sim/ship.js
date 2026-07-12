@@ -58,9 +58,10 @@ export function createShip(idNum, home, tuning, type = tuning.SHIP_DEFAULT_TYPE 
 }
 
 /** Spawn a purchased ship at `home` with NO working capital (gold conserved). Its build reflects
- *  the port's situation (see chooseShipType) — so fleets diversify as ports prosper or come under threat. */
-export function spawnShip(world, home) {
-  const s = createShip(world.nextEntityId++, home, world.rules, chooseShipType(world, home));
+ *  the port's situation (see chooseShipType) — so fleets diversify as ports prosper or come under
+ *  threat — unless a specific `type` is given (e.g. an investment chosen on pre-spend wealth). */
+export function spawnShip(world, home, type = chooseShipType(world, home)) {
+  const s = createShip(world.nextEntityId++, home, world.rules, type);
   s.cargo.Gold = 0;
   s.captain = makeCaptain(world); // a fresh captain takes the new vessel
   s.name = shipName(world);

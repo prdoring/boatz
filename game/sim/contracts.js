@@ -36,7 +36,7 @@ export function contracts(world, h) {
       }
       continue;
     }
-    if (isl.rebellion) continue;
+    if (isl.rebellion || isl.haven) continue; // a port aflame or fallen to piracy posts no lawful contracts
     if (world.simTime < (isl._contractCd || 0)) continue; // a port posts sparingly, not constantly
     if ((isl.gold || 0) < t.CONTRACT_MIN_TREASURY + t.CONTRACT_REWARD) continue;
 

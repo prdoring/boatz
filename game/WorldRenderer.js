@@ -99,6 +99,8 @@ export class WorldRenderer {
       if (isl.plague) this._statusRing(sx, sy, Math.max(R * 1.55, 21), '#cf7bee', now, false);
       // A port in open rebellion is aflame — flickering embers, unmistakable at any zoom.
       if (isl.rebellion) this._fireRing(sx, sy, Math.max(R * 1.15, 16), now, isl.id);
+      // A pirate HAVEN — a dark menacing ring and the black flag flying over the wharves.
+      if (isl.haven) this._havenMark(sx, sy, Math.max(R * 1.35, 18), now);
       // Pirate-haunted waters — a faint crimson haze that deepens with the danger.
       if (isl.danger > 0.25) this._dangerHaze(sx, sy, Math.max(R * 1.7, 24), isl.danger, now);
 
@@ -120,6 +122,30 @@ export class WorldRenderer {
     ctx.lineWidth = 1.5;
     ctx.setLineDash([4, 5]);
     ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
+
+  /** A pirate haven — a dark blood-red ring and a small black flag flying over the port. */
+  _havenMark(sx, sy, r, now) {
+    const ctx = this.ctx;
+    const pulse = 0.55 + 0.45 * Math.sin(now * 0.005);
+    ctx.save();
+    ctx.globalAlpha = 0.14;
+    ctx.fillStyle = '#2a0308';
+    ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 0.45 * pulse;
+    ctx.strokeStyle = '#8a1420'; ctx.lineWidth = 2.4;
+    ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+    // Black flag on a staff planted above the island.
+    ctx.save();
+    const fx = sx, fy = sy - r - 3;
+    ctx.strokeStyle = '#141414'; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(fx, fy - 15); ctx.stroke();
+    ctx.fillStyle = '#111';
+    ctx.beginPath(); ctx.moveTo(fx, fy - 15); ctx.lineTo(fx + 13, fy - 12); ctx.lineTo(fx, fy - 9); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#e8e0d0'; // a pale skull dot on the flag
+    ctx.beginPath(); ctx.arc(fx + 4.5, fy - 12, 1.7, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   }
 

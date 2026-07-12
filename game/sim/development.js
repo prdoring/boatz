@@ -24,7 +24,7 @@ export function development(world, h) {
     if (world.ships.length >= t.MAX_SHIPS_TOTAL) break;
     if (world.simTime < (isl._devCd || 0)) continue;
     if ((isl.gold || 0) < t.DEVELOP_SHIP_GOLD) continue;          // only a flush port invests
-    if (isl.rebellion) continue;                                   // a port aflame builds nothing
+    if (isl.rebellion || isl.haven) continue;                      // a port aflame or turned pirate builds no honest fleet
     const owned = world.ships.filter((s) => s.homeId === isl.id).length;
     if (owned >= t.MAX_SHIPS_PER_ISLAND) continue;                 // fleet already at its cap
 

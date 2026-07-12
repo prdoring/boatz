@@ -30,6 +30,7 @@ const EVENT_COLOR = {
   contract: '#e8c15a', contractdone: '#8ee6a0',
   storm: '#9fb2cc', stormloss: '#8fb6c6', season: '#c8b3ff',
   ambition: '#e8c15a', overreach: '#e0863a',
+  haven: '#b0242e', redeemed: '#8ee6a0', assault: '#e0a24a',
 };
 const SEASON_ICON = { Spring: '🌱', Summer: '☀', Autumn: '🍂', Winter: '❄' };
 const NEWS_ROWS = 9; // how many recent events the ticker shows
@@ -418,7 +419,9 @@ export class SimScene extends Scene {
     const pct = Math.round((isl.population / Math.max(1, isl.k)) * 100);
     lines.push({ text: `${islandStateWord(isl)} · pop ${isl.population}/${isl.k} (${pct}%)`, color: 'rgba(190, 210, 220, 0.85)' });
     lines.push({ text: `Civ ${Math.round((isl.civ || 0) * 100)}% · ${(isl.produces || []).slice(0, 3).join(', ')}` });
-    if (isl.magistrate) {
+    if (isl.haven) {
+      lines.push({ text: `🏴‍☠ PIRATE HAVEN · grip ${Math.round((isl.haven.strength || 0) * 100)}%`, color: '#c0392b' });
+    } else if (isl.magistrate) {
       lines.push(isl.rebellion
         ? { text: '🔥 IN REBELLION', color: '#ff5b30' }
         : { text: `Loyalty ${Math.round((isl.loyalty != null ? isl.loyalty : 1) * 100)}% · ${isl.magistrate.name}`, color: moraleColor(isl.loyalty != null ? isl.loyalty : 1) });

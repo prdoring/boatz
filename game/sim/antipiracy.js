@@ -18,6 +18,7 @@ import { makeCaptain, skill01 } from './captains.js';
 import { windMult } from './wind.js';
 import { combatStrength } from './piracy.js';
 import { payBounty } from './bounty.js';
+import { assaultHaven } from './havens.js';
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
@@ -46,15 +47,19 @@ export function antipiracy(world, h) {
   }
 
   const pirates = world.ships.filter((s) => s.pirate && !s._sunk);
+  const havenList = world.islands.filter((i) => i.haven);
+  const threatened = (isl) => pirates.some((p) => dist(p, isl) < t.PRIVATEER_THREAT_RANGE)
+    || havenList.some((hv) => hv !== isl && dist(hv, isl) < t.PRIVATEER_THREAT_RANGE); // a nearby haven is a standing threat
 
   // Commission new privateers (throttled globally so it doesn't churn the fleet in one tick).
-  if (pirates.length > 0 && privateerCount(world) < Math.max(1, world.ships.length * t.PRIVATEER_MAX_FRAC)) {
+  if ((pirates.length > 0 || havenList.length > 0) && privateerCount(world) < Math.max(1, world.ships.length * t.PRIVATEER_MAX_FRAC)) {
     for (const isl of world.islands) {
+      if (isl.haven) continue; // a haven fields cutthroats, not privateers
       if (world.simTime < (isl._privCd || 0)) continue;
-      // A pirate must actually threaten these waters — the trigger is the threat itself, not the
-      // island's own damage, so a wealthy weapons-stocking port can protect a nearby lane it cares
-      // about even before it's personally sacked.
-      if (!pirates.some((p) => dist(p, isl) < t.PRIVATEER_THREAT_RANGE)) continue;
+      // A pirate or a nearby haven must actually threaten these waters — the trigger is the threat
+      // itself, not the island's own damage, so a wealthy weapons-stocking port can protect a lane
+      // it cares about (or move against a den down the coast) even before it's personally sacked.
+      if (!threatened(isl)) continue;
       // MEANS (nothing free): keep a treasury reserve after paying wages, and have GUNS in the
       // armoury it had to trade for — so only a solvent, armed port can field a hunter.
       if ((isl.gold || 0) < t.PRIVATEER_TREASURY_MIN + t.PRIVATEER_COMMISSION_COST) continue;
@@ -76,23 +81,31 @@ export function antipiracy(world, h) {
     const speed = (priv.speed || t.SHIP_SPEED) * t.PRIVATEER_SPEED_MULT; // per-hull (a sloop privateer is fleet)
     const home = world.islandsById.get(priv.homeId);
 
-    // Commission lapsed (or the seas are clear): make for home and pay off the crew.
-    if (world.simTime >= (priv.privateerUntil || 0) || pirates.length === 0) {
+    // Commission lapsed, or the seas are truly clear (no pirates AND no havens): pay off the crew.
+    if (world.simTime >= (priv.privateerUntil || 0) || (pirates.length === 0 && havenList.length === 0)) {
       if (home && moveToward(priv, home.x, home.y, speed, h)) standDown(world, priv, home);
       else if (!home) standDown(world, priv, null);
       continue;
     }
 
-    // Hunt the nearest pirate in range; run it down and fight.
+    // Target priority. A HAVEN already in bombardment range is the priority: breaking the den is the
+    // only way the law wins for good, and if privateers always chased the pirates a haven spawns they
+    // could never get around to the haven itself (it would entrench unchecked). Otherwise hunt the
+    // nearest pirate; otherwise make for the nearest haven; otherwise patrol the troubled waters.
+    let haven = null, hd = Infinity;
+    for (const hv of havenList) { const d = dist(priv, hv); if (d < hd) { hd = d; haven = hv; } }
     let prey = priv._prey ? pirates.find((p) => p.id === priv._prey) : null;
     if (!prey || dist(priv, prey) > t.PRIVATEER_HUNT_RANGE) {
       prey = nearestPirate(world, priv, pirates); priv._prey = prey ? prey.id : null;
     }
-    if (prey) {
+    if (haven && hd <= t.HAVEN_SUPPRESS_RANGE) {
+      if (assaultHaven(world, priv, haven) && priv._sunk) sunk = true;
+    } else if (prey && (!haven || dist(priv, prey) <= hd)) {
       if (dist(priv, prey) <= t.PIRATE_COMBAT_RANGE) { if (resolveHunt(world, priv, prey)) sunk = true; priv._prey = null; }
       else if (sailHunter(world, priv, prey.x, prey.y, speed, h)) sunk = true;
+    } else if (haven) {
+      if (sailHunter(world, priv, haven.x, haven.y, speed, h)) sunk = true; // close on the den
     } else {
-      // No quarry in reach — patrol toward the most troubled nearby port.
       const patrol = mostDangerous(world, priv) || home;
       if (patrol) sailHunter(world, priv, patrol.x, patrol.y, speed, h);
     }

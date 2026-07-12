@@ -36,13 +36,13 @@ function updateShipDemand(world, island) {
 
 /** Assign a voyage to each idle, un-tasked NPC ship at its home island. */
 export function dispatch(world) {
-  for (const island of world.islands) updateShipDemand(world, island);
+  for (const island of world.islands) { if (!island.haven) updateShipDemand(world, island); }
   for (const ship of world.ships) {
     if (ship.state !== 'idle' || ship.voyage) continue;
     const agent = world.agents[ship.ownerId];
     if (!agent || agent.kind !== 'npc') continue; // player ships are driven by intents
     const home = world.islandsById.get(ship.homeId);
-    if (!home) continue;
+    if (!home || home.haven) continue; // a pirate haven runs no honest trade
     const v = planVoyage(world, home, ship);
     if (v) ship.voyage = v;
   }

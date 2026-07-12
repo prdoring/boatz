@@ -42,6 +42,7 @@ const EVENT_TEXT_COLOR = {
   contract: '#e8c15a', contractdone: '#8ee6a0',
   storm: '#9fb2cc', stormloss: '#8fb6c6', season: '#c8b3ff',
   ambition: '#e8c15a', overreach: '#e0863a',
+  haven: '#b0242e', redeemed: '#8ee6a0', assault: '#e0a24a',
 };
 
 export class InfoPanel extends Panel {
@@ -154,12 +155,13 @@ export class InfoPanel extends Panel {
     this._subtitle(ctx, `${cap(isl.type)} · ${isl.primary || '?'}${isl.secondary ? ' / ' + isl.secondary : ''}`, c);
 
     // Active afflictions.
+    if (isl.haven) this._banner(ctx, `🏴‍☠ PIRATE HAVEN — grip ${Math.round((isl.haven.strength || 0) * 100)}%`, '#b0242e', c);
     if (isl.blight) this._banner(ctx, `Blight — ${isl.blight} crippled`, '#ec8a3a', c);
     if (isl.plague) this._banner(ctx, 'Plague — population dying', '#c072e0', c);
     if (isl.danger > 0.25) this._banner(ctx, `⚑ Pirate danger — ${dangerWord(isl.danger)} waters`, '#c0392b', c);
     if (isl.contract) this._banner(ctx, `📜 WANTED: ${isl.contract.good} · ${fmt(isl.contract.reward)} g reward`, '#e8c15a', c);
 
-    // Magistrate + the populace's loyalty.
+    // Magistrate + the populace's loyalty (a haven has no lawful magistrate).
     if (isl.magistrate) this._magistrate(ctx, isl, ctxt, c);
 
     // Population + civilization gauges.

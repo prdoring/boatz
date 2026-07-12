@@ -105,6 +105,8 @@ export function snapshotEconomy(world) {
       rebellion: !!isl.rebellion, // aflame in revolt → fire highlight on the map
       danger: round2(isl.danger || 0), // how pirate-haunted its waters are → panel/map cue
       lawlessness: round2(isl.lawlessness || 0), // civil disorder 0..1 → panel/map cue (seed of havens)
+      haven: isl.haven ? { strength: round2(isl.havenStrength || 0) } : null, // fallen to the black flag → map/panel
+
       contract: isl.contract ? { good: isl.contract.good, reward: Math.round(isl.contract.reward) } : null, // open WANTED posting
       magistrate: isl.magistrate ? {
         name: isl.magistrate.name, rank: magRank(isl.magistrate),

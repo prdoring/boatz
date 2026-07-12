@@ -17,6 +17,7 @@ import { upkeep } from './upkeep.js';
 import { reputation } from './reputation.js';
 import { events } from './events.js';
 import { governance } from './magistrate.js';
+import { havens } from './havens.js';
 import { development } from './development.js';
 import { contracts } from './contracts.js';
 
@@ -37,6 +38,7 @@ export const SIM_SYSTEMS = [
   reputation, // daily decay of diplomatic opinions (trade itself updates them in ship.js)
   events,     // daily shocks: blight, plague lifecycle/mortality (wrecks fire in ship.js)
   governance, // island loyalty + magistrate + rebellion (production/income halt via effectiveRate/upkeep)
+  havens,     // failed islands fall to pirate havens (harbour/build pirates); privateers redeem them — after governance (reads lawlessness) + antipiracy (assaults land this tick)
   development, // wealthy ports invest surplus gold into new hulls (fleet growth + a gold sink), daily
   contracts,   // ports post paid contracts for goods they acutely lack (directed relief), daily
 ];

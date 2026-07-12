@@ -30,6 +30,7 @@ export function findBestPartner(world, island, good, mode, travelMult = 1) {
   const day = currentDay(world);
   let best = null, bestScore = -Infinity;
   for (const p of nearbyIslands(world, island)) {
+    if (p.haven) continue; // a pirate haven is no honest trade partner — merchants give it a wide berth
     // An embargo (either side's deep hostility) shuts the port — it's simply not an option.
     if (isEmbargoed(p, island.id, t) || isEmbargoed(island, p.id, t)) continue;
     const d = dist(island, p);

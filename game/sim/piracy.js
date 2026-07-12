@@ -86,13 +86,24 @@ export function piracy(world, h) {
       continue;
     }
 
-    // No prey in sight. Starving + near a port → raid it. Otherwise roam the hunting grounds.
-    const isle = nearestIsland(world, ship);
-    if ((ship.cargo.Food || 0) < t.CREW_FOOD_PER_DAY && isle && dist(ship, isle) <= t.PIRATE_RAID_RANGE
-        && world.simTime >= (ship._raidCd || 0) && world.simTime >= (isle._raidCd || 0)) {
-      raidIsland(world, ship, isle);
-    } else if (isle) {
-      if (sail(world, ship, isle.x, isle.y, speed, h) === 'sunk') sunk = true;
+    // No prey in sight. A hungry or plunder-laden pirate makes for its nearest HAVEN to victual and
+    // fence its loot (havens.js does the transfer once it's in range) — a base is what lets a pirate
+    // survive and a haven grow rich. With no haven to run to, it falls back to the old ways: raid a
+    // nearby port when starving, else roam the hunting grounds.
+    const hungry = (ship.cargo.Food || 0) < t.CREW_FOOD_PER_DAY;
+    const laden = cargoUnits(ship) > ship.capacity * 0.5 || (ship.cargo[GOLD] || 0) > 150;
+    const haven = nearestHaven(world, ship);
+    if (haven && (hungry || laden)) {
+      if (dist(ship, haven) > t.HAVEN_RESUPPLY_RANGE * 0.5 && sail(world, ship, haven.x, haven.y, speed, h) === 'sunk') sunk = true;
+      // else: loitering in the haven's roads — resupply/fence happens in havens.js this same tick
+    } else {
+      const isle = nearestIsland(world, ship);
+      if (hungry && isle && dist(ship, isle) <= t.PIRATE_RAID_RANGE
+          && world.simTime >= (ship._raidCd || 0) && world.simTime >= (isle._raidCd || 0)) {
+        raidIsland(world, ship, isle);
+      } else if (isle) {
+        if (sail(world, ship, isle.x, isle.y, speed, h) === 'sunk') sunk = true;
+      }
     }
   }
   if (sunk) world.ships = world.ships.filter((s) => !s._sunk);
@@ -124,6 +135,14 @@ function nearestPrey(world, ship) {
 function nearestIsland(world, ship) {
   let best = null, bestD = Infinity;
   for (const p of world.islands) { const d = dist(ship, p); if (d < bestD) { bestD = d; best = p; } }
+  return best;
+}
+
+/** Nearest pirate HAVEN — a stronghold a raider can run to for food and to fence loot (havens.js).
+ *  Reads the plain `island.haven` field so piracy needn't import havens.js (avoids a cycle). */
+function nearestHaven(world, ship) {
+  let best = null, bestD = Infinity;
+  for (const p of world.islands) { if (!p.haven) continue; const d = dist(ship, p); if (d < bestD) { bestD = d; best = p; } }
   return best;
 }
 

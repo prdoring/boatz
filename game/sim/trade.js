@@ -8,6 +8,7 @@ import { bidAsk } from './pricing.js';
 import { planVoyage } from './goals.js';
 import { recordTrade, repPriceMult, tradeBarred, bumpRep } from './reputation.js';
 import { logEvent, logEventThrottled } from './events.js';
+import { contractPayout } from './contracts.js';
 
 /**
  * Set island.wantsShip via hysteresis: a port wealthy enough to buy a ship AND keep a
@@ -81,6 +82,8 @@ export function executeStop(world, island, ship, stop) {
     if (qty <= 0) continue;
     transfer(ship.cargo, good, island.stock, good, qty);
     transfer(island, 'gold', ship.cargo, GOLD, qty * bid);
+    const reward = contractPayout(world, island, good, qty); // claim any open contract reward (from escrow)
+    if (reward > 0) ship.cargo[GOLD] = (ship.cargo[GOLD] || 0) + reward;
     volume += qty;
   }
 
@@ -104,6 +107,8 @@ export function executeStop(world, island, ship, stop) {
     if (qty <= 0) continue;
     transfer(ship.cargo, good, island.stock, good, qty);
     transfer(island, 'gold', ship.cargo, GOLD, qty * bid);
+    const reward = contractPayout(world, island, good, qty); // an opportunistic drop can fill a contract too
+    if (reward > 0) ship.cargo[GOLD] = (ship.cargo[GOLD] || 0) + reward;
     volume += qty;
   }
 

@@ -27,6 +27,7 @@ const EVENT_COLOR = {
   pirate: '#ff5b4a', plunder: '#e0503a', fended: '#8ee6a0', raid: '#ff7b4a', raidfail: '#8ee6a0',
   bounty: '#ffd166', privateer: '#6fa8d8', hunted: '#8ee6a0', hunterlost: '#e0863a', standdown: '#8fb6c6',
   aid: '#7fe0b0', betray: '#ff5b30', embargo: '#e0863a',
+  contract: '#e8c15a', contractdone: '#8ee6a0',
 };
 const NEWS_ROWS = 9; // how many recent events the ticker shows
 
@@ -421,6 +422,7 @@ export class SimScene extends Scene {
     if (isl.blight) lines.push({ text: `⚠ Blight: ${isl.blight}`, color: EVENT_COLOR.blight });
     if (isl.plague) lines.push({ text: '☠ Plague outbreak', color: EVENT_COLOR.plague });
     if (isl.danger > 0.25) lines.push({ text: `⚑ Pirate danger ${Math.round(isl.danger * 100)}%`, color: '#c0392b' });
+    if (isl.contract) lines.push({ text: `📜 Wants ${isl.contract.good} · ${isl.contract.reward}g`, color: '#e8c15a' });
     return lines;
   }
 

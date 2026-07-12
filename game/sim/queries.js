@@ -58,7 +58,9 @@ export function findBestPartner(world, island, good, mode, travelMult = 1) {
       const bid = bidAsk(partnerMid, spread).bid * repPriceMult(p, island.id, swing, false);
       const myAsk = bidAsk(island.price[good].mid, spread).ask; // an island knows its OWN price
       const margin = bid - myAsk;
-      const score = margin - travel - peril;
+      // A port with an open CONTRACT for this good is a draw — its reward makes the run worth more.
+      const contractPull = (p.contract && p.contract.good === good && p.contract.reward > 0) ? t.CONTRACT_ROUTE_BONUS : 0;
+      const score = margin - travel - peril + contractPull;
       if (score > bestScore) { bestScore = score; best = { partner: p, unitPrice: bid, dist: d, margin }; }
     }
   }

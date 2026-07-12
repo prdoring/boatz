@@ -17,6 +17,7 @@ import { reputation } from './reputation.js';
 import { events } from './events.js';
 import { governance } from './magistrate.js';
 import { development } from './development.js';
+import { contracts } from './contracts.js';
 
 export const SIM_SYSTEMS = [
   applyIntents,
@@ -35,4 +36,5 @@ export const SIM_SYSTEMS = [
   events,     // daily shocks: blight, plague lifecycle/mortality (wrecks fire in ship.js)
   governance, // island loyalty + magistrate + rebellion (production/income halt via effectiveRate/upkeep)
   development, // wealthy ports invest surplus gold into new hulls (fleet growth + a gold sink), daily
+  contracts,   // ports post paid contracts for goods they acutely lack (directed relief), daily
 ];

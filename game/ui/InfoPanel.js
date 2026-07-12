@@ -39,6 +39,7 @@ const EVENT_TEXT_COLOR = {
   pirate: '#ff5b4a', plunder: '#e0503a', fended: '#8ee6a0', raid: '#ff7b4a', raidfail: '#8ee6a0',
   bounty: '#ffd166', privateer: '#6fa8d8', hunted: '#8ee6a0', hunterlost: '#e0863a', standdown: '#8fb6c6',
   aid: '#7fe0b0', betray: '#ff5b30', embargo: '#e0863a',
+  contract: '#e8c15a', contractdone: '#8ee6a0',
 };
 
 export class InfoPanel extends Panel {
@@ -154,6 +155,7 @@ export class InfoPanel extends Panel {
     if (isl.blight) this._banner(ctx, `Blight — ${isl.blight} crippled`, '#ec8a3a', c);
     if (isl.plague) this._banner(ctx, 'Plague — population dying', '#c072e0', c);
     if (isl.danger > 0.25) this._banner(ctx, `⚑ Pirate danger — ${dangerWord(isl.danger)} waters`, '#c0392b', c);
+    if (isl.contract) this._banner(ctx, `📜 WANTED: ${isl.contract.good} · ${fmt(isl.contract.reward)} g reward`, '#e8c15a', c);
 
     // Magistrate + the populace's loyalty.
     if (isl.magistrate) this._magistrate(ctx, isl, ctxt, c);

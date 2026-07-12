@@ -71,9 +71,9 @@ export function antipiracy(world, h) {
   }
 
   // Drive every privateer: hunt, fight, or stand down.
-  const speed = t.SHIP_SPEED * t.PRIVATEER_SPEED_MULT;
   for (const priv of world.ships) {
     if (!priv.privateer || priv._sunk) continue;
+    const speed = (priv.speed || t.SHIP_SPEED) * t.PRIVATEER_SPEED_MULT; // per-hull (a sloop privateer is fleet)
     const home = world.islandsById.get(priv.homeId);
 
     // Commission lapsed (or the seas are clear): make for home and pay off the crew.

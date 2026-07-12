@@ -17,6 +17,17 @@ import { makeMagistrate } from './magistrate.js';
 import { shipName } from './naming.js';
 import { GOLD, PEOPLE } from './resources.js';
 
+/** A starting hull for a port's fleet, reflecting its size: big ports launch brigs and the odd
+ *  galleon; modest ports run fast little sloops — with seeded variety so no two fleets are alike. */
+function startingHull(world, isl, tuning) {
+  const types = tuning.SHIP_TYPES;
+  if (!types) return tuning.SHIP_DEFAULT_TYPE || 'ship';
+  const roll = streamFloat(world, 'init');
+  const big = (isl.k || 120) >= 125;
+  if (big) return roll < 0.3 ? 'galleon' : roll < 0.85 ? 'brig' : 'sloop';
+  return roll < 0.5 ? 'sloop' : roll < 0.9 ? 'brig' : 'galleon';
+}
+
 /** Prepare derived lookups on the (cloned) economy so systems stay allocation-free. */
 export function prepareEconomy(economy) {
   economy._recipeByOut = {};
@@ -79,7 +90,7 @@ export function buildWorld({ economy, roster, seed = 1337 }) {
 
   for (const isl of world.islands) {
     for (let i = 0; i < tuning.START_SHIPS_PER_ISLAND; i++) {
-      const s = createShip(world.nextEntityId++, isl, tuning);
+      const s = createShip(world.nextEntityId++, isl, tuning, startingHull(world, isl, tuning));
       s.captain = makeCaptain(world); // every ship is run by a named, improving captain
       s.name = shipName(world);
       world.ships.push(s);

@@ -21,8 +21,13 @@ export function upkeep(world, h) {
   const perDay = h / t.SIM_DAY_SECONDS;
   const spoil = (t.STOCK_SPOILAGE || 0) * h;
 
+  // Fleet upkeep scales with each hull's class (a galleon costs far more to keep than a sloop),
+  // so a big ship is a real ongoing commitment — the counterweight to its greater capacity.
   const fleet = new Map();
-  for (const s of world.ships) fleet.set(s.homeId, (fleet.get(s.homeId) || 0) + 1);
+  for (const s of world.ships) {
+    const spec = t.SHIP_TYPES && t.SHIP_TYPES[s.type];
+    fleet.set(s.homeId, (fleet.get(s.homeId) || 0) + (spec ? spec.upkeep : 1));
+  }
 
   for (const island of world.islands) {
     const pop = island.population;

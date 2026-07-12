@@ -22,14 +22,14 @@ test('combat strength rises with guns, skill, morale — and a pirate fights har
   assert.ok(combatStrength(w, rogue) > combatStrength(w, plain), 'a pirate gets the ferocity bonus');
 });
 
-test('weapons contribution is capped (a ship cannot stack infinite guns)', () => {
+test('weapons contribution is capped by the hull class (a ship cannot stack infinite guns)', () => {
   const w = makeWorld();
   const s = w.ships[0];
-  const cap = w.rules.COMBAT_WEAPON_CAP;
+  const cap = w.rules.SHIP_TYPES[s.type].weaponCap; // per-hull gun capacity
   s.cargo = { Gold: 0, People: 0, Weapons: cap }; s.morale = 0.5;
   const atCap = combatStrength(w, s);
   s.cargo.Weapons = cap * 4;
-  assert.ok(Math.abs(combatStrength(w, s) - atCap) < 1e-9, 'guns past the cap add nothing');
+  assert.ok(Math.abs(combatStrength(w, s) - atCap) < 1e-9, 'guns past the hull cap add nothing');
 });
 
 test('turning pirate is a CONVERSION — no ship is created, the hull is reused under a new flag', () => {

@@ -13,15 +13,30 @@ import { makeCaptain, skill01, awardVoyageXp, navProfile } from './captains.js';
 import { provisionCrew, deviationTarget } from './crew.js';
 import { shipName } from './naming.js';
 
-export function createShip(idNum, home, tuning) {
+/** The build a port chooses for a new hull, by its situation: a threatened port arms with a
+ *  fighting BRIG, a wealthy hub hauls volume in a GALLEON, and a modest port runs a cheap, fast
+ *  SLOOP. Gated by treasury (a galleon is a major investment) → richer ports field bigger fleets. */
+export function chooseShipType(world, home) {
+  const types = world.rules.SHIP_TYPES;
+  if (!types) return world.rules.SHIP_DEFAULT_TYPE || 'ship';
+  const gold = home.gold || 0;
+  const danger = home.danger || 0;
+  if (danger > 0.4 && gold >= types.brig.minTreasury) return 'brig';   // arm for dangerous waters
+  if (gold >= types.galleon.minTreasury) return 'galleon';             // a rich hub hauls volume
+  if (gold >= types.brig.minTreasury) return 'brig';
+  return 'sloop';                                                      // cheap and quick
+}
+
+export function createShip(idNum, home, tuning, type = tuning.SHIP_DEFAULT_TYPE || 'ship') {
+  const spec = (tuning.SHIP_TYPES && tuning.SHIP_TYPES[type]) || null;
   return {
     id: 's' + idNum,
     homeId: home.id,
     ownerId: 'npc',
-    type: 'ship',
+    type,
     x: home.x, y: home.y, heading: 0,
-    speed: tuning.SHIP_SPEED,
-    capacity: tuning.SHIP_CAPACITY,
+    speed: spec ? spec.speed : tuning.SHIP_SPEED,
+    capacity: spec ? spec.capacity : tuning.SHIP_CAPACITY,
     cargo: { Gold: tuning.START_SHIP_GOLD, People: 0, Food: tuning.CREW_FOOD_PER_DAY * tuning.PROVISION_DAYS }, // sail victualled
     state: 'idle',
     infected: false, // carries plague between ports (cleared on returning home)
@@ -42,9 +57,10 @@ export function createShip(idNum, home, tuning) {
   };
 }
 
-/** Spawn a purchased ship at `home` with NO working capital (gold conserved). */
+/** Spawn a purchased ship at `home` with NO working capital (gold conserved). Its build reflects
+ *  the port's situation (see chooseShipType) — so fleets diversify as ports prosper or come under threat. */
 export function spawnShip(world, home) {
-  const s = createShip(world.nextEntityId++, home, world.rules);
+  const s = createShip(world.nextEntityId++, home, world.rules, chooseShipType(world, home));
   s.cargo.Gold = 0;
   s.captain = makeCaptain(world); // a fresh captain takes the new vessel
   s.name = shipName(world);
@@ -106,7 +122,7 @@ function sail(world, ship, h) {
   const t = world.rules;
   const skill = skill01(ship.captain, t);
   const heading = Math.atan2(ship.targetY - ship.y, ship.targetX - ship.x);
-  const eff = t.SHIP_SPEED * windMult(world, heading, skill);
+  const eff = (ship.speed || t.SHIP_SPEED) * windMult(world, heading, skill); // per-hull speed (sloop fast, galleon slow)
   if (maybeSink(world, ship, eff * h)) return 'sunk';
   if (moveToward(ship, ship.targetX, ship.targetY, eff, h)) {
     if (ship.leg && ship.legIdx < ship.leg.length - 1) { // reached a tack corner — turn onto the next leg
@@ -123,7 +139,7 @@ function sail(world, ship, h) {
 function panicRun(world, ship, island, h) {
   const t = world.rules;
   const heading = Math.atan2(island.y - ship.y, island.x - ship.x);
-  const eff = t.SHIP_SPEED * t.PIRATE_PANIC_MULT * windMult(world, heading, skill01(ship.captain, t)); // crew rows for their lives (outrun the pirate)
+  const eff = (ship.speed || t.SHIP_SPEED) * t.PIRATE_PANIC_MULT * windMult(world, heading, skill01(ship.captain, t)); // crew rows for their lives (outrun the pirate)
   if (maybeSink(world, ship, eff * h)) return 'sunk';
   if (moveToward(ship, island.x, island.y, eff, h)) provisionCrew(world, island, ship); // reached safe harbour — victual up
   return 'fleeing';
@@ -152,7 +168,9 @@ function armForDefence(world, home, ship) {
   let near = 0;
   for (const s of world.ships) if (s.pirate && Math.hypot(s.x - home.x, s.y - home.y) < t.PIRATE_HUNT_RANGE) near++;
   const danger = Math.min(1, near / 2);
-  const target = t.ARM_WEAPONS_BASE + (1 - bold) * t.ARM_WEAPONS_CAUTION + danger * t.ARM_DANGER_BONUS;
+  const spec = t.SHIP_TYPES && t.SHIP_TYPES[ship.type];
+  const wcap = spec ? spec.weaponCap : t.COMBAT_WEAPON_CAP; // a hull mounts only so many guns
+  const target = Math.min(wcap, t.ARM_WEAPONS_BASE + (1 - bold) * t.ARM_WEAPONS_CAUTION + danger * t.ARM_DANGER_BONUS);
   const need = target - (ship.cargo.Weapons || 0);
   if (need < 1) return;
   const space = Math.max(0, ship.capacity - cargoUnits(ship, t.GOLD_PER_CARGO_UNIT));

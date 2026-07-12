@@ -20,6 +20,9 @@ import { PALETTE, ISLAND_RADIUS, SHIP_RADIUS } from './config.js';
 const PIRATE_HULL = '#7a1420';
 const PRIVATEER_HULL = '#2f4b6e';
 
+// Hull class reads at a glance from size: a nimble sloop is small, a brig standard, a galleon big.
+const SHIP_TYPE_SCALE = { sloop: 0.82, brig: 1.0, galleon: 1.32 };
+
 export class WorldRenderer {
   constructor(ctx, camera, art, vfx, effectsRenderer) {
     this.ctx = ctx;
@@ -308,7 +311,8 @@ export class WorldRenderer {
       if (highlightHomeId && s.homeId === highlightHomeId) this._homeRing(s.x, s.y, Math.max(SHIP_RADIUS * 1.7 * zoom, 11), now);
       // Hull tint tells faction at a glance: pirate crimson-black, privateer naval blue, else home.
       const hull = s.pirate ? PIRATE_HULL : s.privateer ? PRIVATEER_HULL : color;
-      this._drawArtAt(def, s.x, s.y, SHIP_RADIUS, hull, s.state || 'sailing', now, this._trans('s:' + id), s.heading || 0);
+      const r = SHIP_RADIUS * (SHIP_TYPE_SCALE[s.type] || 1); // size reads the hull class
+      this._drawArtAt(def, s.x, s.y, r, hull, s.state || 'sailing', now, this._trans('s:' + id), s.heading || 0);
       // A crew in open revolt (mutiny/defection standoff) — a stark pulsing marker, clamped so
       // it's spotted anywhere on the map even at overview zoom.
       if (s.revolt) this._revoltRing(s.x, s.y, Math.max(SHIP_RADIUS * 1.9 * zoom, 13), now);

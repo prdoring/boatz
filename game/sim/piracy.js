@@ -32,16 +32,22 @@ export function pirateCount(world) { let n = 0; for (const s of world.ships) if 
 /** Weapons a ship has to fight with (offense + defense). */
 export function weaponsAboard(ship) { return ship.cargo.Weapons || 0; }
 
-/** A ship's fighting strength: base + captaincy + crew spirit + guns (+ a pirate's ferocity). */
+/** A ship's fighting strength: base + captaincy + crew spirit + guns (+ a pirate's ferocity),
+ *  scaled by the HULL's fighting character (a brig fights above its weight, a sloop below it, and
+ *  it can mount only as many guns as its class allows — a galleon out-guns a sloop). */
 export function combatStrength(world, ship) {
   const t = world.rules;
-  const guns = Math.min(weaponsAboard(ship), t.COMBAT_WEAPON_CAP) * t.COMBAT_WEAPON_W;
-  return t.COMBAT_BASE
+  const spec = (t.SHIP_TYPES && t.SHIP_TYPES[ship.type]) || null;
+  const wcap = spec ? spec.weaponCap : t.COMBAT_WEAPON_CAP;
+  const cmult = spec ? spec.combat : 1;
+  const guns = Math.min(weaponsAboard(ship), wcap) * t.COMBAT_WEAPON_W;
+  const s = t.COMBAT_BASE
     + skill01(ship.captain, t) * t.COMBAT_SKILL_W
     + (ship.morale != null ? ship.morale : 0.6) * t.COMBAT_MORALE_W
     + guns
     + (ship.pirate ? t.COMBAT_PIRATE_BONUS : 0)
     + (ship.privateer ? t.COMBAT_PRIVATEER_BONUS : 0); // a professional hunter's edge
+  return s * cmult;
 }
 
 /** Whether the seas can bear another pirate (fleet-fraction cap → self-limiting). */
@@ -64,10 +70,10 @@ export function turnPirate(world, ship) {
 /** SIM system: drive every pirate — hunt, chase, fight, or raid a port for provisions. */
 export function piracy(world, h) {
   const t = world.rules;
-  const speed = t.SHIP_SPEED * t.PIRATE_SPEED_MULT;
   let sunk = false;
   for (const ship of world.ships) {
     if (!ship.pirate || ship._sunk) continue;
+    const speed = (ship.speed || t.SHIP_SPEED) * t.PIRATE_SPEED_MULT; // per-hull (a captured galleon is slow)
 
     // Between raids a pirate lies low with its loot (a cooldown) — no fresh fights, just roams.
     const resting = world.simTime < (ship._huntCd || 0);

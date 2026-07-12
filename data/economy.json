@@ -52,6 +52,12 @@
 
     "SHIP_SPEED": 120,
     "SHIP_CAPACITY": 100,
+    "SHIP_TYPES": {
+      "sloop":   { "capacity": 64,  "speed": 150, "weaponCap": 10, "upkeep": 0.65, "combat": 0.82, "minTreasury": 0 },
+      "brig":    { "capacity": 100, "speed": 120, "weaponCap": 22, "upkeep": 1.0,  "combat": 1.15, "minTreasury": 1000 },
+      "galleon": { "capacity": 150, "speed": 96,  "weaponCap": 34, "upkeep": 1.7,  "combat": 1.0,  "minTreasury": 2200 }
+    },
+    "SHIP_DEFAULT_TYPE": "brig",
     "DOCK_SECONDS": 3,
     "START_SHIPS_PER_ISLAND": 2,
     "MAX_SHIPS_PER_ISLAND": 6,

@@ -25,6 +25,7 @@ const EVENT_COLOR = {
   launch: '#6fd0e0', migrate: '#f2b8d0', famine: '#d98a3a', boom: '#ffd166', ally: '#8ee6a0', rival: '#e0863a',
   rebellion: '#ff5b30', overthrow: '#ff7b4a', quellReb: '#8ee6a0',
   pirate: '#ff5b4a', plunder: '#e0503a', fended: '#8ee6a0', raid: '#ff7b4a', raidfail: '#8ee6a0',
+  bounty: '#ffd166', privateer: '#6fa8d8', hunted: '#8ee6a0', hunterlost: '#e0863a', standdown: '#8fb6c6',
 };
 const NEWS_ROWS = 9; // how many recent events the ticker shows
 
@@ -418,6 +419,7 @@ export class SimScene extends Scene {
     }
     if (isl.blight) lines.push({ text: `⚠ Blight: ${isl.blight}`, color: EVENT_COLOR.blight });
     if (isl.plague) lines.push({ text: '☠ Plague outbreak', color: EVENT_COLOR.plague });
+    if (isl.danger > 0.25) lines.push({ text: `⚑ Pirate danger ${Math.round(isl.danger * 100)}%`, color: '#c0392b' });
     return lines;
   }
 
@@ -429,8 +431,12 @@ export class SimScene extends Scene {
     const cap = s.captain;
     const lines = [{ text: s.name || (cap ? `Capt. ${cap.name}` : (home ? `${home.name} ship` : 'Merchant ship')), bold: true }];
     if (cap) lines.push({ text: `Capt. ${cap.name} · ${cap.rank} · ${s.pirate ? 'rogue' : (home ? home.name : '—')}`, color: 'rgba(190, 210, 220, 0.85)' });
-    if (s.pirate) lines.push({ text: '☠ BLACK FLAG — PIRATE', color: '#ff5b4a', bold: true });
-    else lines.push({ text: REASON_LABEL[s.reason] || 'Idle', color: '#c8b3ff' });
+    if (s.pirate) {
+      lines.push({ text: '☠ BLACK FLAG — PIRATE', color: '#ff5b4a', bold: true });
+      if (s.bounty > 0) lines.push({ text: `Bounty ${s.bounty}g on this head`, color: '#ffd166' });
+    } else if (s.privateer) {
+      lines.push({ text: '⚔ PRIVATEER — pirate-hunter', color: '#6fa8d8', bold: true });
+    } else lines.push({ text: REASON_LABEL[s.reason] || 'Idle', color: '#c8b3ff' });
     if (dest && s.state === 'sailing') lines.push({ text: `→ ${dest.name}  (~${s.eta}s)` });
     const rel = s.state === 'sailing' ? windRelation(s.heading, this.sim.wind) : null;
     lines.push({

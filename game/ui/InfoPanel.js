@@ -36,6 +36,7 @@ const EVENT_TEXT_COLOR = {
   launch: '#6fd0e0', migrate: '#f2b8d0', famine: '#d98a3a', boom: '#ffd166', ally: '#8ee6a0', rival: '#e0863a',
   rebellion: '#ff5b30', overthrow: '#ff7b4a', quellReb: '#8ee6a0',
   pirate: '#ff5b4a', plunder: '#e0503a', fended: '#8ee6a0', raid: '#ff7b4a', raidfail: '#8ee6a0',
+  bounty: '#ffd166', privateer: '#6fa8d8', hunted: '#8ee6a0', hunterlost: '#e0863a', standdown: '#8fb6c6',
 };
 
 export class InfoPanel extends Panel {
@@ -150,6 +151,7 @@ export class InfoPanel extends Panel {
     // Active afflictions.
     if (isl.blight) this._banner(ctx, `Blight — ${isl.blight} crippled`, '#ec8a3a', c);
     if (isl.plague) this._banner(ctx, 'Plague — population dying', '#c072e0', c);
+    if (isl.danger > 0.25) this._banner(ctx, `⚑ Pirate danger — ${dangerWord(isl.danger)} waters`, '#c0392b', c);
 
     // Magistrate + the populace's loyalty.
     if (isl.magistrate) this._magistrate(ctx, isl, ctxt, c);
@@ -201,15 +203,23 @@ export class InfoPanel extends Panel {
   _ship(ctx, id, s, c) {
     const ctxt = this.getContext();
     const st = { label: STATE[s.state] || cap(s.state), color: STATE_COLOR[s.state] || PALETTE.panelDim };
+    const subtitle = s.pirate ? `${cap(s.type)} · rogue out of ${name(ctxt.islandsById, s.homeId)}`
+      : s.privateer ? `Privateer · out of ${name(ctxt.islandsById, s.homeId)}`
+      : `${cap(s.type)} · home ${name(ctxt.islandsById, s.homeId)}`;
     this._titleRow(ctx, s.name || shipLabel(id, ctxt.shipsById, ctxt.islandsById), st, c);
-    this._subtitle(ctx, s.pirate ? `${cap(s.type)} · rogue out of ${name(ctxt.islandsById, s.homeId)}` : `${cap(s.type)} · home ${name(ctxt.islandsById, s.homeId)}`, c);
+    this._subtitle(ctx, subtitle, c);
 
-    // A pirate flies the black flag — the loudest banner, above everything else.
-    if (s.pirate) { c.y += 8; this._banner(ctx, '☠ BLACK FLAG — PIRATE', '#e04a5a', c); }
+    // Faction banner — the loudest line, above everything else.
+    if (s.pirate) {
+      c.y += 8; this._banner(ctx, '☠ BLACK FLAG — PIRATE', '#e04a5a', c);
+      if (s.bounty > 0) { c.y += 6; this._banner(ctx, `Bounty: ${fmt(s.bounty)} g on this head`, '#ffd166', c); }
+    } else if (s.privateer) {
+      c.y += 8; this._banner(ctx, '⚔ PRIVATEER — pirate-hunter', '#6fa8d8', c);
+    }
 
-    // Errand banner.
+    // Errand banner (merchants only).
     const goal = GOAL[s.reason] || (s.reason ? { label: cap(s.reason), color: PALETTE.panelText } : null);
-    if (goal && !s.pirate) { c.y += 8; this._banner(ctx, goal.label, goal.color, c); }
+    if (goal && !s.pirate && !s.privateer) { c.y += 8; this._banner(ctx, goal.label, goal.color, c); }
 
     // Captain — identity, experience, personality, and how the wind sits for them.
     if (s.captain) this._captain(ctx, s, ctxt, c);
@@ -545,6 +555,13 @@ function loyaltyStatus(isl) {
 }
 function loyaltyColor(l) {
   return l >= 0.6 ? PALETTE.good : l >= 0.4 ? '#8fc6d4' : l >= 0.28 ? '#e0b24a' : PALETTE.bad;
+}
+
+/** How feared a port's waters are, from its danger scalar. */
+function dangerWord(d) {
+  if (d >= 0.7) return 'perilous';
+  if (d >= 0.45) return 'dangerous';
+  return 'uneasy';
 }
 
 /** Crew mood label + colour from morale (or open revolt). */

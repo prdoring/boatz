@@ -13,7 +13,7 @@ import { magRank, magSkill } from './magistrate.js';
 // StateBuffer field descriptors for ships (the interpolated `entities` map).
 export const SHIP_LERP = ['x', 'y'];
 export const SHIP_ANGLE = ['heading'];
-export const SHIP_COPY = ['state', 'type', 'homeId', 'destId', 'reason', 'eta', 'cargo', 'gold', 'route', 'cap', 'used', 'sick', 'captain', 'morale', 'foodDays', 'revolt', 'name', 'pirate'];
+export const SHIP_COPY = ['state', 'type', 'homeId', 'destId', 'reason', 'eta', 'cargo', 'gold', 'route', 'cap', 'used', 'sick', 'captain', 'morale', 'foodDays', 'revolt', 'name', 'pirate', 'privateer', 'bounty'];
 
 // Display state (for art + panel) from the internal sim state.
 function displayState(s) {
@@ -55,6 +55,8 @@ export function snapshotShips(world) {
       sick: !!s.infected,
       name: s.name || null,
       pirate: !!s.pirate, // flying the black flag → distinct art + panel + map marker
+      privateer: !!s.privateer, // a commissioned pirate-hunter → distinct art + panel + marker
+      bounty: Math.round(s.bounty || 0), // gold on this (pirate's) head — shown in the panel/tip
       morale: round2(s.morale != null ? s.morale : 1),
       foodDays: round1(foodDaysAboard(world, s)),
       revolt: !!s.uprising, // crew in open revolt (dead in the water) → highlighted on the map
@@ -101,6 +103,7 @@ export function snapshotEconomy(world) {
       intel: intelSummary(world, isl, day), // { known, fresh } — reach of its price knowledge
       loyalty: round2(isl.loyalty != null ? isl.loyalty : 1),
       rebellion: !!isl.rebellion, // aflame in revolt → fire highlight on the map
+      danger: round2(isl.danger || 0), // how pirate-haunted its waters are → panel/map cue
       magistrate: isl.magistrate ? {
         name: isl.magistrate.name, rank: magRank(isl.magistrate),
         skill: round2(magSkill(isl.magistrate, world.rules)),

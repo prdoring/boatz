@@ -73,6 +73,8 @@ export function buildWorld({ economy, roster, seed = 1337 }) {
     isl.unrest = 0;
     isl.rebellion = null;
     isl._rebelCd = 0;
+    isl.danger = 0;   // how pirate-haunted these waters are (0..1) — set by attacks, decays in antipiracy
+    isl._privCd = 0;  // simTime before which it won't commission another privateer
   }
 
   for (const isl of world.islands) {

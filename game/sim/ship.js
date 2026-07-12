@@ -310,7 +310,7 @@ function updateShip(world, ship, h) {
 export function ship(world, h) {
   let sunk = false;
   for (const s of world.ships) {
-    if (s.pirate) continue; // pirates are driven by the piracy system, not merchant logic
+    if (s.pirate || s.privateer) continue; // driven by piracy / antipiracy, not merchant logic
     updateShip(world, s, h);
     if (s._sunk) sunk = true;
   }

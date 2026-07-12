@@ -15,8 +15,10 @@ import { drawUnifiedArt } from '/engine/render/ArtInterpreter.js';
 import { PALETTE, ISLAND_RADIUS, SHIP_RADIUS } from './config.js';
 
 // A pirate's sail is dyed a menacing dark crimson-black (vs a merchant's home-port colour),
-// so a raider reads as hostile at a glance even before the skull marker is noticed.
+// so a raider reads as hostile at a glance even before the skull marker is noticed. A privateer
+// flies naval steel-blue — the law's answer, distinct from both merchant and pirate.
 const PIRATE_HULL = '#7a1420';
+const PRIVATEER_HULL = '#2f4b6e';
 
 export class WorldRenderer {
   constructor(ctx, camera, art, vfx, effectsRenderer) {
@@ -94,9 +96,28 @@ export class WorldRenderer {
       if (isl.plague) this._statusRing(sx, sy, Math.max(R * 1.55, 21), '#cf7bee', now, false);
       // A port in open rebellion is aflame — flickering embers, unmistakable at any zoom.
       if (isl.rebellion) this._fireRing(sx, sy, Math.max(R * 1.15, 16), now, isl.id);
+      // Pirate-haunted waters — a faint crimson haze that deepens with the danger.
+      if (isl.danger > 0.25) this._dangerHaze(sx, sy, Math.max(R * 1.7, 24), isl.danger, now);
 
       if (zoom > 0.32) this._label(isl.name, sx, sy, R);
     }
+  }
+
+  /** Faint crimson haze over pirate-threatened waters — a soft ring that deepens with danger. */
+  _dangerHaze(sx, sy, r, danger, now) {
+    const ctx = this.ctx;
+    const d = Math.min(1, danger);
+    const pulse = 0.6 + 0.4 * Math.sin(now * 0.004);
+    ctx.save();
+    ctx.globalAlpha = 0.12 * d * pulse;
+    ctx.fillStyle = '#b03030';
+    ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 0.35 * d;
+    ctx.strokeStyle = '#c0392b';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 5]);
+    ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
   }
 
   /** Flickering ring of flames around a port in revolt — a hot glow disc + licking tongues. */
@@ -285,14 +306,39 @@ export class WorldRenderer {
       // so its whole fleet is trackable across the map even at overview zoom (where a ship
       // is only ~1px). Drawn as a filled disc glow + ring so it pops against the water.
       if (highlightHomeId && s.homeId === highlightHomeId) this._homeRing(s.x, s.y, Math.max(SHIP_RADIUS * 1.7 * zoom, 11), now);
-      // A pirate flies the black flag — draw a dark hull tint by passing an ominous colour.
-      this._drawArtAt(def, s.x, s.y, SHIP_RADIUS, s.pirate ? PIRATE_HULL : color, s.state || 'sailing', now, this._trans('s:' + id), s.heading || 0);
+      // Hull tint tells faction at a glance: pirate crimson-black, privateer naval blue, else home.
+      const hull = s.pirate ? PIRATE_HULL : s.privateer ? PRIVATEER_HULL : color;
+      this._drawArtAt(def, s.x, s.y, SHIP_RADIUS, hull, s.state || 'sailing', now, this._trans('s:' + id), s.heading || 0);
       // A crew in open revolt (mutiny/defection standoff) — a stark pulsing marker, clamped so
       // it's spotted anywhere on the map even at overview zoom.
       if (s.revolt) this._revoltRing(s.x, s.y, Math.max(SHIP_RADIUS * 1.9 * zoom, 13), now);
       // A pirate raised the black flag — a skull marker so predators are spotted anywhere.
       else if (s.pirate) this._pirateMark(s.x, s.y, Math.max(SHIP_RADIUS * 1.9 * zoom, 12), now);
+      // A commissioned privateer — a naval marker (the hunter) so the law is visible too.
+      else if (s.privateer) this._privateerMark(s.x, s.y, Math.max(SHIP_RADIUS * 1.9 * zoom, 12), now);
     }
+  }
+
+  /** A privateer's mark: a steel-blue disc + crossed-sabres, the sanctioned pirate-hunter. */
+  _privateerMark(wx, wy, r, now) {
+    const { sx, sy } = this.camera.worldToScreen(wx, wy);
+    const ctx = this.ctx;
+    const pulse = 0.7 + 0.3 * Math.sin(now * 0.006);
+    ctx.save();
+    ctx.globalAlpha = 0.24;
+    ctx.fillStyle = '#2f4b6e';
+    ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 0.9;
+    ctx.strokeStyle = '#6fa8d8';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.stroke();
+    ctx.globalAlpha = pulse;
+    ctx.fillStyle = '#cfe4f6';
+    ctx.shadowColor = '#0a1a2a'; ctx.shadowBlur = 5;
+    ctx.font = `${Math.round(Math.max(11, r * 0.95))}px system-ui, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('⚔', sx, sy - r - 6);
+    ctx.restore();
   }
 
   /** The black flag: a dark disc + skull that hovers over a pirate vessel — menacing, and

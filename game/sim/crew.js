@@ -102,7 +102,7 @@ export function crew(world, h) {
   const r = world.rules;
   let lost = false;
   for (const ship of world.ships) {
-    const away = ship.pirate || (ship.voyage && ship.state !== 'idle'); // pirates are always at sea, always eating
+    const away = ship.pirate || ship.privateer || (ship.voyage && ship.state !== 'idle'); // pirates/privateers are always at sea, always eating
     if (!away) { // in home port: crew ashore, stores land — reset toward calm
       ship.morale = Math.min(1, ship.morale + perDay(world, r.MORALE_RECOVER_RATE * 2, h));
       ship.hunger = 0;
@@ -141,8 +141,9 @@ export function crew(world, h) {
       ship._sunk = true; lost = true; continue;
     }
 
-    // 4) UNREST → UPRISING — merchant crews only; a pirate crew is already the mutiny.
-    if (ship.pirate) continue;
+    // 4) UNREST → UPRISING — merchant crews only; a pirate crew is already the mutiny, and a
+    //    privateer crew is state-paid (its wages bought its loyalty for the commission).
+    if (ship.pirate || ship.privateer) continue;
     if (ship.morale < r.MUTINY_MORALE) ship.unrest += dDay; else ship.unrest = Math.max(0, ship.unrest - dDay * 1.5);
     const grace = r.MUTINY_GRACE_DAYS + skill01(ship.captain, r) * r.MUTINY_GRACE_SKILL;
     if (!ship.uprising && world.simTime >= (ship._upCd || 0) && ship.unrest >= grace) {

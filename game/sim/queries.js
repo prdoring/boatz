@@ -38,11 +38,14 @@ export function findBestPartner(world, island, good, mode, travelMult = 1) {
     // on the prices it has HEARD (stale rumor away from its routes). Availability (stock/gold/
     // demand) stays common knowledge, so ships still route to real producers with real surplus.
     const partnerMid = beliefMid(world, island, p.id, good, day);
+    // Pirate-haunted waters are shunned: a feared port is a worse trade partner (this is what lets
+    // piracy strangle a route — and motivates the port to pay for privateers to clear it).
+    const peril = (p.danger || 0) * t.DANGER_ROUTE_WEIGHT;
     if (mode === 'import') {
       if ((p.stock[good] || 0) < 1) continue;
       // The ask WE'D actually pay reflects how `p` feels about us (friends discount).
       const ask = bidAsk(partnerMid, spread).ask * repPriceMult(p, island.id, swing, true);
-      const score = -ask - travel;
+      const score = -ask - travel - peril;
       if (score > bestScore) { bestScore = score; best = { partner: p, unitPrice: ask, dist: d, margin: 0 }; }
     } else {
       if ((p.gold || 0) < 1) continue;
@@ -53,7 +56,7 @@ export function findBestPartner(world, island, good, mode, travelMult = 1) {
       const bid = bidAsk(partnerMid, spread).bid * repPriceMult(p, island.id, swing, false);
       const myAsk = bidAsk(island.price[good].mid, spread).ask; // an island knows its OWN price
       const margin = bid - myAsk;
-      const score = margin - travel;
+      const score = margin - travel - peril;
       if (score > bestScore) { bestScore = score; best = { partner: p, unitPrice: bid, dist: d, margin }; }
     }
   }

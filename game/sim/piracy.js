@@ -14,6 +14,7 @@ import { transfer, cargoUnits, GOLD, PEOPLE } from './resources.js';
 import { logEvent, maybeSink } from './events.js';
 import { makePirateCaptain, skill01 } from './captains.js';
 import { windMult } from './wind.js';
+import { markDanger, postBounty, payBounty } from './bounty.js';
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
@@ -39,7 +40,8 @@ export function combatStrength(world, ship) {
     + skill01(ship.captain, t) * t.COMBAT_SKILL_W
     + (ship.morale != null ? ship.morale : 0.6) * t.COMBAT_MORALE_W
     + guns
-    + (ship.pirate ? t.COMBAT_PIRATE_BONUS : 0);
+    + (ship.pirate ? t.COMBAT_PIRATE_BONUS : 0)
+    + (ship.privateer ? t.COMBAT_PRIVATEER_BONUS : 0); // a professional hunter's edge
 }
 
 /** Whether the seas can bear another pirate (fleet-fraction cap → self-limiting). */
@@ -134,6 +136,8 @@ function resolveCombat(world, pirate, victim) {
   if (pirateWins) {
     const loot = plunder(world, pirate, victim);
     pirate.morale = Math.min(1, (pirate.morale || 0.6) + t.PIRATE_MORALE_PLUNDER);
+    markDanger(world, victim.x, victim.y, 'plunder');           // these waters are now feared
+    postBounty(world, pirate, victim.homeId, 'plunder');        // the robbed ship's home wants blood
     const sinks = streamFloat(world, 'combat') < t.PIRATE_SINK_ON_LOSS;
     logEvent(world, 'plunder', `${pirate.name} ran down ${victim.name || 'a merchant'} — Capt. ${pirate.captain.name} took ${loot.goods} cargo and ${loot.gold}g${sinks ? ', then put her under.' : '; she fled home stripped.'}`, { x: victim.x, y: victim.y, shipId: pirate.id });
     if (sinks) { victim._sunk = true; }
@@ -151,7 +155,8 @@ function resolveCombat(world, pirate, victim) {
     // A well-armed merchant can cripple its attacker — pirates that pick the wrong fight die.
     if (streamFloat(world, 'combat') < t.PIRATE_SINK_ON_FEND) {
       pirate._sunk = true;
-      logEvent(world, 'fended', `${victim.name || 'A merchant'} fought off ${pirate.name} and sent her to the bottom — Capt. ${victim.captain ? victim.captain.name : 'the master'}'s guns won the day.`, { x: victim.x, y: victim.y, shipId: victim.id });
+      const paid = payBounty(world, pirate, victim.homeId); // the merchant's home claims the reward
+      logEvent(world, 'fended', `${victim.name || 'A merchant'} fought off ${pirate.name} and sent her to the bottom — Capt. ${victim.captain ? victim.captain.name : 'the master'}'s guns won the day${paid ? ` (${paid}g bounty claimed)` : ''}.`, { x: victim.x, y: victim.y, shipId: victim.id });
     } else {
       logEvent(world, 'fended', `${victim.name || 'A merchant'} fought off ${pirate.name} — Capt. ${victim.captain ? victim.captain.name : 'the master'}'s guns drove the pirates back.`, { x: victim.x, y: victim.y, shipId: victim.id });
     }
@@ -184,7 +189,8 @@ function raidIsland(world, pirate, island) {
   // Raiding a port is dangerous — its guns and mob can send the raider to the bottom.
   if (streamFloat(world, 'combat') < t.PIRATE_RAID_RISK) {
     pirate._sunk = true;
-    logEvent(world, 'raidfail', `${island.name} beat off a raid by ${pirate.name} and sank her at the quay.`, { islandId: island.id, shipId: pirate.id });
+    const paid = payBounty(world, pirate, island.id); // the port claims the reward on its own defence
+    logEvent(world, 'raidfail', `${island.name} beat off a raid by ${pirate.name} and sank her at the quay${paid ? ` (${paid}g bounty claimed)` : ''}.`, { islandId: island.id, shipId: pirate.id });
     return;
   }
   const food = Math.min(t.PIRATE_RAID_FOOD, island.stock.Food || 0);
@@ -193,5 +199,7 @@ function raidIsland(world, pirate, island) {
   transfer(island, 'gold', pirate.cargo, GOLD, gold);
   if (island.loyalty != null) island.loyalty = Math.max(0, island.loyalty - t.PIRATE_RAID_LOYALTY_HIT);
   pirate.morale = Math.min(1, (pirate.morale || 0.6) + 0.15);
+  markDanger(world, island.x, island.y, 'raid');       // a sacked port's waters are the most feared
+  postBounty(world, pirate, island.id, 'raid');        // and it puts a price on the raider's head
   logEvent(world, 'raid', `${pirate.name} raided ${island.name} — Capt. ${pirate.captain.name} carried off ${Math.round(food)} food and ${gold}g.`, { islandId: island.id, shipId: pirate.id });
 }

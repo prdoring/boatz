@@ -14,7 +14,8 @@
 // below a hostility threshold, alliances/wars.
 
 import { streamFloat } from './rng.js';
-import { logEventThrottled } from './events.js';
+import { logEvent, logEventThrottled } from './events.js';
+import { foodDays } from './island.js';
 
 const clampRep = (v) => (v < -1 ? -1 : v > 1 ? 1 : v);
 
@@ -64,6 +65,27 @@ export function repPriceMult(host, homeId, swing, isBuy) {
   return isBuy ? (1 - swing * r) : (1 + swing * r);
 }
 
+/** EMBARGO — reputation with teeth: past mere gouging, a host that HATES a trader shuts its
+ *  port to them entirely (no deal at any price). Either side's hostility blocks the trade, so a
+ *  feud actually severs a trade line (its economic bite). Checked in partner search + at the dock. */
+export function isEmbargoed(host, otherId, t) {
+  if (!host || !host.rep) return false;
+  return (host.rep[otherId] || 0) <= t.REP_EMBARGO_THRESHOLD;
+}
+
+/** True if trade between two islands is barred by an embargo from EITHER side. */
+export function tradeBarred(world, aId, bId, t) {
+  const a = world.islandsById.get(aId), b = world.islandsById.get(bId);
+  return isEmbargoed(a, bId, t) || isEmbargoed(b, aId, t);
+}
+
+/** Nudge two islands' MUTUAL opinion of each other (e.g. an act of aid warms a friendship). */
+export function bumpRep(world, aId, bId, amount) {
+  const a = world.islandsById.get(aId), b = world.islandsById.get(bId);
+  if (a && a.rep) a.rep[bId] = clampRep((a.rep[bId] || 0) + amount);
+  if (b && b.rep) b.rep[aId] = clampRep((b.rep[aId] || 0) + amount);
+}
+
 /** SIM system (once per sim-day): grudges fade toward neutral, and producers of the SAME
  *  primary resource drift apart — they compete for the same customers, so without active
  *  trade between them their relationship sours. This is the source of NEGATIVE reputation
@@ -85,13 +107,36 @@ export function reputation(world) {
     }
   }
 
+  if (!world._blocState) world._blocState = {};
+  const isl = world.islands;
+
+  // BETRAYAL — reputation with teeth, the dark side of trust: now and then a close ally turns.
+  // A trusted friendship (high mutual regard) collapses overnight into a feud — dramatic, rare,
+  // and it can flip a bloc or sever a supply line (embargo territory). Deterministic via the rng
+  // stream. The betrayer is the more DESPERATE partner (lower food security) — hardship breeds it.
+  for (let i = 0; i < isl.length; i++) {
+    const a = isl[i];
+    if (!a.rep) continue;
+    for (let j = i + 1; j < isl.length; j++) {
+      const b = isl[j];
+      if (!b.rep) continue;
+      const m = ((a.rep[b.id] || 0) + (b.rep[a.id] || 0)) / 2;
+      if (m < t.REP_BETRAY_MIN_TRUST) continue; // only real friendships can be betrayed
+      if (streamFloat(world, 'betray') >= t.REP_BETRAY_CHANCE_PER_DAY) continue;
+      const betrayer = foodDays(a, t) <= foodDays(b, t) ? a : b; // the one in greater want turns first
+      const victim = betrayer === a ? b : a;
+      betrayer.rep[victim.id] = clampRep((betrayer.rep[victim.id] || 0) - t.REP_BETRAY_DROP);
+      victim.rep[betrayer.id] = clampRep((victim.rep[betrayer.id] || 0) - t.REP_BETRAY_DROP); // the wound is mutual
+      world._blocState[betrayer.id < victim.id ? betrayer.id + '|' + victim.id : victim.id + '|' + betrayer.id] = 'rival';
+      logEvent(world, 'betray', `Treachery! ${betrayer.name} betrayed its ally ${victim.name} — the alliance is shattered.`, { islandId: victim.id });
+    }
+  }
+
   // News: a pair's MUTUAL regard crossing into alliance / rivalry territory is a diplomatic
   // headline. HYSTERESIS (enter at ±threshold, fall back to neutral only below ±exit) stops a
   // pair hovering at the boundary from spamming the ticker. Deduped per unordered pair; only
   // the ENTER transitions are logged.
-  if (!world._blocState) world._blocState = {};
-  const A = t.REP_ALLY_THRESHOLD, R = t.REP_RIVAL_THRESHOLD, X = t.REP_BLOC_EXIT;
-  const isl = world.islands;
+  const A = t.REP_ALLY_THRESHOLD, R = t.REP_RIVAL_THRESHOLD, X = t.REP_BLOC_EXIT, E = t.REP_EMBARGO_THRESHOLD;
   for (let i = 0; i < isl.length; i++) {
     const a = isl[i];
     if (!a.rep) continue;
@@ -101,14 +146,18 @@ export function reputation(world) {
       const m = ((a.rep[b.id] || 0) + (b.rep[a.id] || 0)) / 2;
       const key = a.id + '|' + b.id;
       const prev = world._blocState[key] || 'neutral';
+      // Tiers by mutual regard: ally ≥ A > neutral > rival ≤ -R > embargo ≤ E (a full trade break).
+      // Hysteresis via the exit band X so a pair straddling a boundary doesn't flap or spam news.
       let state = prev;
-      if (prev === 'ally') { if (m < X) state = m <= -R ? 'rival' : 'neutral'; }
-      else if (prev === 'rival') { if (m > -X) state = m >= A ? 'ally' : 'neutral'; }
-      else { if (m >= A) state = 'ally'; else if (m <= -R) state = 'rival'; }
+      if (prev === 'ally') { if (m < X) state = m <= E ? 'embargo' : m <= -R ? 'rival' : 'neutral'; }
+      else if (prev === 'rival') { if (m <= E) state = 'embargo'; else if (m > -X) state = m >= A ? 'ally' : 'neutral'; }
+      else if (prev === 'embargo') { if (m > E + X) state = m >= A ? 'ally' : m <= -R ? 'rival' : 'neutral'; }
+      else { if (m >= A) state = 'ally'; else if (m <= E) state = 'embargo'; else if (m <= -R) state = 'rival'; }
       if (state === prev) continue;
       world._blocState[key] = state;
       if (state === 'ally') logEventThrottled(world, 'ally', 1.5 * t.SIM_DAY_SECONDS, `${a.name} & ${b.name} forge an alliance`, { islandId: a.id });
       else if (state === 'rival') logEventThrottled(world, 'rival', 2 * t.SIM_DAY_SECONDS, `${a.name} & ${b.name} fall into rivalry`, { islandId: a.id });
+      else if (state === 'embargo') logEventThrottled(world, 'embargo', 2 * t.SIM_DAY_SECONDS, `${a.name} & ${b.name} sever all trade — an embargo`, { islandId: a.id });
     }
   }
 }

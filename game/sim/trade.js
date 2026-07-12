@@ -6,8 +6,8 @@
 import { transfer, cargoUnits, GOLD, PEOPLE } from './resources.js';
 import { bidAsk } from './pricing.js';
 import { planVoyage } from './goals.js';
-import { recordTrade, repPriceMult } from './reputation.js';
-import { logEventThrottled } from './events.js';
+import { recordTrade, repPriceMult, tradeBarred, bumpRep } from './reputation.js';
+import { logEvent, logEventThrottled } from './events.js';
 
 /**
  * Set island.wantsShip via hysteresis: a port wealthy enough to buy a ship AND keep a
@@ -59,6 +59,15 @@ export function executeStop(world, island, ship, stop) {
   const homeId = ship.homeId;
   let volume = 0; // goods moved this stop → drives the reputation gained
 
+  // EMBARGO — a feud severs the trade line: the port turns the trader away, no goods or coin
+  // change hands at any price. Refugees already aboard still land (people, not politics).
+  if (tradeBarred(world, island.id, homeId, t)) {
+    if (stop.people > 0 && (ship.cargo[PEOPLE] || 0) > 0) {
+      transfer(ship.cargo, PEOPLE, island, 'population', Math.min(stop.people, ship.cargo[PEOPLE]));
+    }
+    return;
+  }
+
   // SELL leg: island BUYS the carried goods at its bid, but only up to its demand
   // (target*RESERVE - stock), so surplus reaches consumers/reserves and no warehouse
   // fills past what it can use. Bid is nudged by how the island feels about the ship's
@@ -86,6 +95,7 @@ export function executeStop(world, island, ship, stop) {
     // Never opportunistically dump coin, migrants, ships, planned trade goods, or the ship's own
     // defensive Weapons (guns are for fighting, not offloading — planned Weapons exports still sell).
     if (good === GOLD || good === PEOPLE || good === 'Ships' || good === 'Weapons' || carryHome.has(good) || stop.sell[good]) continue;
+    if (stop.gift && stop.gift[good]) continue; // aid cargo is a gift for this port, not for sale
     const have = ship.cargo[good] || 0;
     if (have <= 0) continue;
     const bid = bidAsk(island.price[good].mid, t.SPREAD).bid * repPriceMult(island, homeId, swing, false);
@@ -109,6 +119,21 @@ export function executeStop(world, island, ship, stop) {
     transfer(island.stock, good, ship.cargo, good, qty);
     transfer(ship.cargo, GOLD, island, 'gold', qty * ask);
     volume += qty;
+  }
+
+  // AID leg: a gift of food from an ally in its hour of need — no coin changes hands, and the
+  // act of solidarity strongly warms the friendship (worth far more rapport than a plain sale).
+  if (stop.gift) {
+    let given = 0;
+    for (const good in stop.gift) {
+      const qty = Math.min(stop.gift[good], ship.cargo[good] || 0);
+      if (qty > 0) given += transfer(ship.cargo, good, island.stock, good, qty);
+    }
+    if (given > 0.5) {
+      bumpRep(world, island.id, homeId, t.REP_AID_GAIN);
+      const from = world.islandsById.get(homeId);
+      logEvent(world, 'aid', `${from ? from.name : 'An ally'} sent ${Math.round(given)} food as aid to famine-struck ${island.name} — a friend in need.`, { islandId: island.id });
+    }
   }
 
   // PEOPLE leg: deliver the migrants routed to this stop.

@@ -176,6 +176,12 @@ function loadForVoyage(world, home, ship) {
       const load = Math.min(stop.sell[good], Math.max(0, space));
       stop.sell[good] = transfer(home.stock, good, ship.cargo, good, load);
     }
+    // Aid gifts ride along like sell cargo, but no coin comes back for them (see executeStop).
+    if (stop.gift) for (const good in stop.gift) {
+      const space = ship.capacity - cargoUnits(ship, t.GOLD_PER_CARGO_UNIT);
+      const load = Math.min(stop.gift[good], Math.max(0, space));
+      stop.gift[good] = transfer(home.stock, good, ship.cargo, good, load);
+    }
   }
 
   const totalPeople = v.stops.reduce((a, s) => a + s.people, 0);

@@ -26,13 +26,14 @@ const EVENT_COLOR = {
   rebellion: '#ff5b30', overthrow: '#ff7b4a', quellReb: '#8ee6a0',
   pirate: '#ff5b4a', plunder: '#e0503a', fended: '#8ee6a0', raid: '#ff7b4a', raidfail: '#8ee6a0',
   bounty: '#ffd166', privateer: '#6fa8d8', hunted: '#8ee6a0', hunterlost: '#e0863a', standdown: '#8fb6c6',
+  aid: '#7fe0b0', betray: '#ff5b30', embargo: '#e0863a',
 };
 const NEWS_ROWS = 9; // how many recent events the ticker shows
 
 // Short human labels for a ship's voyage purpose (the hover tooltip / quick glance).
 const REASON_LABEL = {
   food: 'Fetching food', migrate: 'Carrying migrants', buyShip: 'Buying a ship',
-  trade: 'Trading', scout: 'Scouting prices',
+  trade: 'Trading', scout: 'Scouting prices', aid: 'Aid convoy',
 };
 
 /** A one-word vitality descriptor from an island's fill (pop/capacity) and civ. Kept in step

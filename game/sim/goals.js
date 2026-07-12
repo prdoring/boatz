@@ -65,7 +65,7 @@ export function planVoyage(world, home, ship) {
   let capLeft = cap;
   let goldLeft = home.gold * t.GOLD_SPEND_FRACTION;
   let profit = 0;
-  let foodBought = false, shipBought = false, peopleLoaded = false, shopped = false, scouting = false;
+  let foodBought = false, shipBought = false, peopleLoaded = false, shopped = false, scouting = false, aidSent = false;
 
   // (1) SURVIVAL — import Food toward the target from the cheapest reachable seller. A
   //     starving port's priority is FOOD, so RESERVE most of the hold for it (up to 70%),
@@ -83,6 +83,30 @@ export function planVoyage(world, home, ship) {
         capLeft -= reserve;
         goldLeft -= Math.min(reserve, afford) * found.unitPrice; // only commit gold we can actually spend now
         foodBought = true;
+      }
+    }
+  }
+
+  // (1b) AID CONVOY — reputation with teeth, the bright side: a food-secure port answers an
+  //      ALLY'S famine with a GIFT of food (solidarity, not commerce — the recipient pays nothing;
+  //      it strongly warms the friendship). Friends keep each other alive. Bounded by the donor's
+  //      own food-security floor + a cooldown, so a port never beggars itself being generous, and
+  //      only fires when the home isn't itself scrambling for food.
+  if (!foodBought && foodDays(home, t) >= t.AID_DONOR_FOOD_DAYS && world.simTime >= (home._aidCd || 0)) {
+    let ally = null;
+    for (const p of nearbyIslands(world, home)) {
+      if ((home.rep ? home.rep[p.id] || 0 : 0) < t.REP_ALLY_AID_MIN) continue; // a true friend
+      if (foodDays(p, t) >= t.SURVIVAL_DAYS) continue;                          // in real trouble
+      if (!ally || foodDays(p, t) < foodDays(ally, t)) ally = p;                // the most desperate one
+    }
+    if (ally && roomForStop(ally.id)) {
+      const sparable = Math.max(0, home.stock.Food - home.targets.Food * 0.6);
+      const give = Math.min(t.AID_FOOD_BATCH, capLeft, sparable);
+      if (give >= 1) {
+        stopFor(ally.id).gift = { Food: give };
+        capLeft -= give;
+        home._aidCd = world.simTime + t.AID_COOLDOWN_DAYS * t.SIM_DAY_SECONDS;
+        aidSent = true;
       }
     }
   }
@@ -205,7 +229,7 @@ export function planVoyage(world, home, ship) {
   if (stops.length === 0) addExports(1.0);
   if (stops.length === 0) return null;
 
-  const reason = shipBought ? 'buyShip' : peopleLoaded ? 'migrate'
+  const reason = aidSent ? 'aid' : shipBought ? 'buyShip' : peopleLoaded ? 'migrate'
     : foodBought ? 'food' : scouting ? 'scout' : 'trade';
   // Don't shuttle for pennies: a pure-trade voyage must clear the profit floor (unless it's
   // also a luxury-shopping run). A GREEDY captain sets a higher bar (skips thin trades); an
@@ -221,7 +245,7 @@ const sumVals = (o) => { let n = 0; for (const k in o) n += o[k]; return n; };
  *  a ship offloads its cargo and earns gold before it reaches a stop where it needs to buy
  *  (e.g. food) — which requires freed hold space and coin. */
 function orderByPath(home, stops, world) {
-  const netSeller = (s) => sumVals(s.sell) - sumVals(s.buy) - s.people >= 0;
+  const netSeller = (s) => sumVals(s.sell) + sumVals(s.gift || {}) - sumVals(s.buy) - s.people >= 0;
   const sellStops = stops.filter(netSeller);
   const buyStops = stops.filter((s) => !netSeller(s));
   const ordered = [];

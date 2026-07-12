@@ -3,7 +3,7 @@
 // dispatch edits. PURE.
 
 import { bidAsk } from './pricing.js';
-import { repPriceMult } from './reputation.js';
+import { repPriceMult, isEmbargoed } from './reputation.js';
 import { beliefMid, currentDay } from './beliefs.js';
 
 export function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
@@ -30,6 +30,8 @@ export function findBestPartner(world, island, good, mode, travelMult = 1) {
   const day = currentDay(world);
   let best = null, bestScore = -Infinity;
   for (const p of nearbyIslands(world, island)) {
+    // An embargo (either side's deep hostility) shuts the port — it's simply not an option.
+    if (isEmbargoed(p, island.id, t) || isEmbargoed(island, p.id, t)) continue;
     const d = dist(island, p);
     // Travel is a decision-only opportunity cost; a bold/adventurous captain discounts it
     // (travelMult < 1) and so ranges farther for a trade, a cautious one stays close to home.

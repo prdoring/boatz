@@ -20,6 +20,7 @@ const GOAL = {
   buyShip: { label: 'Buying a ship', color: '#c8a06a' },
   trade: { label: 'Trading', color: '#8ee6a0' },
   scout: { label: 'Scouting prices', color: '#c8b3ff' },
+  aid: { label: 'Aid convoy for an ally', color: '#7fe0b0' },
 };
 const STATE = { idle: 'In port', sailing: 'Sailing', docked: 'Docked' };
 const STATE_COLOR = { idle: '#9fb6bd', sailing: '#5fd0e0', docked: '#8fc6ff' };
@@ -37,6 +38,7 @@ const EVENT_TEXT_COLOR = {
   rebellion: '#ff5b30', overthrow: '#ff7b4a', quellReb: '#8ee6a0',
   pirate: '#ff5b4a', plunder: '#e0503a', fended: '#8ee6a0', raid: '#ff7b4a', raidfail: '#8ee6a0',
   bounty: '#ffd166', privateer: '#6fa8d8', hunted: '#8ee6a0', hunterlost: '#e0863a', standdown: '#8fb6c6',
+  aid: '#7fe0b0', betray: '#ff5b30', embargo: '#e0863a',
 };
 
 export class InfoPanel extends Panel {

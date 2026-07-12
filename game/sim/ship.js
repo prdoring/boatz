@@ -119,6 +119,16 @@ function sail(world, ship, h) {
   return 'sailing';
 }
 
+/** Crowd on sail and run for `island` (evading a pirate) — a panicked dash, no leg tracking. */
+function panicRun(world, ship, island, h) {
+  const t = world.rules;
+  const heading = Math.atan2(island.y - ship.y, island.x - ship.x);
+  const eff = t.SHIP_SPEED * t.PIRATE_PANIC_MULT * windMult(world, heading, skill01(ship.captain, t)); // crew rows for their lives (outrun the pirate)
+  if (maybeSink(world, ship, eff * h)) return 'sunk';
+  if (moveToward(ship, island.x, island.y, eff, h)) provisionCrew(world, island, ship); // reached safe harbour — victual up
+  return 'fleeing';
+}
+
 /** A skilled captain on a non-urgent run may HOLD in port for a strong headwind to shift —
  *  bounded so patience always runs out. Never on a food run (people are starving) or a scout. */
 function shouldWaitForWind(world, ship, home, v) {
@@ -132,6 +142,24 @@ function shouldWaitForWind(world, ship, home, v) {
   return upwindness(world, heading) >= t.WAIT_UPWIND_THRESHOLD;
 }
 
+/** Arm a departing merchant from its home armoury — Weapons the island PRODUCED or bought (never
+ *  free). A cautious captain (or one sailing pirate-infested waters) mounts more guns, which take
+ *  hold slots away from trade cargo; a bold captain runs light and fat. Guns are spent in any
+ *  fight (a Weapons sink), so ports must keep replenishing them — real, ongoing Weapons demand. */
+function armForDefence(world, home, ship) {
+  const t = world.rules;
+  const bold = (ship.captain && ship.captain.traits && ship.captain.traits.boldness) || 0.5;
+  let near = 0;
+  for (const s of world.ships) if (s.pirate && Math.hypot(s.x - home.x, s.y - home.y) < t.PIRATE_HUNT_RANGE) near++;
+  const danger = Math.min(1, near / 2);
+  const target = t.ARM_WEAPONS_BASE + (1 - bold) * t.ARM_WEAPONS_CAUTION + danger * t.ARM_DANGER_BONUS;
+  const need = target - (ship.cargo.Weapons || 0);
+  if (need < 1) return;
+  const space = Math.max(0, ship.capacity - cargoUnits(ship, t.GOLD_PER_CARGO_UNIT));
+  const load = Math.min(need, Math.max(0, home.stock.Weapons || 0), space);
+  if (load >= 1) transfer(home.stock, 'Weapons', ship.cargo, 'Weapons', load);
+}
+
 /** Load the whole voyage at home: the multi-good sell basket, migrants, and a gold
  *  budget for planned buys (with headroom for price drift). Records the ACTUAL amounts
  *  loaded back onto each stop so executeStop never tries to sell more than was carried. */
@@ -140,6 +168,7 @@ function loadForVoyage(world, home, ship) {
   const v = ship.voyage;
 
   provisionCrew(world, home, ship); // victual the crew first — food (and grog) before trade cargo
+  armForDefence(world, home, ship); // then load guns from the home armoury (fewer hold slots for trade)
 
   for (const stop of v.stops) {
     for (const good in stop.sell) {
@@ -199,6 +228,18 @@ function unloadHome(world, home, ship) {
   }
 }
 
+/** A pirate within evasion range → the merchant runs for the nearest port. Returns the sanctuary
+ *  island (or null). Pirates disrupt trade this way even when they never catch anyone. */
+function fleeTarget(world, ship) {
+  const t = world.rules;
+  let threat = false;
+  for (const s of world.ships) { if (s.pirate && Math.hypot(s.x - ship.x, s.y - ship.y) < t.PIRATE_EVADE_RANGE) { threat = true; break; } }
+  if (!threat) return null;
+  let best = null, bestD = Infinity;
+  for (const p of world.islands) { const d = (p.x - ship.x) ** 2 + (p.y - ship.y) ** 2; if (d < bestD) { bestD = d; best = p; } }
+  return best;
+}
+
 /** Divert a sailing ship to `island` to reprovision — abandons the old plan; docks there
  *  (crew fed), then heads home. */
 function redirectResupply(world, ship, island) {
@@ -223,6 +264,8 @@ function updateShip(world, ship, h) {
       }
       break;
     case 'outbound': {
+      const flee = fleeTarget(world, ship); // pirate near → sprint for the nearest port
+      if (flee) { if (panicRun(world, ship, flee, h) === 'sunk') return; break; }
       const dev = deviationTarget(world, ship); // a worried captain runs for the nearest larder
       if (dev) { redirectResupply(world, ship, dev); break; }
       const r = sail(world, ship, h);
@@ -244,6 +287,8 @@ function updateShip(world, ship, h) {
       }
       break;
     case 'inbound': {
+      const flee = fleeTarget(world, ship);
+      if (flee) { if (panicRun(world, ship, flee, h) === 'sunk') return; break; }
       const r = sail(world, ship, h);
       if (r === 'sunk') return; // lost at sea
       if (r === 'arrived') {
@@ -264,6 +309,10 @@ function updateShip(world, ship, h) {
 /** The ship SIM system. Removes any vessels that foundered this step. */
 export function ship(world, h) {
   let sunk = false;
-  for (const s of world.ships) { updateShip(world, s, h); if (s._sunk) sunk = true; }
+  for (const s of world.ships) {
+    if (s.pirate) continue; // pirates are driven by the piracy system, not merchant logic
+    updateShip(world, s, h);
+    if (s._sunk) sunk = true;
+  }
   if (sunk) world.ships = world.ships.filter((s) => !s._sunk);
 }

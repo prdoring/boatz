@@ -49,6 +49,16 @@ export function personalityOf(traits) {
   return { boldness: sign > 0 ? 'Bold' : 'Cautious', wanderlust: sign > 0 ? 'Wanderer' : 'Homebody', greed: sign > 0 ? 'Shrewd' : 'Easygoing' }[key];
 }
 
+/** A pirate captain — an epithet name ("Cormac Redhand"), bold and greedy, and already blooded
+ *  (some starting experience). The kind who takes a ship by force and sails it under the black flag. */
+export function makePirateCaptain(world) {
+  const f = pick(FIRST, streamFloat(world, 'captain'));
+  const name = `${f} ${pick(EPITHET, streamFloat(world, 'captain'))}`;
+  const traits = { boldness: 0.7 + 0.3 * streamFloat(world, 'captain'), wanderlust: trait(world), greed: 0.6 + 0.4 * streamFloat(world, 'captain') };
+  const portrait = Math.floor(streamFloat(world, 'captain') * 0x7fffffff) >>> 0;
+  return { name, xp: Math.floor(180 + streamFloat(world, 'captain') * 420), traits, personality: personalityOf(traits), portrait };
+}
+
 /** A fresh captain with a seeded name, personality, and zero experience. */
 export function makeCaptain(world) {
   const f = pick(FIRST, streamFloat(world, 'captain'));

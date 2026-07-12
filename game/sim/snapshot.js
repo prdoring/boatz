@@ -13,7 +13,7 @@ import { magRank, magSkill } from './magistrate.js';
 // StateBuffer field descriptors for ships (the interpolated `entities` map).
 export const SHIP_LERP = ['x', 'y'];
 export const SHIP_ANGLE = ['heading'];
-export const SHIP_COPY = ['state', 'type', 'homeId', 'destId', 'reason', 'eta', 'cargo', 'gold', 'route', 'cap', 'used', 'sick', 'captain', 'morale', 'foodDays', 'revolt', 'name'];
+export const SHIP_COPY = ['state', 'type', 'homeId', 'destId', 'reason', 'eta', 'cargo', 'gold', 'route', 'cap', 'used', 'sick', 'captain', 'morale', 'foodDays', 'revolt', 'name', 'pirate'];
 
 // Display state (for art + panel) from the internal sim state.
 function displayState(s) {
@@ -54,6 +54,7 @@ export function snapshotShips(world) {
       gold: Math.round(s.cargo[GOLD] || 0),
       sick: !!s.infected,
       name: s.name || null,
+      pirate: !!s.pirate, // flying the black flag → distinct art + panel + map marker
       morale: round2(s.morale != null ? s.morale : 1),
       foodDays: round1(foodDaysAboard(world, s)),
       revolt: !!s.uprising, // crew in open revolt (dead in the water) → highlighted on the map

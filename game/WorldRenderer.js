@@ -14,6 +14,10 @@
 import { drawUnifiedArt } from '/engine/render/ArtInterpreter.js';
 import { PALETTE, ISLAND_RADIUS, SHIP_RADIUS } from './config.js';
 
+// A pirate's sail is dyed a menacing dark crimson-black (vs a merchant's home-port colour),
+// so a raider reads as hostile at a glance even before the skull marker is noticed.
+const PIRATE_HULL = '#7a1420';
+
 export class WorldRenderer {
   constructor(ctx, camera, art, vfx, effectsRenderer) {
     this.ctx = ctx;
@@ -281,11 +285,37 @@ export class WorldRenderer {
       // so its whole fleet is trackable across the map even at overview zoom (where a ship
       // is only ~1px). Drawn as a filled disc glow + ring so it pops against the water.
       if (highlightHomeId && s.homeId === highlightHomeId) this._homeRing(s.x, s.y, Math.max(SHIP_RADIUS * 1.7 * zoom, 11), now);
-      this._drawArtAt(def, s.x, s.y, SHIP_RADIUS, color, s.state || 'sailing', now, this._trans('s:' + id), s.heading || 0);
+      // A pirate flies the black flag — draw a dark hull tint by passing an ominous colour.
+      this._drawArtAt(def, s.x, s.y, SHIP_RADIUS, s.pirate ? PIRATE_HULL : color, s.state || 'sailing', now, this._trans('s:' + id), s.heading || 0);
       // A crew in open revolt (mutiny/defection standoff) — a stark pulsing marker, clamped so
       // it's spotted anywhere on the map even at overview zoom.
       if (s.revolt) this._revoltRing(s.x, s.y, Math.max(SHIP_RADIUS * 1.9 * zoom, 13), now);
+      // A pirate raised the black flag — a skull marker so predators are spotted anywhere.
+      else if (s.pirate) this._pirateMark(s.x, s.y, Math.max(SHIP_RADIUS * 1.9 * zoom, 12), now);
     }
+  }
+
+  /** The black flag: a dark disc + skull that hovers over a pirate vessel — menacing, and
+   *  clamped to a minimum screen size so a raider is trackable across the map at any zoom. */
+  _pirateMark(wx, wy, r, now) {
+    const { sx, sy } = this.camera.worldToScreen(wx, wy);
+    const ctx = this.ctx;
+    const pulse = 0.7 + 0.3 * Math.sin(now * 0.008);
+    ctx.save();
+    ctx.globalAlpha = 0.28;
+    ctx.fillStyle = '#0b0b10';
+    ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 0.9;
+    ctx.strokeStyle = '#1c1c24';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.stroke();
+    ctx.globalAlpha = pulse;
+    ctx.fillStyle = '#f4f0e6'; // bone white
+    ctx.shadowColor = '#000'; ctx.shadowBlur = 6;
+    ctx.font = `${Math.round(Math.max(12, r * 1.1))}px system-ui, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('☠', sx, sy - r - 6);
+    ctx.restore();
   }
 
   _revoltRing(wx, wy, r, now) {

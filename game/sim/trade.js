@@ -83,7 +83,9 @@ export function executeStop(world, island, ship, stop) {
   const carryHome = new Set();
   if (ship.voyage) for (const st of ship.voyage.stops) for (const g in st.buy) carryHome.add(g);
   for (const good in ship.cargo) {
-    if (good === GOLD || good === PEOPLE || good === 'Ships' || carryHome.has(good) || stop.sell[good]) continue;
+    // Never opportunistically dump coin, migrants, ships, planned trade goods, or the ship's own
+    // defensive Weapons (guns are for fighting, not offloading — planned Weapons exports still sell).
+    if (good === GOLD || good === PEOPLE || good === 'Ships' || good === 'Weapons' || carryHome.has(good) || stop.sell[good]) continue;
     const have = ship.cargo[good] || 0;
     if (have <= 0) continue;
     const bid = bidAsk(island.price[good].mid, t.SPREAD).bid * repPriceMult(island, homeId, swing, false);

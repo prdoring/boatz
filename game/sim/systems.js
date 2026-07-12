@@ -8,6 +8,7 @@ import { population } from './population.js';
 import { pricing } from './pricing.js';
 import { dispatch } from './trade.js';
 import { ship } from './ship.js';
+import { piracy } from './piracy.js';
 import { crew } from './crew.js';
 import { wind } from './wind.js';
 import { upkeep } from './upkeep.js';
@@ -24,6 +25,7 @@ export const SIM_SYSTEMS = [
   pricing,
   dispatch,
   ship,
+  piracy,     // pirate vessels hunt/fight/raid (the ship system skips them)
   crew,       // provisioning/morale/mutiny for at-sea ships, after movement (reads arrivals/docks)
   upkeep,     // gold flow (income/upkeep sinks) + spoilage, after production/trade/movement
   reputation, // daily decay of diplomatic opinions (trade itself updates them in ship.js)

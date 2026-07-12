@@ -16,6 +16,7 @@ import { bidAsk } from './pricing.js';
 import { skill01, makeCaptain } from './captains.js';
 import { logEvent } from './events.js';
 import { streamFloat } from './rng.js';
+import { turnPirate, canTurnPirate } from './piracy.js';
 
 const perDay = (world, ratePerDay, h) => ratePerDay * (h / world.rules.SIM_DAY_SECONDS);
 const days = (world, h) => h / world.rules.SIM_DAY_SECONDS;
@@ -101,7 +102,7 @@ export function crew(world, h) {
   const r = world.rules;
   let lost = false;
   for (const ship of world.ships) {
-    const away = ship.voyage && ship.state !== 'idle';
+    const away = ship.pirate || (ship.voyage && ship.state !== 'idle'); // pirates are always at sea, always eating
     if (!away) { // in home port: crew ashore, stores land — reset toward calm
       ship.morale = Math.min(1, ship.morale + perDay(world, r.MORALE_RECOVER_RATE * 2, h));
       ship.hunger = 0;
@@ -140,7 +141,8 @@ export function crew(world, h) {
       ship._sunk = true; lost = true; continue;
     }
 
-    // 4) UNREST → UPRISING
+    // 4) UNREST → UPRISING — merchant crews only; a pirate crew is already the mutiny.
+    if (ship.pirate) continue;
     if (ship.morale < r.MUTINY_MORALE) ship.unrest += dDay; else ship.unrest = Math.max(0, ship.unrest - dDay * 1.5);
     const grace = r.MUTINY_GRACE_DAYS + skill01(ship.captain, r) * r.MUTINY_GRACE_SKILL;
     if (!ship.uprising && world.simTime >= (ship._upCd || 0) && ship.unrest >= grace) {
@@ -165,6 +167,11 @@ function resolveUprising(world, ship) {
   if (streamFloat(world, 'mutiny') < pQuell) {
     logEvent(world, 'quell', `Aboard ${vessel}, the crew rose up with ${grievance} — but Capt. ${name} faced them down and held command.`, at);
   } else {
+    // A desperate, victorious crew may raise the black flag instead of finding a new master.
+    if (streamFloat(world, 'mutiny') < r.PIRATE_CONVERT_CHANCE && canTurnPirate(world)) {
+      turnPirate(world, ship); // leaves the economy; sets its own state/voyage + logs
+      return;
+    }
     const target = streamFloat(world, 'mutiny') < r.DEFECT_FRACTION ? defectionTarget(world, ship) : null;
     if (target) {
       logEvent(world, 'defect', `The crew of ${vessel}, ${grievance}, threw over Capt. ${name} and defected to ${target.name}.`, at);

@@ -24,6 +24,7 @@ const EVENT_COLOR = {
   mutiny: '#ff5b4a', defect: '#e0863a', quell: '#8ee6a0', unrest: '#e0b24a', starve: '#c0503a',
   launch: '#6fd0e0', migrate: '#f2b8d0', famine: '#d98a3a', boom: '#ffd166', ally: '#8ee6a0', rival: '#e0863a',
   rebellion: '#ff5b30', overthrow: '#ff7b4a', quellReb: '#8ee6a0',
+  pirate: '#ff5b4a', plunder: '#e0503a', fended: '#8ee6a0', raid: '#ff7b4a', raidfail: '#8ee6a0',
 };
 const NEWS_ROWS = 9; // how many recent events the ticker shows
 
@@ -427,8 +428,9 @@ export class SimScene extends Scene {
     const dest = s.destId != null ? this.sim.islandsById.get(s.destId) : null;
     const cap = s.captain;
     const lines = [{ text: s.name || (cap ? `Capt. ${cap.name}` : (home ? `${home.name} ship` : 'Merchant ship')), bold: true }];
-    if (cap) lines.push({ text: `Capt. ${cap.name} · ${cap.rank} · ${home ? home.name : '—'}`, color: 'rgba(190, 210, 220, 0.85)' });
-    lines.push({ text: REASON_LABEL[s.reason] || 'Idle', color: '#c8b3ff' });
+    if (cap) lines.push({ text: `Capt. ${cap.name} · ${cap.rank} · ${s.pirate ? 'rogue' : (home ? home.name : '—')}`, color: 'rgba(190, 210, 220, 0.85)' });
+    if (s.pirate) lines.push({ text: '☠ BLACK FLAG — PIRATE', color: '#ff5b4a', bold: true });
+    else lines.push({ text: REASON_LABEL[s.reason] || 'Idle', color: '#c8b3ff' });
     if (dest && s.state === 'sailing') lines.push({ text: `→ ${dest.name}  (~${s.eta}s)` });
     const rel = s.state === 'sailing' ? windRelation(s.heading, this.sim.wind) : null;
     lines.push({

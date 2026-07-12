@@ -1,0 +1,85 @@
+// Piracy — the black-flag antagonist. Combat is decided by captain skill, crew morale, and
+// WEAPONS aboard (the offense/defense equation); pirates spawn only by CONVERSION of an existing
+// crew (nothing appears for free), are capped as a fraction of the fleet (self-limiting), and can
+// be sunk when they pick the wrong fight. These tests lock those invariants in.
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { makeWorld } from './helpers/simWorld.js';
+import {
+  combatStrength, weaponsAboard, pirateCount, canTurnPirate, turnPirate, piracy,
+} from '/game/sim/piracy.js';
+import { GOLD } from '/game/sim/resources.js';
+
+test('combat strength rises with guns, skill, morale — and a pirate fights harder', () => {
+  const w = makeWorld();
+  const a = w.ships[0], b = w.ships[1];
+  a.cargo = { Gold: 0, People: 0, Weapons: 0 }; a.morale = 0.5;
+  b.cargo = { Gold: 0, People: 0, Weapons: 10 }; b.morale = 0.5; b.captain = a.captain;
+  assert.ok(combatStrength(w, b) > combatStrength(w, a), 'more guns → more strength');
+  assert.equal(weaponsAboard(b), 10);
+
+  const plain = { ...b, pirate: false }, rogue = { ...b, pirate: true };
+  assert.ok(combatStrength(w, rogue) > combatStrength(w, plain), 'a pirate gets the ferocity bonus');
+});
+
+test('weapons contribution is capped (a ship cannot stack infinite guns)', () => {
+  const w = makeWorld();
+  const s = w.ships[0];
+  const cap = w.rules.COMBAT_WEAPON_CAP;
+  s.cargo = { Gold: 0, People: 0, Weapons: cap }; s.morale = 0.5;
+  const atCap = combatStrength(w, s);
+  s.cargo.Weapons = cap * 4;
+  assert.ok(Math.abs(combatStrength(w, s) - atCap) < 1e-9, 'guns past the cap add nothing');
+});
+
+test('turning pirate is a CONVERSION — no ship is created, the hull is reused under a new flag', () => {
+  const w = makeWorld();
+  const before = w.ships.length;
+  const ship = w.ships[0];
+  const id = ship.id, hull = ship.capacity, home = ship.homeId;
+  ship.voyage = { reason: 'trade', stops: [], index: 0 };
+  turnPirate(w, ship);
+  assert.equal(w.ships.length, before, 'no new ship spawned — piracy adds nothing free to the fleet');
+  assert.equal(ship.id, id, 'same hull');
+  assert.equal(ship.capacity, hull, 'same capacity');
+  assert.equal(ship.homeId, home, 'still remembers its home port');
+  assert.equal(ship.pirate, true, 'flying the black flag');
+  assert.equal(ship.voyage, null, 'abandoned its merchant voyage');
+  assert.ok(ship.captain && ship.captain.name, 'sails under a fresh captain');
+  assert.ok(pirateCount(w) >= 1);
+});
+
+test('piracy is self-limiting — the fleet-fraction cap blocks the next conversion', () => {
+  const w = makeWorld();
+  const cap = Math.max(1, w.ships.length * w.rules.PIRATE_MAX_FRAC);
+  let guard = 0;
+  while (canTurnPirate(w) && guard++ < 1000) {
+    const victim = w.ships.find((s) => !s.pirate);
+    if (!victim) break;
+    turnPirate(w, victim);
+  }
+  assert.ok(!canTurnPirate(w), 'the seas refuse another pirate once the cap is reached');
+  assert.ok(pirateCount(w) <= Math.ceil(cap), `pirates (${pirateCount(w)}) stay within the cap (${cap})`);
+});
+
+test('a pirate that catches a merchant plunders its coin and cargo (weapons burn as a sink)', () => {
+  const w = makeWorld();
+  const pirate = w.ships[0], victim = w.ships[1];
+  // Put the victim right on top of the pirate, inside combat range, so piracy() resolves a fight.
+  turnPirate(w, pirate);
+  pirate.x = 1000; pirate.y = 1000; pirate.morale = 1; pirate._huntCd = 0;
+  pirate.cargo = { Gold: 0, People: 0, Weapons: 40 }; // heavily armed → very likely to win
+  pirate.captain.xp = 5000; // a fearsome, skilled captain
+  victim.x = 1000; victim.y = 1000; victim.state = 'outbound'; victim.pirate = false;
+  victim.morale = 0.1; victim.cargo = { Gold: 500, People: 0, Food: 30, Weapons: 2 };
+  victim.captain.xp = 0;
+  const pirateWeaponsBefore = weaponsAboard(pirate);
+
+  piracy(w, w.rules.SIM_STEP);
+
+  const tookLoot = (pirate.cargo[GOLD] || 0) > 0 || (pirate.cargo.Food || 0) > 0;
+  const victimStripped = (victim.cargo[GOLD] || 0) < 500 || !!victim._sunk;
+  assert.ok(tookLoot, 'the pirate carried off coin and/or cargo');
+  assert.ok(victimStripped, 'the merchant lost its coin (or went under)');
+  assert.ok(weaponsAboard(pirate) < pirateWeaponsBefore, 'guns were spent in the fight (a weapons sink)');
+});

@@ -35,6 +35,7 @@ const EVENT_TEXT_COLOR = {
   mutiny: '#ff5b4a', defect: '#e0863a', quell: '#8ee6a0', unrest: '#e0b24a', starve: '#c0503a',
   launch: '#6fd0e0', migrate: '#f2b8d0', famine: '#d98a3a', boom: '#ffd166', ally: '#8ee6a0', rival: '#e0863a',
   rebellion: '#ff5b30', overthrow: '#ff7b4a', quellReb: '#8ee6a0',
+  pirate: '#ff5b4a', plunder: '#e0503a', fended: '#8ee6a0', raid: '#ff7b4a', raidfail: '#8ee6a0',
 };
 
 export class InfoPanel extends Panel {
@@ -201,11 +202,14 @@ export class InfoPanel extends Panel {
     const ctxt = this.getContext();
     const st = { label: STATE[s.state] || cap(s.state), color: STATE_COLOR[s.state] || PALETTE.panelDim };
     this._titleRow(ctx, s.name || shipLabel(id, ctxt.shipsById, ctxt.islandsById), st, c);
-    this._subtitle(ctx, `${cap(s.type)} · home ${name(ctxt.islandsById, s.homeId)}`, c);
+    this._subtitle(ctx, s.pirate ? `${cap(s.type)} · rogue out of ${name(ctxt.islandsById, s.homeId)}` : `${cap(s.type)} · home ${name(ctxt.islandsById, s.homeId)}`, c);
+
+    // A pirate flies the black flag — the loudest banner, above everything else.
+    if (s.pirate) { c.y += 8; this._banner(ctx, '☠ BLACK FLAG — PIRATE', '#e04a5a', c); }
 
     // Errand banner.
     const goal = GOAL[s.reason] || (s.reason ? { label: cap(s.reason), color: PALETTE.panelText } : null);
-    if (goal) { c.y += 8; this._banner(ctx, goal.label, goal.color, c); }
+    if (goal && !s.pirate) { c.y += 8; this._banner(ctx, goal.label, goal.color, c); }
 
     // Captain — identity, experience, personality, and how the wind sits for them.
     if (s.captain) this._captain(ctx, s, ctxt, c);

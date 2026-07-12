@@ -19,10 +19,11 @@ test('a ship completes a full multi-hop voyage back to idle', () => {
   const home = w.islands[0];
   const a = w.islands[1];
   const b = w.islands[2];
-  const s = w.ships.find((sh) => sh.homeId === home.id);
+  const s = w.ships.find((sh) => sh.homeId === home.id && !sh.pirate);
   w.rules.SINK_PER_1000 = 0; // deterministic: this ship must not founder mid-test
-  // Isolate: park every other ship idle with no voyage so only `s` moves.
-  for (const other of w.ships) { if (other !== s) { other.state = 'idle'; other.voyage = null; } }
+  // Isolate: keep ONLY `s` afloat — drop every other hull (incl. the seeded rogues, which would
+  // otherwise trip this ship's pirate-evasion and stop it ever completing the run).
+  w.ships = w.ships.filter((sh) => sh === s);
   s.state = 'idle';
   s.voyage = {
     reason: 'trade', index: 0,

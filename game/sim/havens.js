@@ -12,7 +12,7 @@ import { streamFloat } from './rng.js';
 import { logEvent } from './events.js';
 import { transfer, GOLD, PEOPLE, clamp } from './resources.js';
 import { createShip } from './ship.js';
-import { turnPirate, pirateCount } from './piracy.js';
+import { turnPirate, pirateCount, canTurnPirate } from './piracy.js';
 import { shipName } from './naming.js';
 import { installMagistrate } from './magistrate.js';
 
@@ -36,6 +36,37 @@ export function havens(world, h) {
     else if (daily) maybeFall(world, isl);
   }
   if (havenList.length) harbourPirates(world, havenList, dDay);
+  if (daily) maybeRaiseRogue(world);
+}
+
+/** Keep a BASELINE of raiders at large: if the seas fall below MIN_PIRATES_AT_LARGE, a fresh rogue
+ *  sails in from beyond the archipelago (throttled by a cooldown). Piracy is otherwise so
+ *  self-limiting — armed merchants + swift privateers wipe it fast — that the seas often go empty of
+ *  any black flag for long stretches. This guarantees there is usually SOMETHING to see and to guard
+ *  against, without touching the cap (canTurnPirate) that bounds the maximum. A brig under a fearsome
+ *  captain, dropped at the map's edge as if sailing in off the open ocean. */
+function maybeRaiseRogue(world) {
+  const t = world.rules;
+  const min = t.MIN_PIRATES_AT_LARGE || 0;
+  if (min <= 0 || pirateCount(world) >= min) return;
+  if (world.simTime < (world._rogueCd || 0) || !canTurnPirate(world)) return;
+  const anchor = world.islands[Math.floor(streamFloat(world, 'rogue') * world.islands.length)] || world.islands[0];
+  if (!anchor) return;
+  const ship = createShip(world.nextEntityId++, anchor, t, 'brig');
+  ship.cargo.Gold = 0; // an outsider sails in with no coin (it must plunder) — no gold minted mid-sim (conservation)
+  // Sail in from a random edge of the map (the open sea beyond the isles).
+  const edge = streamFloat(world, 'rogue');
+  if (edge < 0.25) { ship.x = 0; ship.y = streamFloat(world, 'rogue') * world.mapH; }
+  else if (edge < 0.5) { ship.x = world.mapW; ship.y = streamFloat(world, 'rogue') * world.mapH; }
+  else if (edge < 0.75) { ship.x = streamFloat(world, 'rogue') * world.mapW; ship.y = 0; }
+  else { ship.x = streamFloat(world, 'rogue') * world.mapW; ship.y = world.mapH; }
+  ship.cargo.Food = t.CREW_FOOD_PER_DAY * t.PROVISION_DAYS * 3;
+  const spec = t.SHIP_TYPES && t.SHIP_TYPES.brig;
+  ship.cargo.Weapons = spec ? spec.weaponCap * 0.7 : 14;
+  ship.name = shipName(world);
+  world.ships.push(ship);
+  turnPirate(world, ship);
+  world._rogueCd = world.simTime + (t.ROGUE_SPAWN_COOLDOWN_DAYS || 2) * t.SIM_DAY_SECONDS;
 }
 
 /** A wholly lawless, uncivilised port teeters for HAVEN_FALL_DAYS, then falls. Capped fleet-wide.

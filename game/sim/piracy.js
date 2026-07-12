@@ -101,8 +101,17 @@ export function piracy(world, h) {
       if (hungry && isle && dist(ship, isle) <= t.PIRATE_RAID_RANGE
           && world.simTime >= (ship._raidCd || 0) && world.simTime >= (isle._raidCd || 0)) {
         raidIsland(world, ship, isle);
-      } else if (isle) {
+      } else if (hungry && isle) {
+        // Starving with no haven to run to: close on a port to raid it (the crew must eat).
         if (sail(world, ship, isle.x, isle.y, speed, h) === 'sunk') sunk = true;
+      } else {
+        // Fed, no prey in reach: PROWL the sea LANES — never camp a wharf. A pirate sitting on a port
+        // pins its whole fleet in harbour (merchants flee any pirate near, so they never leave, so the
+        // pirate catches nothing) and gridlocks trade to a standstill. Steer for the nearest vessel
+        // already UNDER WAY; with none in sight, hold station out in the port's APPROACHES (a standoff
+        // from the wharf) so harbour-bound ships can still slip out and only run afoul if they sail its way.
+        const target = prowlTarget(world, ship, isle);
+        if (target && sail(world, ship, target.x, target.y, speed, h) === 'sunk') sunk = true;
       }
     }
   }
@@ -136,6 +145,35 @@ function nearestIsland(world, ship) {
   let best = null, bestD = Infinity;
   for (const p of world.islands) { const d = dist(ship, p); if (d < bestD) { bestD = d; best = p; } }
   return best;
+}
+
+/** Nearest merchant already UNDER WAY (outbound/inbound) — a pirate's real prey lives on the lanes,
+ *  not in port (ships in harbour are safe and are skipped by nearestPrey). No range cap: it gives a
+ *  prowling pirate a heading toward wherever trade is actually moving. */
+function nearestSeaMerchant(world, ship) {
+  let best = null, bestD = Infinity;
+  for (const s of world.ships) {
+    if (s.pirate || s.privateer || s._sunk) continue;
+    if (s.state !== 'outbound' && s.state !== 'inbound') continue;
+    const d = (s.x - ship.x) ** 2 + (s.y - ship.y) ** 2;
+    if (d < bestD) { bestD = d; best = s; }
+  }
+  return best;
+}
+
+/** Where a fed, prey-less pirate heads: toward the nearest merchant under way (hunt the lanes), else
+ *  HOLD STATION off the nearest port — a standoff out in its APPROACHES — rather than camping the
+ *  wharf. Camping pins the port's whole fleet in harbour and strangles trade; loitering a hunt-range
+ *  out lets harbour-bound ships slip away (they only flee within PIRATE_EVADE_RANGE of the pirate). */
+function prowlTarget(world, ship, isle) {
+  const prey = nearestSeaMerchant(world, ship);
+  if (prey) return prey;
+  if (!isle) return null;
+  const standoff = world.rules.PIRATE_HUNT_RANGE * 0.7;
+  const d = dist(ship, isle);
+  if (d > standoff * 1.1) return isle; // still far off — close on the approaches
+  const ang = Math.atan2(ship.y - isle.y, ship.x - isle.x) || 0; // hold a standoff off the port, on the pirate's own side
+  return { x: isle.x + Math.cos(ang) * standoff, y: isle.y + Math.sin(ang) * standoff };
 }
 
 /** Nearest pirate HAVEN — a stronghold a raider can run to for food and to fence loot (havens.js).

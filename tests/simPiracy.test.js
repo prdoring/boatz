@@ -62,6 +62,30 @@ test('piracy is self-limiting — the fleet-fraction cap blocks the next convers
   assert.ok(pirateCount(w) <= Math.ceil(cap), `pirates (${pirateCount(w)}) stay within the cap (${cap})`);
 });
 
+test('the world is seeded with a few rogues already at large (the early seas are not empty)', () => {
+  const w = makeWorld();
+  const pirates = w.ships.filter((s) => s.pirate);
+  assert.equal(pirates.length, w.rules.START_PIRATES, 'START_PIRATES raiders sail from day one');
+  for (const p of pirates) {
+    assert.ok((p.cargo.Weapons || 0) > 0, 'a seeded rogue is armed for the fight');
+    assert.ok((p.cargo.Food || 0) > 0, 'and victualled to hunt before it must raid');
+  }
+});
+
+test('a fed pirate with no prey does NOT camp an island wharf — it stands off in the approaches', () => {
+  const w = makeWorld();
+  const isle = w.islands[0];
+  const pirate = w.ships.find((s) => s.pirate) || w.ships[0];
+  turnPirate(w, pirate);
+  pirate.cargo = { Gold: 0, People: 0, Food: 999, Weapons: 10 }; // fed (won't raid) and not laden (won't fence)
+  pirate._huntCd = 0; pirate._prey = null;
+  pirate.x = isle.x; pirate.y = isle.y;               // sitting right on the wharf
+  for (const s of w.ships) if (!s.pirate) s.state = 'idle'; // no merchant is under way → no prey at sea
+  for (let i = 0; i < 60; i++) piracy(w, w.rules.SIM_STEP);
+  const d = Math.hypot(pirate.x - isle.x, pirate.y - isle.y);
+  assert.ok(d > w.rules.PIRATE_RAID_RANGE, `the pirate stood off the wharf (dist ${Math.round(d)}u) instead of camping it`);
+});
+
 test('a pirate that catches a merchant plunders its coin and cargo (weapons burn as a sink)', () => {
   const w = makeWorld();
   const pirate = w.ships[0], victim = w.ships[1];

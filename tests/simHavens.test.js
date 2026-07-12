@@ -29,6 +29,17 @@ test('a wholly lawless, collapsed island falls to a pirate haven and its crews r
   assert.ok(w.ships.some((s) => s.pirate && s.homeId === isl.id), 'its own crews turned pirate to seed the haven');
 });
 
+test('a baseline of rogues is kept at large — a fresh raider sails in when the seas fall quiet', () => {
+  const w = makeWorld();
+  w.ships = w.ships.filter((s) => !s.pirate); // clear the seas of the seeded rogues
+  w._rogueCd = 0; w._havenDay = -1;           // reset the cooldown + force the daily check
+  assert.equal(w.ships.filter((s) => s.pirate).length, 0, 'seas start empty of pirates');
+  havens(w, w.rules.SIM_STEP);
+  const raised = w.ships.filter((s) => s.pirate);
+  assert.ok(raised.length >= 1, 'a rogue sailed in to keep the seas from going empty');
+  assert.ok((raised[0].cargo.Weapons || 0) > 0, 'and it is armed');
+});
+
 test('a healthy island does NOT fall — the pressure has to be sustained', () => {
   const w = makeWorld();
   const isl = w.islands[0];

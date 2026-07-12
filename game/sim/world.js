@@ -15,6 +15,7 @@ import { initWind } from './wind.js';
 import { initWeather } from './weather.js';
 import { makeCaptain } from './captains.js';
 import { installMagistrate } from './magistrate.js';
+import { turnPirate } from './piracy.js';
 import { shipName } from './naming.js';
 import { GOLD, PEOPLE } from './resources.js';
 
@@ -99,6 +100,13 @@ export function buildWorld({ economy, roster, seed = 1337 }) {
     }
   }
 
+  // A few RAIDERS already at large when the world boots. Piracy otherwise only emerges once crews
+  // start to mutiny (rare until food runs thin) or a haven forms (mid-game), so the early seas would
+  // be empty of any black flag for a long while. Seed a handful of rogues out on the water under
+  // fearsome captains, so there's a threat to see (and privateers to answer it) from day one — the
+  // usual fleet-fraction cap + privateers keep it self-limiting from there.
+  seedStartPirates(world, tuning);
+
   // Seed every pair's reputation just above/below neutral (the diplomatic layer).
   initReputation(world, tuning.REP_INIT_SPREAD);
   initWeather(world); // season + storms (before wind, which reads the prevailing trade winds)
@@ -108,6 +116,29 @@ export function buildWorld({ economy, roster, seed = 1337 }) {
 
   world.totals = worldTotals(world);
   return world;
+}
+
+/** Drop START_PIRATES rogue sloops onto the open sea at genesis (deterministic). Each is a fresh
+ *  pirate under a fearsome captain, homed to a random port only as a label; they begin hunting at
+ *  once. Bounded by START_PIRATES (small) and thereafter by the usual PIRATE_MAX_FRAC cap. */
+function seedStartPirates(world, tuning) {
+  const n = tuning.START_PIRATES || 0;
+  for (let k = 0; k < n; k++) {
+    const anchor = world.islands[Math.floor(streamFloat(world, 'init') * world.islands.length)] || world.islands[0];
+    if (!anchor) break;
+    // A fearsome BRIG, not a flimsy sloop: seeded pirates must survive armed merchants fending them
+    // off AND the privateers ports commission within a day, or they're wiped before ever being seen.
+    const s = createShip(world.nextEntityId++, anchor, tuning, 'brig');
+    s.x = streamFloat(world, 'init') * world.mapW; // scattered across open water, not sitting in a port
+    s.y = streamFloat(world, 'init') * world.mapH;
+    s.cargo.Food = tuning.CREW_FOOD_PER_DAY * tuning.PROVISION_DAYS * 3; // enough to hunt before it must raid
+    const spec = tuning.SHIP_TYPES && tuning.SHIP_TYPES.brig;
+    s.cargo.Weapons = spec ? spec.weaponCap * 0.7 : 14; // a full fighting complement of guns
+    s.captain = makeCaptain(world);
+    s.name = shipName(world);
+    world.ships.push(s);
+    turnPirate(world, s); // raise the black flag (fresh pirate captain + hunting state; logs 'pirate')
+  }
 }
 
 /** Conserved totals — the invariant probe for tests. */

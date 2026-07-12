@@ -66,32 +66,38 @@ function provisionDays(world, ship) {
 }
 
 /** Top up the crew's Food (and a little Ale) from `island` — the captain victualling the ship.
- *  Pays the port's ask from the ship's purse; a starving crew is given a minimal ration even
- *  if broke (no port lets sailors die at the quay). Called at home on departure and at each
- *  dock, so a trading ship reprovisions as it goes. */
+ *  A ship's HOME port outfits its own vessel from the town stores (no coin required — feeding the
+ *  crew that sails for it is an operating cost, not a sale); a FOREIGN port sells at its ask from
+ *  the ship's purse, with a minimal charity ration so no crew starves at the quay even if broke.
+ *  Called at home on departure and at each dock, so a trading ship reprovisions as it goes.
+ *
+ *  This home-victualling is load-bearing: without it a ship fresh off `unloadHome` (purse emptied
+ *  into the home treasury) had no coin to buy its own crew's food and departed under-provisioned —
+ *  which cratered fleet morale into a permanent near-mutiny state and a constant resupply spiral. */
 export function provisionCrew(world, island, ship) {
   const r = world.rules;
+  const atHome = island.id === ship.homeId;
   const spare = (good) => Math.max(0, (island.stock[good] || 0) - island.targets[good] * r.PROVISION_FOOD_RESERVE);
 
   const foodWant = foodRate(world, ship) * provisionDays(world, ship) - (ship.cargo.Food || 0);
   if (foodWant >= 0.5) {
     const ask = bidAsk(island.price.Food.mid, r.SPREAD).ask;
-    const afford = ask > 0 ? (ship.cargo[GOLD] || 0) / ask : 0;
+    const afford = atHome ? Infinity : (ask > 0 ? (ship.cargo[GOLD] || 0) / ask : 0);
     let take = Math.min(foodWant, spare('Food'), afford);
     if (take < 1 && ship.morale < 0.35 && (island.stock.Food || 0) > 2) take = Math.min(foodWant, 3); // charity ration
     if (take >= 0.5) {
       const moved = transfer(island.stock, 'Food', ship.cargo, 'Food', take);
-      transfer(ship.cargo, GOLD, island, 'gold', Math.min(ship.cargo[GOLD] || 0, moved * ask));
+      if (!atHome) transfer(ship.cargo, GOLD, island, 'gold', Math.min(ship.cargo[GOLD] || 0, moved * ask));
     }
   }
-  // A prudent captain also lays in some grog for morale (only if he can pay and it's spare).
+  // A prudent captain also lays in some grog for morale — free from home, bought abroad if he can pay.
   const aleWant = aleRate(world, ship) * r.PROVISION_ALE_DAYS - (ship.cargo.Ale || 0);
   if (aleWant >= 0.5 && (island.stock.Ale || 0) > 0) {
     const ask = bidAsk(island.price.Ale.mid, r.SPREAD).ask;
-    const take = Math.min(aleWant, spare('Ale'), ask > 0 ? (ship.cargo[GOLD] || 0) / ask : 0);
+    const take = Math.min(aleWant, spare('Ale'), atHome ? Infinity : (ask > 0 ? (ship.cargo[GOLD] || 0) / ask : 0));
     if (take >= 0.5) {
       const moved = transfer(island.stock, 'Ale', ship.cargo, 'Ale', take);
-      transfer(ship.cargo, GOLD, island, 'gold', Math.min(ship.cargo[GOLD] || 0, moved * ask));
+      if (!atHome) transfer(ship.cargo, GOLD, island, 'gold', Math.min(ship.cargo[GOLD] || 0, moved * ask));
     }
   }
 }

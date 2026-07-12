@@ -44,16 +44,29 @@ test('grog (ale) lifts morale above what food alone gives', () => {
   assert.ok(merry.morale > dry.morale, 'the ship with grog is merrier');
 });
 
-test('provisionCrew stocks food from a port and pays for it', () => {
+test('a FOREIGN port sells the crew its provisions (paid from the ship purse)', () => {
   const w = makeWorld();
   const ship = w.ships[0];
   ship.cargo = { Gold: 2000, People: 0, Food: 0 };
-  const isl = w.islands.find((i) => i.stock.Food > 50) || w.islands[0];
-  isl.stock.Food = 300;
+  const foreign = w.islands.find((i) => i.id !== ship.homeId);
+  foreign.stock.Food = 300;
   const goldBefore = ship.cargo.Gold;
-  provisionCrew(w, isl, ship);
+  provisionCrew(w, foreign, ship);
   assert.ok(ship.cargo.Food > 1, 'took on provisions');
-  assert.ok(ship.cargo.Gold < goldBefore, 'paid the port');
+  assert.ok(ship.cargo.Gold < goldBefore, 'paid the foreign port');
+});
+
+test('a HOME port victuals its own crew from the town stores, free of charge', () => {
+  const w = makeWorld();
+  const ship = w.ships[0];
+  ship.cargo = { Gold: 0, People: 0, Food: 0 }; // a broke ship fresh off unloading — must still be fed
+  const home = w.islandsById.get(ship.homeId);
+  home.stock.Food = 300;
+  const homeFoodBefore = home.stock.Food;
+  provisionCrew(w, home, ship);
+  assert.ok(ship.cargo.Food > 1, 'a broke crew is still provisioned by its home port');
+  assert.ok(home.stock.Food < homeFoodBefore, 'the food came out of the town stores');
+  assert.equal(ship.cargo.Gold, 0, 'no coin changes hands feeding the port’s own crew');
 });
 
 test('a crew with no food for too long is lost with the ship', () => {

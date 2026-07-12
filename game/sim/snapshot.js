@@ -8,7 +8,7 @@ import { GOLD, cargoUnits } from './resources.js';
 import { intelSummary, currentDay } from './beliefs.js';
 import { rankOf, skill01 } from './captains.js';
 import { foodDaysAboard } from './crew.js';
-import { magRank, magSkill } from './magistrate.js';
+import { magRank, magSkill, ambitionLabel } from './magistrate.js';
 
 // StateBuffer field descriptors for ships (the interpolated `entities` map).
 export const SHIP_LERP = ['x', 'y'];
@@ -104,12 +104,14 @@ export function snapshotEconomy(world) {
       loyalty: round2(isl.loyalty != null ? isl.loyalty : 1),
       rebellion: !!isl.rebellion, // aflame in revolt → fire highlight on the map
       danger: round2(isl.danger || 0), // how pirate-haunted its waters are → panel/map cue
+      lawlessness: round2(isl.lawlessness || 0), // civil disorder 0..1 → panel/map cue (seed of havens)
       contract: isl.contract ? { good: isl.contract.good, reward: Math.round(isl.contract.reward) } : null, // open WANTED posting
       magistrate: isl.magistrate ? {
         name: isl.magistrate.name, rank: magRank(isl.magistrate),
         skill: round2(magSkill(isl.magistrate, world.rules)),
         personality: isl.magistrate.personality, traits: isl.magistrate.traits,
         portrait: isl.magistrate.portrait,
+        ambition: isl.magistrate.ambition ? { kind: isl.magistrate.ambition.kind, label: ambitionLabel(isl.magistrate), progress: round2(isl.magistrate.ambition.progress || 0) } : null,
       } : null,
     };
   });

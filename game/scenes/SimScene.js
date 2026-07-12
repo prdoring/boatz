@@ -29,6 +29,7 @@ const EVENT_COLOR = {
   aid: '#7fe0b0', betray: '#ff5b30', embargo: '#e0863a',
   contract: '#e8c15a', contractdone: '#8ee6a0',
   storm: '#9fb2cc', stormloss: '#8fb6c6', season: '#c8b3ff',
+  ambition: '#e8c15a', overreach: '#e0863a',
 };
 const SEASON_ICON = { Spring: '🌱', Summer: '☀', Autumn: '🍂', Winter: '❄' };
 const NEWS_ROWS = 9; // how many recent events the ticker shows
@@ -421,10 +422,13 @@ export class SimScene extends Scene {
       lines.push(isl.rebellion
         ? { text: '🔥 IN REBELLION', color: '#ff5b30' }
         : { text: `Loyalty ${Math.round((isl.loyalty != null ? isl.loyalty : 1) * 100)}% · ${isl.magistrate.name}`, color: moraleColor(isl.loyalty != null ? isl.loyalty : 1) });
+      const amb = isl.magistrate.ambition;
+      if (amb && amb.label) lines.push({ text: `⚑ ${amb.label} agenda · ${Math.round((amb.progress || 0) * 100)}%`, color: '#e8c15a' });
     }
     if (isl.blight) lines.push({ text: `⚠ Blight: ${isl.blight}`, color: EVENT_COLOR.blight });
     if (isl.plague) lines.push({ text: '☠ Plague outbreak', color: EVENT_COLOR.plague });
     if (isl.danger > 0.25) lines.push({ text: `⚑ Pirate danger ${Math.round(isl.danger * 100)}%`, color: '#c0392b' });
+    if (isl.lawlessness > 0.35) lines.push({ text: `⚔ Lawless ${Math.round(isl.lawlessness * 100)}%`, color: '#c0392b' });
     if (isl.contract) lines.push({ text: `📜 Wants ${isl.contract.good} · ${isl.contract.reward}g`, color: '#e8c15a' });
     return lines;
   }

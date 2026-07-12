@@ -16,8 +16,8 @@
 
 import { streamFloat } from './rng.js';
 import { foodDays } from './island.js';
-import { logEvent } from './events.js';
-import { clamp } from './resources.js';
+import { logEvent, logEventThrottled } from './events.js';
+import { clamp, safeDiv, tradeables, targetFor } from './resources.js';
 
 const SUR = [
   'Ashcombe', 'Pennywise', 'Harrow', 'Thistlewood', 'Grimsby', 'Whitlock', 'Crowe', 'Fairweather',
@@ -43,12 +43,127 @@ export function magPersonality(traits) {
   return { firmness: sign > 0 ? 'Iron-fisted' : 'Lenient', generosity: sign > 0 ? 'Generous' : 'Miserly', integrity: sign > 0 ? 'Just' : 'Corrupt' }[key];
 }
 
-/** A fresh magistrate: seeded name/title, portrait, traits, and zero experience. */
-export function makeMagistrate(world) {
+// ─── Ambitions ──────────────────────────────────────────────────────────────
+// A magistrate governs toward an ECONOMIC AGENDA, not just survival. The ambition
+// reshapes what the island considers "enough" of each good (retarget, below), which
+// naturally drives its imports/exports beyond subsistence, and carries a success
+// signal that lifts loyalty when it prospers or erodes it when the mayor chases glory
+// while the port suffers — feeding the existing loyalty→rebellion→overthrow cycle. A
+// new regime rolls a fresh agenda, so an island's economic character shifts over time.
+const AMBITION_META = {
+  grow:     { label: 'Growth',   verb: 'grow' },       // people & plenty: import food + comforts, swell the population
+  industry: { label: 'Industry', verb: 'industrialize' }, // import raw inputs, become a manufacturing exporter
+  wealth:   { label: 'Wealth',   verb: 'enrich' },     // hoard coin: import little, sell hard (risks neglecting civ)
+  fortify:  { label: 'Defense',  verb: 'fortify' },    // stockpile guns & iron against pirates and rivals
+  splendor: { label: 'Splendor', verb: 'beautify' },   // import luxuries & grog to raise civilization
+  order:    { label: 'Order',    verb: 'pacify' },      // a law-and-order drive: drive down lawlessness
+};
+
+export function ambitionLabel(mag) {
+  const a = mag && mag.ambition;
+  return a && AMBITION_META[a.kind] ? AMBITION_META[a.kind].label : '';
+}
+
+/** Pick an agenda suited to the island's nature (seeded, weighted). */
+function chooseAmbition(world, island) {
+  const kinds = world.rules.AMBITIONS || ['grow'];
+  const w = {};
+  for (const k of kinds) w[k] = 1;
+  if (island) {
+    const has = new Set([island.primary, island.secondary]);
+    if (island.type === 'shipyard' || (has.has('Iron') && has.has('Wood'))) { w.fortify = (w.fortify || 0) + 2; w.industry = (w.industry || 0) + 2; }
+    if (has.has('PreciousMetal')) { w.splendor = (w.splendor || 0) + 2; w.wealth = (w.wealth || 0) + 2; }
+    if ((island.produces || []).length >= 2) w.industry = (w.industry || 0) + 1;
+    if ((island.k || 0) >= 180) w.grow = (w.grow || 0) + 2; // a big island wants to fill its capacity
+    if ((island.lawlessness || 0) > 0.4) w.order = (w.order || 0) + 3; // a troubled port cries out for order
+  }
+  const total = kinds.reduce((a, k) => a + (w[k] || 0), 0);
+  let r = streamFloat(world, 'mag') * total;
+  for (const k of kinds) { r -= (w[k] || 0); if (r <= 0) return k; }
+  return kinds[0];
+}
+
+/** A fresh magistrate: seeded name/title, portrait, traits, experience, and an economic agenda. */
+export function makeMagistrate(world, island = null) {
   const name = `${pick(TITLE, streamFloat(world, 'mag'))} ${pick(SUR, streamFloat(world, 'mag'))}`;
   const traits = { firmness: trait(world), generosity: trait(world), integrity: trait(world) };
   const portrait = Math.floor(streamFloat(world, 'mag') * 0x7fffffff) >>> 0;
-  return { name, xp: 0, traits, personality: magPersonality(traits), portrait };
+  const ambition = { kind: chooseAmbition(world, island), progress: 0.35, milestone: false };
+  return { name, xp: 0, traits, personality: magPersonality(traits), portrait, ambition };
+}
+
+/** The raw resources that feed the goods this island manufactures (industry's import focus). */
+function inputRawsFor(island, economy) {
+  const raws = new Set();
+  const byOut = economy._recipeByOut || {};
+  for (const out of island.produces || []) {
+    const recipe = byOut[out] || economy.recipes.find((r) => r.out === out);
+    if (!recipe) continue;
+    for (const inp of recipe.inputs) {
+      if (inp.all) raws.add(inp.all);
+      else if (inp.anyOf) for (const r of inp.anyOf) raws.add(r);
+    }
+  }
+  return raws;
+}
+
+/** Reshape the island's stock targets to reflect its magistrate's ambition. Called whenever a
+ *  magistrate takes office (install / overthrow). Food is never biased below its base — no agenda
+ *  is allowed to starve the island. Every other target scales, driving the port's trade demand. */
+export function retarget(island, economy, tuning) {
+  const amb = island.magistrate && island.magistrate.ambition;
+  const bias = (amb && tuning.AMBITION_BIAS && tuning.AMBITION_BIAS[amb.kind]) || {};
+  const inputs = amb && amb.kind === 'industry' ? inputRawsFor(island, economy) : null;
+  for (const res of tradeables(economy)) {
+    let mult = bias[res] != null ? bias[res] : 1;
+    if (inputs && inputs.has(res)) mult = tuning.AMBITION_INDUSTRY_INPUT_MULT;
+    let target = targetFor(tuning, res) * mult;
+    if (res === 'Food') target = Math.max(target, targetFor(tuning, res)); // survival floor
+    island.targets[res] = target;
+  }
+}
+
+/** Seat a fresh magistrate on an island and re-target its economy to the new agenda. */
+export function installMagistrate(world, island) {
+  island.magistrate = makeMagistrate(world, island);
+  retarget(island, world.economy, world.rules);
+  return island.magistrate;
+}
+
+/** How well the sitting agenda is going, in ~[-1, +1] (drives progress + the loyalty coupling). */
+function ambitionSignal(world, isl) {
+  const t = world.rules;
+  const kind = isl.magistrate.ambition.kind;
+  const ratio = (good) => safeDiv(isl.stock[good] || 0, Math.max(1, isl.targets[good] || 1), 0);
+  switch (kind) {
+    case 'grow':     return clamp(isl.population / Math.max(1, isl.k) - 0.5, -0.5, 0.5) * 2;
+    case 'industry': {
+      let s = 0, n = 0;
+      for (const g of isl.produces || []) { if ((t.SPECIAL_GOODS || []).includes(g)) continue; s += ratio(g); n++; }
+      return clamp((n ? s / n : 0) - 1, -1, 1);
+    }
+    case 'wealth':   return clamp(isl.gold / Math.max(1, t.START_ISLAND_GOLD * 2) - 1, -1, 1);
+    case 'fortify':  return clamp(ratio('Weapons') - 0.6, -1, 1);
+    case 'splendor': return clamp(isl.civ - 0.5, -0.5, 0.5) * 2;
+    case 'order':    return clamp(0.5 - (isl.lawlessness || 0), -0.5, 0.5) * 2;
+    default:         return 0;
+  }
+}
+
+/** The lawlessness an island trends toward: hardship raises it, capable/honest/firm rule holds it. */
+function steadyLawlessness(isl, t) {
+  const m = isl.magistrate;
+  let s = t.LAWLESS_BASE
+    + (1 - (isl.civ || 0)) * t.LAWLESS_POVERTY
+    + (isl.danger || 0) * t.LAWLESS_DANGER;
+  if (foodDays(isl, t) < t.FAMINE_FOOD_DAYS) s += t.LAWLESS_FAMINE;
+  if (m) {
+    s -= magSkill(m, t) * t.LAWLESS_ORDER_SKILL;
+    s -= (m.traits.integrity - 0.5) * t.LAWLESS_INTEGRITY; // graft breeds crime; honesty curbs it
+    s -= m.traits.firmness * t.LAWLESS_FIRM;               // an iron fist suppresses disorder (at loyalty's cost)
+    if (m.ambition && m.ambition.kind === 'order') s -= t.LAWLESS_ORDER_AMBITION; // a mayor actively keeping the peace
+  }
+  return clamp(s, 0, 1);
 }
 
 export function magSkill(mag, rules) { return mag ? 1 - Math.exp(-(mag.xp || 0) / rules.MAG_XP_SCALE) : 0; }
@@ -77,7 +192,8 @@ function steadyLoyalty(isl, rules) {
     + isl.civ * rules.LOYALTY_CIV_WEIGHT
     + magSkill(m, rules) * rules.LOYALTY_SKILL_WEIGHT
     + tr.generosity * rules.LOYALTY_GEN_WEIGHT
-    - tr.firmness * rules.LOYALTY_FIRM_RESENT;
+    - tr.firmness * rules.LOYALTY_FIRM_RESENT
+    - (isl.lawlessness || 0) * rules.LAWLESS_LOYALTY_DRAG; // a lawless port trusts its ruler less
   return clamp(s, 0.05, 0.95);
 }
 
@@ -101,9 +217,34 @@ export function governance(world, h) {
       continue;
     }
 
+    // LAWLESSNESS drifts toward its hardship/governance-set steady state (civil order, distinct
+    // from political loyalty). It drags civ + growth (population.js) and — later — is the metric a
+    // pirate haven grows from. A day's drift eases it toward where the island's fortunes put it.
+    isl.lawlessness = clamp((isl.lawlessness || 0) + (steadyLawlessness(isl, t) - (isl.lawlessness || 0)) * t.LAWLESS_RECOVER * dDay, 0, 1);
+
+    // AMBITION — the magistrate governs toward an agenda. Track its progress; a thriving agenda
+    // buoys his standing, and pressing on with grand designs while the port starves erodes it.
+    let ambitionDm = 0;
+    if (daily && mag.ambition) {
+      const sig = ambitionSignal(world, isl);
+      mag.ambition.progress = clamp((mag.ambition.progress != null ? mag.ambition.progress : 0.35) + sig * t.AMBITION_PROGRESS_RATE, 0, 1);
+      ambitionDm = (mag.ambition.progress - 0.5) * t.AMBITION_LOYALTY_BONUS; // results judged by the people
+      const ruin = foodDays(isl, t) < t.FOOD_SECURITY_DAYS || isl.gold < 40;
+      if (ruin) {
+        ambitionDm -= t.AMBITION_OVERREACH_PENALTY; // overreach: chasing glory while the port suffers
+        logEventThrottled(world, 'overreach', t.SIM_DAY_SECONDS * 3, `${mag.name} presses on with grand designs for ${isl.name} while the port suffers — discontent festers.`, { islandId: isl.id });
+      } else if (mag.ambition.progress >= t.AMBITION_MILESTONE && !mag.ambition.milestone) {
+        mag.ambition.milestone = true;
+        const verb = (AMBITION_META[mag.ambition.kind] || {}).verb || 'better';
+        logEvent(world, 'ambition', `${isl.name} flourishes — ${mag.name}'s drive to ${verb} the port bears fruit.`, { islandId: isl.id });
+      } else if (mag.ambition.progress < t.AMBITION_MILESTONE - 0.2) {
+        mag.ambition.milestone = false;
+      }
+    }
+
     // LOYALTY drift toward the steady state, plus hardship drags and comfort boosts.
     const skill = magSkill(mag, t), tr = mag.traits;
-    let dm = t.LOYALTY_RECOVER * (steadyLoyalty(isl, t) - isl.loyalty);
+    let dm = t.LOYALTY_RECOVER * (steadyLoyalty(isl, t) - isl.loyalty) + ambitionDm;
     if (foodDays(isl, t) < t.FAMINE_FOOD_DAYS) dm -= t.LOYALTY_FAMINE;
     if (isl.plague) dm -= t.LOYALTY_PLAGUE;
     if (isl.blight) dm -= t.LOYALTY_BLIGHT;
@@ -133,10 +274,11 @@ function resolveRebellion(world, isl) {
   if (streamFloat(world, 'rebel') < pQuell) {
     logEvent(world, 'quellReb', `${mag.name} crushed the rebellion on ${isl.name} and clung to power — but the grievances remain.`, { islandId: isl.id });
   } else {
-    logEvent(world, 'overthrow', `${isl.name} rose up and cast out ${mag.name}; a new regime seizes the ruined port.`, { islandId: isl.id });
-    isl.magistrate = makeMagistrate(world);          // a fresh regime takes over
+    const newMag = installMagistrate(world, isl);     // a fresh regime takes over, with a fresh agenda + re-targeted economy
+    logEvent(world, 'overthrow', `${isl.name} rose up and cast out ${mag.name}; ${newMag.name} seizes the ruined port with a mind to ${((AMBITION_META[newMag.ambition.kind] || {}).verb) || 'rebuild'} it.`, { islandId: isl.id });
     isl.civ *= (1 - t.OVERTHROW_CIV_HIT);            // the old order's works scattered
     isl.gold = Math.floor(isl.gold * (1 - t.OVERTHROW_GOLD_HIT)); // treasury looted
+    isl.lawlessness = clamp((isl.lawlessness || 0) + t.LAWLESS_OVERTHROW_BUMP, 0, 1); // turmoil leaves the streets unruly
   }
   isl.loyalty = Math.max(isl.loyalty, 0.5); // order (of a sort) restored
   isl.unrest = 0;

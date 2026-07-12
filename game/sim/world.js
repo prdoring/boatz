@@ -14,7 +14,7 @@ import { initReputation } from './reputation.js';
 import { initWind } from './wind.js';
 import { initWeather } from './weather.js';
 import { makeCaptain } from './captains.js';
-import { makeMagistrate } from './magistrate.js';
+import { installMagistrate } from './magistrate.js';
 import { shipName } from './naming.js';
 import { GOLD, PEOPLE } from './resources.js';
 
@@ -80,13 +80,14 @@ export function buildWorld({ economy, roster, seed = 1337 }) {
     // scratch, which would starve every crew before production ramps — a cold-start mass mutiny).
     isl.stock.Food = 190 * (0.8 + 0.4 * streamFloat(world, 'init'));
     // Governance: a magistrate rules each island; the populace starts reasonably loyal.
-    isl.magistrate = makeMagistrate(world);
     isl.loyalty = tuning.LOYALTY_STEADY_BASE + 0.2;
+    isl.lawlessness = tuning.LAWLESS_BASE; // civil (dis)order, 0..1 — the seed of pirate havens
     isl.unrest = 0;
     isl.rebellion = null;
     isl._rebelCd = 0;
     isl.danger = 0;   // how pirate-haunted these waters are (0..1) — set by attacks, decays in antipiracy
     isl._privCd = 0;  // simTime before which it won't commission another privateer
+    installMagistrate(world, isl); // seat a named magistrate with an economic agenda; retargets the economy
   }
 
   for (const isl of world.islands) {

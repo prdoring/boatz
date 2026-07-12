@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld } from './helpers/simWorld.js';
-import { governance, makeMagistrate, magSkill, magRank, magPersonality } from '/game/sim/magistrate.js';
+import { governance, makeMagistrate, magSkill, magRank, magPersonality, retarget, installMagistrate, ambitionLabel } from '/game/sim/magistrate.js';
 import { effectiveRate } from '/game/sim/island.js';
 
 function run(w, days) {
@@ -50,6 +50,43 @@ test('sustained discontent erupts in rebellion, which halts production', () => {
   governance(w, w.rules.SIM_STEP);
   assert.ok(isl.rebellion, 'the port rose in rebellion');
   assert.ok(before > 0 && effectiveRate(isl, isl.primary, w.rules) === 0, 'production is halted while aflame');
+});
+
+test('a magistrate governs toward an economic agenda that reshapes the island targets', () => {
+  const w = makeWorld();
+  const isl = w.islands[0];
+  assert.ok(isl.magistrate.ambition && typeof isl.magistrate.ambition.kind === 'string', 'every magistrate has an ambition');
+  const foodBase = isl.targets.Food, weaponsBase = isl.targets.Weapons;
+  // A defense agenda raises the appetite for weapons; a survival floor protects Food.
+  isl.magistrate.ambition = { kind: 'fortify', progress: 0.35, milestone: false };
+  retarget(isl, w.economy, w.rules);
+  assert.ok(isl.targets.Weapons > weaponsBase, 'a fortify agenda raises the weapons target');
+  assert.ok(isl.targets.Food >= foodBase, 'no agenda drops the Food target below its base');
+  // A wealth agenda hoards coin by wanting LESS of the comforts (drives it to export them).
+  isl.magistrate.ambition = { kind: 'wealth', progress: 0.35, milestone: false };
+  retarget(isl, w.economy, w.rules);
+  assert.ok(isl.targets.Ale < weaponsBase && isl.targets.Food >= foodBase, 'a wealth agenda lowers comfort targets but never Food');
+});
+
+test('lawlessness rises on a failing port and falls under prosperous, honest rule', () => {
+  const w = makeWorld();
+  const failing = w.islands[0], thriving = w.islands[1];
+  failing.civ = 0.05; failing.stock.Food = 0; failing.population = 120; failing.lawlessness = 0.15; failing._rebelCd = 1e9;
+  failing.magistrate = { name: 'Weak', xp: 0, traits: { firmness: 0, generosity: 0.5, integrity: 0.1 }, ambition: { kind: 'grow', progress: 0.35 } };
+  thriving.civ = 0.9; thriving.stock.Food = 900; thriving.population = 100; thriving.lawlessness = 0.6; thriving._rebelCd = 1e9;
+  thriving.magistrate = { name: 'Firm', xp: 6000, traits: { firmness: 0.6, generosity: 0.5, integrity: 0.9 }, ambition: { kind: 'order', progress: 0.35 } };
+  run(w, 3);
+  assert.ok(failing.lawlessness > 0.15, 'famine + weak, corrupt rule breeds lawlessness');
+  assert.ok(thriving.lawlessness < 0.6, 'prosperity + firm honest rule (and an order agenda) restores order');
+});
+
+test('installing a magistrate seats a named ruler with an agenda and re-targets the economy', () => {
+  const w = makeWorld();
+  const isl = w.islands[0];
+  const m = installMagistrate(w, isl);
+  assert.equal(isl.magistrate, m, 'the new magistrate takes office');
+  assert.ok(m.ambition && m.ambition.kind, 'the new regime governs toward an economic agenda');
+  assert.ok(ambitionLabel(m).length > 0, 'the agenda has a display label for the panel');
 });
 
 test('a rebellion resolves — loyalty resets and order (of a sort) returns', () => {

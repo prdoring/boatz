@@ -9,7 +9,8 @@ function reserveScore(stock, perCapTarget, pop) {
   return clamp(safeDiv(stock, Math.max(pop, 1) * perCapTarget), 0, 1);
 }
 
-/** Civilization score in [0,1]: saturating gold + per-capita luxury/ale/food reserves. */
+/** Civilization score in [0,1]: saturating gold + per-capita luxury/ale/food reserves,
+ *  dragged down by lawlessness (a crime-ridden port is a less civilised place to live). */
 export function computeCiv(island, t) {
   const w = t.CIV_WEIGHTS;
   const goldScore = safeDiv(island.gold, island.gold + t.CIV_GOLD_K);
@@ -17,7 +18,8 @@ export function computeCiv(island, t) {
   const ale = reserveScore(island.stock.Ale, t.ALE_PER_CAPITA, island.population);
   const foodTargetPerCap = t.FOOD_PER_CAPITA * t.SIM_DAY_SECONDS * t.FOOD_SECURITY_DAYS;
   const food = reserveScore(island.stock.Food, foodTargetPerCap, island.population);
-  return clamp(w.GOLD * goldScore + w.LUX * lux + w.ALE * ale + w.FOOD * food, 0, 1);
+  const base = w.GOLD * goldScore + w.LUX * lux + w.ALE * ale + w.FOOD * food;
+  return clamp(base * (1 - (t.LAWLESS_CIV_DRAG || 0) * (island.lawlessness || 0)), 0, 1);
 }
 
 export function population(world, h) {
@@ -46,10 +48,12 @@ export function population(world, h) {
       island.population = Math.max(t.POP_FLOOR, island.population - deaths);
     } else {
       // Food-security-gated logistic growth: population approaches K from below and
-      // stops before it can outrun food (the key anti-death-spiral mechanism).
+      // stops before it can outrun food (the key anti-death-spiral mechanism). A lawless
+      // port grows slower — people don't flock to (and drift away from) a den of crime.
       const secure = clamp((foodDays(island, t) - t.FOOD_SECURITY_DAYS) / t.FOOD_SECURITY_DAYS, 0, 1);
+      const order = 1 - (t.LAWLESS_GROWTH_DRAG || 0) * (island.lawlessness || 0);
       const K = island.k;
-      island.population += t.POP_GROWTH_RATE * island.population * (1 - island.population / K) * secure * h;
+      island.population += t.POP_GROWTH_RATE * island.population * (1 - island.population / K) * secure * Math.max(0, order) * h;
       if (island.population > K) island.population = K;
     }
     island.civ = computeCiv(island, t);

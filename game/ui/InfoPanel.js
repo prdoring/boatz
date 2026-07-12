@@ -41,6 +41,7 @@ const EVENT_TEXT_COLOR = {
   aid: '#7fe0b0', betray: '#ff5b30', embargo: '#e0863a',
   contract: '#e8c15a', contractdone: '#8ee6a0',
   storm: '#9fb2cc', stormloss: '#8fb6c6', season: '#c8b3ff',
+  ambition: '#e8c15a', overreach: '#e0863a',
 };
 
 export class InfoPanel extends Panel {
@@ -310,6 +311,10 @@ export class InfoPanel extends Panel {
     ctx.fillText(clip(ctx, m.name, c.cw - size - 12), tx, top + 22);
     ctx.font = '12.5px system-ui, sans-serif'; ctx.fillStyle = '#c8b3ff';
     ctx.fillText(`${m.rank} · ${m.personality || 'Even-handed'}`, tx, top + 42);
+    if (m.ambition && m.ambition.label) {
+      ctx.fillStyle = '#e8c15a';
+      ctx.fillText(clip(ctx, `⚑ ${m.ambition.label} · ${Math.round((m.ambition.progress || 0) * 100)}%`, c.cw - size - 12), tx, top + 60);
+    }
     ctx.restore();
     c.y = top + size + 2;
     const loy = isl.loyalty != null ? isl.loyalty : 1;
@@ -317,6 +322,8 @@ export class InfoPanel extends Panel {
     this._gauge(ctx, 'Loyalty', `${Math.round(loy * 100)}%`, loy, loyaltyColor(loy), c);
     const st = loyaltyStatus(isl);
     this._kv(ctx, 'Populace', st.label, c, st.color);
+    const law = isl.lawlessness || 0;
+    if (law > 0.05) this._gauge(ctx, 'Lawlessness', lawlessWord(law), law, lawlessColor(law), c);
     const tr = m.traits;
     if (tr) {
       this._gauge(ctx, 'Firmness', '', tr.firmness, '#e0863a', c);
@@ -567,6 +574,17 @@ function dangerWord(d) {
   if (d >= 0.7) return 'perilous';
   if (d >= 0.45) return 'dangerous';
   return 'uneasy';
+}
+
+/** Civil-order label + colour from an island's lawlessness scalar. */
+function lawlessWord(l) {
+  if (l >= 0.7) return 'lawless';
+  if (l >= 0.45) return 'unruly';
+  if (l >= 0.25) return 'restless';
+  return 'orderly';
+}
+function lawlessColor(l) {
+  return l >= 0.7 ? '#c0392b' : l >= 0.45 ? '#e0863a' : l >= 0.25 ? '#e0b24a' : '#8ee6a0';
 }
 
 /** Crew mood label + colour from morale (or open revolt). */

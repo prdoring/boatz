@@ -10,7 +10,7 @@
 //   people  — migrants delivered to that stop's population.
 //   reason  — dominant purpose, for the UI (buyShip > migrate > food > trade).
 
-import { foodDays } from './island.js';
+import { foodDays, producesRaw } from './island.js';
 import { findBestPartner, nearestWhere, nearbyIslands, dist } from './queries.js';
 import { tradeables } from './resources.js';
 import { bidAsk } from './pricing.js';
@@ -18,6 +18,42 @@ import { intelAge, currentDay } from './beliefs.js';
 import { navProfile } from './captains.js';
 
 function emptyStop(islandId) { return { islandId, sell: {}, buy: {}, people: 0 }; }
+
+/** Whether `island` is a source of `res` — either a manufactured good it makes, or a raw it mines
+ *  (raws live on primary/secondary, NOT in `produces`, which lists only finished goods). */
+function makesRes(island, res) { return island.produces.includes(res) || producesRaw(island, res); }
+
+/** Goods the home needs but whose cheapest KNOWN producer is DEAR (or that it knows no producer of
+ *  at all) — the things it ought to shop around for. Returns { good: extraOverBase }, a positive
+ *  value meaning a cheaper supplier is worth sending a ship to find. This is what lets a port react
+ *  to a supplier quietly raising its prices: rather than stubbornly overpaying the one market it
+ *  knows, it goes looking (scouts the UNKNOWN producers) for a better deal. Compared against KNOWN
+ *  beliefs (not the optimistic base prior every unknown port carries), so it triggers precisely when
+ *  the places the home has actually seen are expensive. */
+export function soughtSupply(world, home) {
+  const t = world.rules;
+  const out = {};
+  for (const res of tradeables(world.economy)) {
+    if (t.SPECIAL_GOODS.includes(res)) continue;
+    if (makesRes(home, res)) continue;                                          // it makes/mines this itself
+    if ((home.stock[res] || 0) >= t.IMPORT_RATIO * home.targets[res]) continue; // not actually short
+    const base = Math.max(1, t.PRICE_BASE[res] || 1);
+    let bestKnown = Infinity, knownAny = false;
+    for (const p of nearbyIslands(world, home)) {
+      if (!makesRes(p, res)) continue;
+      const per = home.beliefs && home.beliefs[p.id];
+      if (!per || !per[res]) continue;                                          // price here is unknown — a scout candidate, not a known quote
+      knownAny = true;
+      const ask = per[res].mid * (1 + t.SPREAD / 2);
+      if (ask < bestKnown) bestKnown = ask;
+    }
+    // Only the "a supplier I KNOW has got expensive" case — that's the one normal routing can't
+    // self-correct (it keeps paying the known price). Ports it knows NOTHING about already look cheap
+    // at the base-price prior, so ordinary trade explores them on its own; no need to force a detour.
+    if (knownAny && bestKnown / base >= t.SCOUT_PRICE_TRIGGER) out[res] = bestKnown / base - 1;
+  }
+  return out;
+}
 
 /** The home's biggest relative deficit good (for backhaul), skipping special goods. */
 export function biggestDeficit(world, island) {
@@ -206,24 +242,42 @@ export function planVoyage(world, home, ship) {
     }
   }
 
-  // (7) SCOUT — no real errand (no food need, nothing worth exporting): rather than shuffle a
-  //     marginal surplus around, send the ship to RECONNOITRE the ports whose prices the home
-  //     knows least about (unknown first, then most stale), nearer preferred. It carries no
-  //     cargo — it goes to look. This is how price information reaches islands off the beaten
-  //     trade routes (a ship that only ever shuttles its two staples never learns what a far
-  //     market pays), and it keeps otherwise-idle vessels useful. Fires BEFORE the desperate
-  //     marginal-export fallback so recon actually beats a penny-shuffle.
-  //     A WANDERER scouts sooner (lower staleness bar) and visits more ports; a HOMEBODY
-  //     barely bothers — so exploration is a matter of the captain's temperament.
-  if (stops.length === 0) {
+  // Goods the home is short of and doesn't make itself — the ports that PRODUCE these are its
+  // potential suppliers, worth getting to know. `sought` is the sharper signal: goods whose
+  // cheapest KNOWN source has got expensive (see soughtSupply) — the home actively wants a better deal.
+  const needs = new Set();
+  for (const res of tradeables(world.economy)) {
+    if (t.SPECIAL_GOODS.includes(res) || makesRes(home, res)) continue;
+    if ((home.stock[res] || 0) < t.IMPORT_RATIO * home.targets[res]) needs.add(res);
+  }
+  const sought = soughtSupply(world, home);
+  const shopping = Object.keys(sought).length > 0;
+
+  // (7) SCOUT — no committed errand (no food need, nothing worth exporting): rather than shuffle a
+  //     marginal surplus around, send the ship to RECONNOITRE — PURPOSEFULLY. Candidates are the
+  //     ports whose prices the home knows least (unknown/stale, nearer preferred), but a stale port
+  //     that PRODUCES something the home is short of is worth checking first (a potential supplier),
+  //     and one that makes a good the home is actively OVERPAYING for (sought) is worth most of all —
+  //     that's the "go find a cheaper source when a supplier gets dear" behaviour. This only ever
+  //     redirects otherwise-idle ships, so it never perturbs committed, profitable trade.
+  //     A WANDERER scouts sooner (lower staleness bar) and visits more ports; a HOMEBODY barely
+  //     bothers. When actively shopping, the staleness bar drops (a motivated buyer re-checks sooner).
+  const addScoutStops = () => {
     const day = currentDay(world);
+    const staleBar = shopping ? Math.min(nav.scoutStale, t.SCOUT_SEEK_STALE) : nav.scoutStale;
     const cand = nearbyIslands(world, home)
       .map((p) => ({ p, age: intelAge(home, p.id, day) }))
-      .filter((c) => c.age >= nav.scoutStale)
-      .map((c) => ({ ...c, score: c.age - dist(home, c.p) * t.SCOUT_DIST_WEIGHT }))
+      .filter((c) => c.age >= staleBar)
+      .map((c) => {
+        let supply = 0; // potential supplier of something the home lacks — and more so if it's overpaying for it
+        for (const g in sought) if (makesRes(c.p, g)) supply += (1 + sought[g]) * t.SCOUT_SUPPLY_WEIGHT;
+        for (const g of needs) if (!sought[g] && makesRes(c.p, g)) supply += t.SCOUT_SUPPLY_WEIGHT * 0.35;
+        return { ...c, score: c.age + supply - dist(home, c.p) * t.SCOUT_DIST_WEIGHT };
+      })
       .sort((a, b) => b.score - a.score);
     for (const c of cand.slice(0, nav.scoutStops)) { if (roomForStop(c.p.id)) { stopFor(c.p.id); scouting = true; } }
-  }
+  };
+  if (stops.length === 0) addScoutStops();
 
   // Last resort: keep the ship busy on the best surplus at a lower bar (no scout target left).
   if (stops.length === 0) addExports(1.0);
@@ -231,10 +285,16 @@ export function planVoyage(world, home, ship) {
 
   const reason = aidSent ? 'aid' : shipBought ? 'buyShip' : peopleLoaded ? 'migrate'
     : foodBought ? 'food' : scouting ? 'scout' : 'trade';
-  // Don't shuttle for pennies: a pure-trade voyage must clear the profit floor (unless it's
-  // also a luxury-shopping run). A GREEDY captain sets a higher bar (skips thin trades); an
-  // easygoing one will take almost any positive run. Scout/errand voyages are exempt.
-  if (reason === 'trade' && profit < t.MIN_TRADE_PROFIT * nav.profitMult && !shopped) return null;
+  // Don't shuttle for pennies: a pure-trade voyage must clear the profit floor (unless it's also a
+  // luxury-shopping run). A GREEDY captain sets a higher bar (skips thin trades); an easygoing one
+  // will take almost any positive run. Scout/errand voyages are exempt. BUT rather than let a ship
+  // idle on a rejected penny-trade, spend the trip reconnoitring potential suppliers of what the
+  // home lacks (especially anything it's overpaying for) — otherwise-idle capacity improving the
+  // port's market knowledge instead of sitting at the quay.
+  if (reason === 'trade' && profit < t.MIN_TRADE_PROFIT * nav.profitMult && !shopped) {
+    if (needs.size > 0) { stops.length = 0; scouting = false; addScoutStops(); if (stops.length) return { reason: 'scout', stops: orderByPath(home, stops, world), index: 0 }; }
+    return null;
+  }
 
   return { reason, stops: orderByPath(home, stops, world), index: 0 };
 }

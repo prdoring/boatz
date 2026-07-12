@@ -232,6 +232,7 @@ function loadForVoyage(world, home, ship) {
 /** Deposit everything the ship is carrying back home; a purchased Ship becomes a new
  *  vessel in the home fleet (the "bought ship joins the fleet" rule). */
 function unloadHome(world, home, ship) {
+  const t = world.rules;
   const bought = Math.floor(ship.cargo.Ships || 0);
   for (const key in ship.cargo) {
     const amt = ship.cargo[key];
@@ -249,7 +250,15 @@ function unloadHome(world, home, ship) {
   }
   if (bought >= 1) {
     ship.cargo.Ships = Math.max(0, (ship.cargo.Ships || 0) - bought);
-    for (let i = 0; i < bought; i++) spawnShip(world, home);
+    // Re-check the fleet caps at the moment of launch, not just when the voyage was planned: a
+    // parallel path (island development) may have filled the last berth while this hull was in
+    // transit. Any hull that won't fit is shelved as re-sellable stock rather than overflowing the
+    // cap (or vanishing) — it cost Wood+Iron to build, so its value is kept.
+    const owned = world.ships.reduce((n, s) => n + (s.homeId === home.id ? 1 : 0), 0);
+    const room = Math.max(0, Math.min(t.MAX_SHIPS_PER_ISLAND - owned, t.MAX_SHIPS_TOTAL - world.ships.length));
+    const launch = Math.min(bought, room);
+    for (let i = 0; i < launch; i++) spawnShip(world, home);
+    if (bought > launch) home.stock.Ships = (home.stock.Ships || 0) + (bought - launch); // no berth — keep the hull to re-sell
   }
 }
 

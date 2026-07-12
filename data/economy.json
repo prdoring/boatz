@@ -103,6 +103,10 @@
     "SCOUT_MIN_STALE_DAYS": 12,
     "SCOUT_STOPS": 3,
     "SCOUT_DIST_WEIGHT": 0.004,
+    "_doc_scout_shop": "Purposeful recon: an idle/thin-trade ship scouts potential SUPPLIERS of what its home lacks rather than aimlessly. A producer of a good the home is actively OVERPAYING for — cheapest KNOWN source >= SCOUT_PRICE_TRIGGER × base (soughtSupply) — is weighted most (×SCOUT_SUPPLY_WEIGHT); a producer of any needed good less so. When shopping, the staleness bar drops to SCOUT_SEEK_STALE days so a motivated buyer re-checks sooner. Only redirects otherwise-idle ships — never perturbs committed trade.",
+    "SCOUT_PRICE_TRIGGER": 1.12,
+    "SCOUT_SUPPLY_WEIGHT": 45,
+    "SCOUT_SEEK_STALE": 4,
 
     "WIND_EFFECT": 0.5,
     "WIND_MULT_MIN": 0.4,

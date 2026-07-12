@@ -28,6 +28,8 @@ export class SimClient {
     this.islands = [];             // array view (insertion order)
     this.economy = { totalGold: 0, shipCount: 0 };
     this.events = [];              // recent world events (blight/plague/wreck) for the news feed
+    this._history = new Map();     // entityKey ("ship:s5"/"island:x") -> [event…] chronicle, built from the stream
+    this._histSeen = 0;            // highest event id ingested (dedupe across overlapping snapshots)
     this.goods = [];
     this.raw = [];
     this.mapW = OCEAN.width;
@@ -92,7 +94,30 @@ export class SimClient {
   _onEcon(m) {
     for (const isl of (m.islands || [])) this._mergeIsland(isl);
     if (m.economy) this.economy = m.economy;
-    if (m.events) this.events = m.events;
+    if (m.events) { this.events = m.events; this._ingestHistory(m.events); }
+  }
+
+  // Build each ship's/island's chronicle from the event stream (deduped by monotonic id).
+  _ingestHistory(events) {
+    const HIST_MAX = 40;
+    for (const e of events) {
+      if (e.id == null || e.id <= this._histSeen) continue;
+      const push = (key) => {
+        let arr = this._history.get(key);
+        if (!arr) { arr = []; this._history.set(key, arr); }
+        arr.push({ id: e.id, day: e.day, kind: e.kind, text: e.text });
+        if (arr.length > HIST_MAX) arr.shift();
+      };
+      if (e.shipId != null) push('ship:' + e.shipId);
+      if (e.islandId != null) push('island:' + e.islandId);
+      this._histSeen = e.id;
+    }
+  }
+
+  /** An entity's chronicle, newest first (empty until events for it arrive while watching). */
+  getHistory(kind, id) {
+    const arr = this._history.get(kind + ':' + id);
+    return arr ? arr.slice().reverse() : [];
   }
 
   _mergeIsland(isl) {

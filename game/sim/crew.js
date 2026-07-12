@@ -20,6 +20,13 @@ import { streamFloat } from './rng.js';
 const perDay = (world, ratePerDay, h) => ratePerDay * (h / world.rules.SIM_DAY_SECONDS);
 const days = (world, h) => h / world.rules.SIM_DAY_SECONDS;
 
+/** The reason a crew turned — for the chronicle's "why". */
+function crewGrievance(ship) {
+  if ((ship.cargo.Food || 0) <= 0.001 || ship.hunger > 0.25) return 'their stores gone and bellies empty';
+  if (ship.morale < 0.22) return 'morale rotted through on a long, hard haul';
+  return 'discontent festering below decks';
+}
+
 /** Set a fresh crew's morale/hunger/unrest on a new ship. */
 export function initCrew(ship, rules) {
   ship.morale = rules.MORALE_STEADY;
@@ -130,7 +137,8 @@ export function crew(world, h) {
     // 3) STARVATION — a crew with no food for too long is lost with the ship.
     if (ship.hunger >= r.STARVE_DAYS) {
       const home = world.islandsById.get(ship.homeId);
-      logEvent(world, 'starve', `A ${home ? home.name : 'merchant'} crew starved and was lost`, { x: ship.x, y: ship.y });
+      const who = ship.captain ? `Capt. ${ship.captain.name}'s` : 'a merchant';
+      logEvent(world, 'starve', `${who} ${home ? home.name : ''} crew starved at sea, lost with all hands.`, { x: ship.x, y: ship.y });
       ship._sunk = true; lost = true; continue;
     }
 
@@ -140,7 +148,8 @@ export function crew(world, h) {
     if (!ship.uprising && world.simTime >= (ship._upCd || 0) && ship.unrest >= grace) {
       ship.uprising = { until: world.simTime + r.UPRISING_STALL_SEC };
       const home = world.islandsById.get(ship.homeId);
-      logEvent(world, 'unrest', `Crew unrest aboard a ${home ? home.name : 'merchant'} ship`, { x: ship.x, y: ship.y, shipId: ship.id });
+      const who = ship.captain ? `Capt. ${ship.captain.name}` : 'the captain';
+      logEvent(world, 'unrest', `The ${home ? home.name : 'merchant'} crew turned on ${who} — ${crewGrievance(ship)}.`, { x: ship.x, y: ship.y, shipId: ship.id });
     }
     if (ship.uprising && world.simTime >= ship.uprising.until) resolveUprising(world, ship);
   }
@@ -152,17 +161,20 @@ function resolveUprising(world, ship) {
   const r = world.rules;
   const home = world.islandsById.get(ship.homeId);
   const at = { x: ship.x, y: ship.y, shipId: ship.id }; // ship survives (new captain / new home) → focusable
+  const port = home ? home.name : 'merchant';
+  const grievance = crewGrievance(ship);
+  const name = ship.captain ? ship.captain.name : 'the captain';
   const pQuell = Math.min(0.95, r.QUELL_BASE + skill01(ship.captain, r) * r.QUELL_SKILL);
 
   if (streamFloat(world, 'mutiny') < pQuell) {
-    logEvent(world, 'quell', `Capt. ${ship.captain.name} faced down a mutiny`, at);
+    logEvent(world, 'quell', `The ${port} crew rose up with ${grievance} — but Capt. ${name} faced them down and held command.`, at);
   } else {
     const target = streamFloat(world, 'mutiny') < r.DEFECT_FRACTION ? defectionTarget(world, ship) : null;
     if (target) {
-      logEvent(world, 'defect', `A ${home ? home.name : 'merchant'} crew defected to ${target.name}`, at);
+      logEvent(world, 'defect', `The ${port} crew, ${grievance}, threw over Capt. ${name} and defected to ${target.name}.`, at);
       ship.homeId = target.id;
     } else {
-      logEvent(world, 'mutiny', `Mutiny! A ${home ? home.name : 'merchant'} crew cast out its captain`, at);
+      logEvent(world, 'mutiny', `Mutiny! The ${port} crew, ${grievance}, cast out Capt. ${name} — a green hand now commands.`, at);
       ship.captain = makeCaptain(world); // a fresh novice takes command
     }
   }

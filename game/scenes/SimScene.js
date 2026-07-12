@@ -98,6 +98,7 @@ export class SimScene extends Scene {
         shipsById: this._world ? this._world.entities : null,
         wind: this.sim.wind,
         portraits: this.shared.portraits,
+        getHistory: (kind, id) => this.sim.getHistory(kind, id),
       }),
     });
     this.controls = new SimControls({

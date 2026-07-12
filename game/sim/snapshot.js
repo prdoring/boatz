@@ -110,7 +110,7 @@ export function snapshotEconomy(world) {
   return {
     islands,
     economy: { totalGold: Math.round(world.totals.gold), shipCount: world.ships.length },
-    events: world.events.slice(-20), // recent news for the (clickable) ticker
+    events: world.events.slice(-60), // recent news for the ticker + the client's per-entity chronicles
   };
 }
 

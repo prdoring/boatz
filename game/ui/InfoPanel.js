@@ -29,25 +29,114 @@ const RES_COLOR = {
   Food: '#e0a83f', Ale: '#b07a3a', Clothing: '#d06a9a', Weapons: '#7f8790', LuxuryGoods: '#ffe36a', Ships: '#c8a06a',
 };
 
+// Chronicle line colour by event kind (mirrors the news-ticker palette).
+const EVENT_TEXT_COLOR = {
+  blight: '#ec8a3a', plague: '#c072e0', wreck: '#8fb6c6', recover: '#8ee6a0',
+  mutiny: '#ff5b4a', defect: '#e0863a', quell: '#8ee6a0', unrest: '#e0b24a', starve: '#c0503a',
+  launch: '#6fd0e0', migrate: '#f2b8d0', famine: '#d98a3a', boom: '#ffd166', ally: '#8ee6a0', rival: '#e0863a',
+  rebellion: '#ff5b30', overthrow: '#ff7b4a', quellReb: '#8ee6a0',
+};
+
 export class InfoPanel extends Panel {
   constructor({ getSelection, getContext }) {
     super();
     this.getSelection = getSelection;
     this.getContext = getContext;
     this.visible = false;
+    this._tab = 'stats'; // 'stats' | 'story'
   }
 
   layout(view) {
     this.setRect(view.width - W - 16, 16, W, view.height - 32);
   }
 
+  /** The two tab-button rects (Stats / Story) at the top of the panel. */
+  _tabRects() {
+    const cx = this.x + PAD, cw = this.w - PAD * 2, y = this.y + 12, h = 22, gap = 6;
+    const bw = (cw - gap) / 2;
+    return [{ id: 'stats', label: 'Stats', x: cx, y, w: bw, h }, { id: 'story', label: 'Story', x: cx + bw + gap, y, w: bw, h }];
+  }
+
+  onDown(px, py) {
+    if (!this.contains(px, py)) return false;
+    const sel = this.getSelection();
+    if (sel && sel.data) {
+      for (const t of this._tabRects()) {
+        if (px >= t.x && px <= t.x + t.w && py >= t.y && py <= t.y + t.h) { this._tab = t.id; break; }
+      }
+    }
+    return true; // consume any click inside the panel (blocks world pick-through)
+  }
+
   drawContent(ctx) {
     const sel = this.getSelection();
     if (!sel || !sel.data) return;
+    this._drawTabs(ctx);
     const cx = this.x + PAD, cw = this.w - PAD * 2;
-    const c = { y: this.y + PAD + 6, cx, cw, max: this.y + this.h - 10 };
-    if (sel.kind === 'island') this._island(ctx, sel.data, c);
+    const c = { y: this.y + 40, cx, cw, max: this.y + this.h - 10 };
+    if (this._tab === 'story') this._story(ctx, sel, c);
+    else if (sel.kind === 'island') this._island(ctx, sel.data, c);
     else this._ship(ctx, sel.id, sel.data, c);
+  }
+
+  _drawTabs(ctx) {
+    ctx.save();
+    ctx.font = '600 12px system-ui, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    for (const t of this._tabRects()) {
+      const active = this._tab === t.id;
+      roundRect(ctx, t.x, t.y, t.w, t.h, 6);
+      ctx.fillStyle = active ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.04)'; ctx.fill();
+      ctx.lineWidth = 1; ctx.strokeStyle = active ? PALETTE.accent : PALETTE.panelEdge; ctx.stroke();
+      ctx.fillStyle = active ? PALETTE.panelText : PALETTE.panelDim;
+      ctx.fillText(t.label, t.x + t.w / 2, t.y + t.h / 2 + 0.5);
+    }
+    ctx.restore();
+  }
+
+  /** The Story tab: the clicked entity's chronicle — action · why · result, newest first. */
+  _story(ctx, sel, c) {
+    const title = sel.kind === 'ship' ? shipLabel(sel.id, this.getContext().shipsById, this.getContext().islandsById) : sel.data.name;
+    this._titleRow(ctx, title, { label: 'Chronicle', color: '#c8b3ff' }, c);
+    const gh = this.getContext().getHistory;
+    const entries = gh ? gh(sel.kind, sel.id) : [];
+    if (!entries.length) {
+      c.y += 10;
+      this._line(ctx, 'No tale yet — its story is still being written.', PALETTE.panelDim, c);
+      this._line(ctx, '(history is recorded from when you started watching)', PALETTE.hudDim, c);
+      return;
+    }
+    c.y += 6;
+    for (const e of entries) {
+      if (c.y > c.max - 14) break;
+      c.y += 14;
+      ctx.save();
+      ctx.font = '600 11px system-ui, sans-serif';
+      ctx.fillStyle = PALETTE.hudDim; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+      ctx.fillText(`Day ${e.day}`, c.cx, c.y);
+      ctx.restore();
+      c.y = this._wrap(ctx, e.text, c.cx + 4, c.y + 15, c.cw - 4, 15, EVENT_TEXT_COLOR[e.kind] || PALETTE.panelText, c.max);
+      c.y += 4;
+    }
+  }
+
+  /** Word-wrap `text` from (x,y) within maxW; returns the y after the last line. */
+  _wrap(ctx, text, x, y, maxW, lh, color, maxY) {
+    ctx.save();
+    ctx.font = '12px system-ui, sans-serif';
+    ctx.fillStyle = color; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    const words = String(text).split(' ');
+    let line = '';
+    for (const w of words) {
+      const test = line ? line + ' ' + w : w;
+      if (ctx.measureText(test).width > maxW && line) {
+        if (y > maxY) { ctx.restore(); return y; }
+        ctx.fillText(line, x, y); y += lh; line = w;
+      } else line = test;
+    }
+    if (line && y <= maxY) { ctx.fillText(line, x, y); }
+    ctx.restore();
+    return y;
   }
 
   // ─── Island ──────────────────────────────────────────────────────

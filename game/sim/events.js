@@ -20,7 +20,8 @@ const CROPS = new Set(['Grain', 'Meat', 'Fiber', 'Wood']); // organic → can bl
 
 export function logEvent(world, kind, text, extra = {}) {
   const day = Math.floor(world.simTime / world.rules.SIM_DAY_SECONDS) + 1;
-  world.events.push({ day, kind, text, ...extra });
+  world._evSeq = (world._evSeq || 0) + 1; // monotonic id so the client can dedupe + build per-entity chronicles
+  world.events.push({ id: world._evSeq, day, kind, text, ...extra });
   const max = world.rules.EVENT_LOG_MAX || 40;
   if (world.events.length > max) world.events.splice(0, world.events.length - max);
 }

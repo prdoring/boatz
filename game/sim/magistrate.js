@@ -60,6 +60,16 @@ export function magRank(mag) {
   return label;
 }
 
+/** Why a populace rose up — for the chronicle's "why". */
+function rebelCause(isl, rules) {
+  if (foodDays(isl, rules) < rules.FAMINE_FOOD_DAYS) return 'famine in the streets';
+  if (isl.plague) return 'plague and death';
+  if (isl.blight) return 'a blighted, failing economy';
+  if (isl.magistrate && isl.magistrate.traits.integrity < 0.4) return "the magistrate's corruption";
+  if (isl.civ < 0.3) return 'grinding poverty';
+  return 'years of hard misrule';
+}
+
 /** The loyalty an island trends toward, given its prosperity + who governs it. */
 function steadyLoyalty(isl, rules) {
   const m = isl.magistrate, tr = m.traits;
@@ -108,7 +118,7 @@ export function governance(world, h) {
     const grace = t.REBEL_GRACE_DAYS + skill * t.REBEL_GRACE_SKILL + tr.firmness * t.REBEL_GRACE_FIRM;
     if (isl.unrest >= grace && world.simTime >= (isl._rebelCd || 0)) {
       isl.rebellion = { until: world.simTime + t.REBELLION_DAYS * t.SIM_DAY_SECONDS };
-      logEvent(world, 'rebellion', `Rebellion erupts on ${isl.name} — the streets are aflame`, { islandId: isl.id });
+      logEvent(world, 'rebellion', `Rebellion erupts on ${isl.name} — ${rebelCause(isl, t)} drove the people to the streets; the port is aflame.`, { islandId: isl.id });
     }
 
     if (daily) mag.xp = (mag.xp || 0) + t.MAG_XP_PER_DAY; // experience for a day of order kept
@@ -121,9 +131,9 @@ function resolveRebellion(world, isl) {
   const mag = isl.magistrate;
   const pQuell = Math.min(0.9, t.QUELL_BASE_MAG + magSkill(mag, t) * t.QUELL_SKILL_MAG + mag.traits.firmness * t.QUELL_FIRM_MAG);
   if (streamFloat(world, 'rebel') < pQuell) {
-    logEvent(world, 'quellReb', `${mag.name} crushed the rebellion on ${isl.name}`, { islandId: isl.id });
+    logEvent(world, 'quellReb', `${mag.name} crushed the rebellion on ${isl.name} and clung to power — but the grievances remain.`, { islandId: isl.id });
   } else {
-    logEvent(world, 'overthrow', `${isl.name} overthrew ${mag.name}`, { islandId: isl.id });
+    logEvent(world, 'overthrow', `${isl.name} rose up and cast out ${mag.name}; a new regime seizes the ruined port.`, { islandId: isl.id });
     isl.magistrate = makeMagistrate(world);          // a fresh regime takes over
     isl.civ *= (1 - t.OVERTHROW_CIV_HIT);            // the old order's works scattered
     isl.gold = Math.floor(isl.gold * (1 - t.OVERTHROW_GOLD_HIT)); // treasury looted

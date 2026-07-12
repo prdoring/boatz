@@ -14,6 +14,50 @@
 import { drawUnifiedArt } from '/engine/render/ArtInterpreter.js';
 import { PALETTE, ISLAND_RADIUS, SHIP_RADIUS } from './config.js';
 
+// ─── Data overlays (heatmap views of the map) ────────────────────────────────
+// Each mode reads one island stat, normalises it to 0..1, and tints every port with a
+// diverging heat colour so the whole archipelago reads as a data map. `good:true` means a
+// high value is GOOD (green high, red low); `good:false` inverts it (red high — trouble).
+// Cycled with the `o` key in SimScene; the legend + per-island values are drawn there.
+export const OVERLAYS = [
+  { key: 'off',        label: 'Off',                good: true,  fmt: () => '' },
+  { key: 'wealth',     label: 'Wealth / capita',    good: true,  lo: 'poor',   hi: 'rich',    fmt: (isl) => `${Math.round(perCapitaGold(isl))}g` },
+  { key: 'prosperity', label: 'Prosperity (civ)',   good: true,  lo: 'squalid',hi: 'thriving',fmt: (isl) => `${Math.round((isl.civ || 0) * 100)}%` },
+  { key: 'food',       label: 'Food security',      good: true,  lo: 'starving',hi:'secure',   fmt: (isl) => `${(isl.foodDays || 0).toFixed(1)}d` },
+  { key: 'population', label: 'Population (fill)',   good: true,  lo: 'empty',  hi: 'packed',  fmt: (isl) => `${Math.round(fill(isl) * 100)}%` },
+  { key: 'unrest',     label: 'Lawlessness',        good: false, lo: 'orderly', hi: 'lawless', fmt: (isl) => `${Math.round((isl.lawlessness || 0) * 100)}%` },
+  { key: 'grievance',  label: 'Grievance',          good: false, lo: 'content', hi: 'resentful',fmt: (isl) => `${Math.round((isl.grievance || 0) * 100)}%` },
+  { key: 'danger',     label: 'Pirate danger',      good: false, lo: 'safe',    hi: 'haunted', fmt: (isl) => `${Math.round((isl.danger || 0) * 100)}%` },
+];
+
+function perCapitaGold(isl) { return (isl.gold || 0) / Math.max(1, isl.population || 1); }
+function fill(isl) { return Math.min(1, (isl.population || 0) / Math.max(1, isl.k || 120)); }
+
+/** Normalise an island's stat for `mode` to 0..1 (0 = worst-looking, 1 = best-looking on its scale). */
+function overlayValue(isl, key) {
+  switch (key) {
+    case 'wealth':     return Math.min(1, perCapitaGold(isl) / 40);       // ~GOLD_MAX_PER_POP
+    case 'prosperity': return Math.min(1, Math.max(0, isl.civ || 0));
+    case 'food':       return Math.min(1, (isl.foodDays || 0) / 6);       // 6+ days = fully secure
+    case 'population':  return fill(isl);
+    case 'unrest':      return Math.min(1, Math.max(0, isl.lawlessness || 0));
+    case 'grievance':   return Math.min(1, Math.max(0, isl.grievance || 0));
+    case 'danger':      return Math.min(1, Math.max(0, isl.danger || 0));
+    default:            return 0;
+  }
+}
+
+/** Diverging red→amber→green heat. `t` in 0..1 where 1 is the "good" end; alpha for translucency.
+ *  Exported so the SimScene legend can paint the same scale the map uses. */
+export function heatColor(t, alpha = 1) {
+  t = Math.min(1, Math.max(0, t));
+  // red (200,60,50) → amber (230,190,60) → green (90,200,110)
+  let r, g, b;
+  if (t < 0.5) { const u = t / 0.5; r = 200 + u * 30; g = 60 + u * 130; b = 50 + u * 10; }
+  else { const u = (t - 0.5) / 0.5; r = 230 - u * 140; g = 190 + u * 10; b = 60 + u * 50; }
+  return `rgba(${r | 0},${g | 0},${b | 0},${alpha})`;
+}
+
 // A pirate's sail is dyed a menacing dark crimson-black (vs a merchant's home-port colour),
 // so a raider reads as hostile at a glance even before the skull marker is noticed. A privateer
 // flies naval steel-blue — the law's answer, distinct from both merchant and pirate.
@@ -105,6 +149,50 @@ export class WorldRenderer {
       if (isl.danger > 0.25) this._dangerHaze(sx, sy, Math.max(R * 1.7, 24), isl.danger, now);
 
       if (zoom > 0.32) this._label(isl.name, sx, sy, R);
+    }
+  }
+
+  /** Data overlay: tint every visible port by one stat (a heatmap layer). Drawn over the islands
+   *  and under the ships, so vessels stay readable. `mode` is one of OVERLAYS (key !== 'off'). The
+   *  value badge is drawn when there's room to read it. */
+  drawOverlay(islands, bounds, mode, now) {
+    const spec = OVERLAYS.find((o) => o.key === mode);
+    if (!spec || spec.key === 'off') return;
+    const ctx = this.ctx;
+    const zoom = this.camera.getZoom?.() ?? 1;
+    for (const isl of islands) {
+      const rad = islandRadius(isl);
+      if (!inBounds(isl.x, isl.y, rad * 2, bounds)) continue;
+      const { sx, sy } = this.camera.worldToScreen(isl.x, isl.y);
+      let v = overlayValue(isl, spec.key);
+      const t = spec.good ? v : 1 - v; // colour by "how good it looks": bad-is-high metrics invert
+      const r = Math.max(rad * zoom * 1.5, 15);
+      // Soft filled heat disc + a firmer ring.
+      ctx.save();
+      const grad = ctx.createRadialGradient(sx, sy, r * 0.15, sx, sy, r);
+      grad.addColorStop(0, heatColor(t, 0.62));
+      grad.addColorStop(1, heatColor(t, 0.05));
+      ctx.fillStyle = grad;
+      ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 0.85;
+      ctx.strokeStyle = heatColor(t, 0.9);
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.stroke();
+      ctx.restore();
+      // Value badge when zoomed in enough to read it.
+      if (zoom > 0.34) {
+        const label = spec.fmt(isl);
+        if (label) {
+          ctx.save();
+          ctx.font = '700 12px system-ui, sans-serif';
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(8,20,26,0.85)';
+          ctx.strokeText(label, sx, sy - r - 9);
+          ctx.fillStyle = '#f4fbff';
+          ctx.fillText(label, sx, sy - r - 9);
+          ctx.restore();
+        }
+      }
     }
   }
 

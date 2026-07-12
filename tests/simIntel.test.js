@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld } from './helpers/simWorld.js';
 import {
-  observeFacts, sightAtSea, believedDanger, believedHaven, believedFoodDays, factSummary,
+  observeFacts, sightAtSea, believedDanger, believedHaven, believedFoodDays, believedCiv, factSummary,
 } from '/game/sim/intel.js';
 import { findBestPartner } from '/game/sim/queries.js';
 
@@ -90,6 +90,33 @@ test('a port a ship reported fallen is not chosen as a trade partner', () => {
   const pick = findBestPartner(w, home, good, 'import');
   assert.ok(pick, 'a partner was found');
   assert.notEqual(pick.partner.id, fallen.id, 'a port KNOWN to have fallen is shunned');
+});
+
+test('believed prosperity is the neutral prior when unheard, the reported civ when fresh, and blends back when stale', () => {
+  const w = makeWorld();
+  const [a, b] = w.islands;
+  const prior = w.rules.INTEL_CIV_PRIOR;
+  const stale = w.rules.INTEL_STALE_DAYS;
+  // Unheard of → the neutral prior (migrants don't flock to a port nobody speaks of).
+  assert.equal(believedCiv(w, a, b.id, 0), prior, 'no word → neutral prior');
+  // Fresh word it is thriving → that reported prosperity.
+  a.intel = { [b.id]: { day: 0, danger: 0, haven: false, foodDays: 5, civ: 0.9, lawless: 0 } };
+  assert.equal(believedCiv(w, a, b.id, 0), 0.9, 'fresh word → the reported prosperity');
+  // Stale word blends back toward the prior (yesterday's boom town may have foundered).
+  const aged = believedCiv(w, a, b.id, stale);
+  assert.ok(Math.abs(aged - prior) < 1e-9, 'fully aged → back to the neutral prior');
+  const mid = believedCiv(w, a, b.id, stale / 2);
+  assert.ok(mid > prior && mid < 0.9, 'half-aged → part way back to the prior');
+});
+
+test('docking carries reported PROSPERITY (civ) too, so migration follows heard-of prosperity', () => {
+  const w = makeWorld();
+  w.simTime = 0;
+  const port = w.islands[0], seen = w.islands[1];
+  const ship = w.ships.find((s) => s.homeId !== port.id) || w.ships[0];
+  ship.intel = { [seen.id]: { day: 0, danger: 0, haven: false, foodDays: 8, civ: 0.75, lawless: 0.1 } };
+  observeFacts(w, port, ship);
+  assert.equal(believedCiv(w, port, seen.id, 0), 0.75, 'the port learned how prosperous `seen` is from the ship');
 });
 
 test('factSummary counts known vs fresh ports', () => {

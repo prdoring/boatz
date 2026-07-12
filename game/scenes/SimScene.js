@@ -8,7 +8,7 @@ import { Scene } from '/engine/core/Scene.js';
 import { UIStack } from '../ui/UIStack.js';
 import { InfoPanel } from '../ui/InfoPanel.js';
 import { SimControls } from '../ui/SimControls.js';
-import { islandRadius } from '../WorldRenderer.js';
+import { islandRadius, OVERLAYS, heatColor } from '../WorldRenderer.js';
 import { SPEEDS } from '../protocol.js';
 import {
   PALETTE, OCEAN, SHIP_HIT, ZOOM_STEP, PAN_SPEED, WAKE_EVERY,
@@ -91,6 +91,7 @@ export class SimScene extends Scene {
     this.keys = new Set();
     this._lastNow = 0;
     this._wakeTick = 0;
+    this._overlayIdx = 0;     // index into OVERLAYS (0 = off) — the active map data overlay
     this._press = null;       // drag-to-pan state
     this._world = null;       // latest interpolated snapshot (this frame)
     this._selection = null;
@@ -273,6 +274,12 @@ export class SimScene extends Scene {
     const k = e.key;
     if (PAN_KEYS[k]) { this.keys.add(k); return; }
     if (k === ' ') { e.preventDefault(); this.sim.togglePause(); return; }
+    // `o` cycles the data overlay (off → wealth → prosperity → …); Shift+O steps back.
+    if (k === 'o' || k === 'O') {
+      const n = OVERLAYS.length;
+      this._overlayIdx = (this._overlayIdx + (e.shiftKey ? n - 1 : 1)) % n;
+      return;
+    }
     // 1/2/3 select the speed presets (SPEEDS = [1,3,10]).
     const idx = { '1': 0, '2': 1, '3': 2 }[k];
     if (idx != null && SPEEDS[idx] != null) this.sim.setSpeed(SPEEDS[idx]);
@@ -332,6 +339,7 @@ export class SimScene extends Scene {
       const highlightIsland = (sel && sel.kind === 'ship' && sel.data) ? sel.data.homeId : null;
       worldRenderer.beginFrame();
       worldRenderer.drawIslands(econ.islands, bounds, now, highlightIsland);
+      if (this._overlayIdx > 0) worldRenderer.drawOverlay(econ.islands, bounds, OVERLAYS[this._overlayIdx].key, now);
       worldRenderer.drawWakes(effects.getTrails(), now);
       worldRenderer.drawStorms(this.sim.storms, bounds, now); // named tempests, under the ships
       worldRenderer.drawShips(world.entities, this.sim.islandsById, bounds, now, highlightHome);
@@ -340,6 +348,7 @@ export class SimScene extends Scene {
       worldRenderer.endFrame();
       this._statusLine(ctx);
       this._windIndicator(ctx);
+      this._overlayLegend(ctx); // active data-overlay key + gradient scale
       this._newsFeed(ctx);
       this._hoverTooltip(ctx); // drawn before the UI so a docked panel occludes it cleanly
     } else {
@@ -550,7 +559,7 @@ export class SimScene extends Scene {
     ctx.fillText(`BOATZ   ${this.sim.islands.length} islands · ${ships} ships · ${fmtGold(econ.economy.totalGold)} gold`, 14, 12);
     ctx.fillStyle = PALETTE.hudDim;
     ctx.font = '12px system-ui, sans-serif';
-    ctx.fillText('click island/ship: inspect   ·   drag or WASD: pan   ·   scroll: zoom   ·   space: pause', 14, 33);
+    ctx.fillText('click: inspect   ·   drag/WASD: pan   ·   scroll: zoom   ·   space: pause   ·   o: data overlay', 14, 33);
     ctx.restore();
   }
 
@@ -584,6 +593,42 @@ export class SimScene extends Scene {
     ctx.fillText(`${windWord(w.str)} wind → ${compass8(w.dir)}`, cx + R + 9, cy - 6);
     const s = this.sim.season;
     if (s) { ctx.fillStyle = PALETTE.hudDim; ctx.font = '11px system-ui, sans-serif'; ctx.fillText(`${SEASON_ICON[s.name] || '·'} ${s.name}`, cx + R + 9, cy + 8); }
+    ctx.restore();
+  }
+
+  /** Bottom-left-of-top legend for the active data overlay: its name, a red→green heat scale, and
+   *  the lo/hi descriptors. When off, a faint hint that the overlays exist. */
+  _overlayLegend(ctx) {
+    const spec = OVERLAYS[this._overlayIdx];
+    const x = 14, y = 52;
+    ctx.save();
+    ctx.font = '12px system-ui, sans-serif';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    if (!spec || spec.key === 'off') {
+      ctx.fillStyle = PALETTE.hudDim;
+      ctx.fillText('press  o  for data overlays', x, y);
+      ctx.restore();
+      return;
+    }
+    ctx.fillStyle = PALETTE.hud;
+    ctx.fillText(`▧ ${spec.label}`, x, y);
+    ctx.fillStyle = PALETTE.hudDim;
+    ctx.font = '10px system-ui, sans-serif';
+    ctx.fillText('o ↻', x + 148, y + 1);
+    // Heat scale: lo (left) → hi (right), coloured exactly as the map paints it.
+    const bx = x, by = y + 18, bw = 156, bh = 9, slices = 26;
+    for (let i = 0; i < slices; i++) {
+      const frac = i / (slices - 1);
+      ctx.fillStyle = heatColor(spec.good ? frac : 1 - frac, 1);
+      ctx.fillRect(bx + (i / slices) * bw, by, bw / slices + 1, bh);
+    }
+    ctx.strokeStyle = 'rgba(8,20,26,0.5)'; ctx.lineWidth = 1;
+    ctx.strokeRect(bx, by, bw, bh);
+    ctx.font = '10px system-ui, sans-serif';
+    ctx.fillStyle = PALETTE.hudDim;
+    ctx.textBaseline = 'top';
+    ctx.textAlign = 'left'; ctx.fillText(spec.lo || 'low', bx, by + bh + 3);
+    ctx.textAlign = 'right'; ctx.fillText(spec.hi || 'high', bx + bw, by + bh + 3);
     ctx.restore();
   }
 

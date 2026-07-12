@@ -38,7 +38,10 @@ export function havens(world, h) {
   if (havenList.length) harbourPirates(world, havenList, dDay);
 }
 
-/** A wholly lawless, uncivilised port teeters for HAVEN_FALL_DAYS, then falls. Capped fleet-wide. */
+/** A wholly lawless, uncivilised port teeters for HAVEN_FALL_DAYS, then falls. Capped fleet-wide.
+ *  Pressure builds a full day per failing day but EASES only slowly on a day of relief
+ *  (HAVEN_PRESSURE_RECOVER) — a port on the brink of collapse doesn't recover its civic order
+ *  overnight, so a genuinely-failed island still tips over even through the odd good day. */
 function maybeFall(world, isl) {
   const t = world.rules;
   const failing = (isl.lawlessness || 0) >= t.HAVEN_LAWLESS && (isl.civ || 0) <= t.HAVEN_MAX_CIV && isl.population > t.POP_FLOOR * 2;
@@ -48,7 +51,7 @@ function maybeFall(world, isl) {
       fall(world, isl);
     }
   } else {
-    isl._havenPressure = Math.max(0, (isl._havenPressure || 0) - 1);
+    isl._havenPressure = Math.max(0, (isl._havenPressure || 0) - t.HAVEN_PRESSURE_RECOVER);
   }
 }
 
@@ -57,7 +60,8 @@ function fall(world, isl) {
   isl.haven = true;
   isl.havenStrength = t.HAVEN_START_STRENGTH;
   isl._havenPressure = 0;
-  isl._havenBuildCd = world.simTime + t.HAVEN_BUILD_COOLDOWN_DAYS * t.SIM_DAY_SECONDS * 0.5; // a short grace before the first hull
+  isl._assaultDay = -1; // no bombardment yet
+  isl._havenBuildCd = world.simTime + t.HAVEN_FIRST_BUILD_GRACE_DAYS * t.SIM_DAY_SECONDS; // a short grace before the first hull
   isl.rebellion = null;  // the disorder curdled into a pirate regime rather than an open blaze
   isl.contract = null;   // no lawful WANTED postings from a den of thieves
   isl.magistrate = null; // no lawful ruler — a pirate lord holds the wharves (governance auto-skips a magistrate-less isle)
@@ -130,9 +134,16 @@ function harbourPirates(world, havenList, dDay) {
 
 /** A privateer/navy batters a haven: cut its entrenchment, and enough breaks its grip. Risky — the
  *  haven's guns can send the attacker down. Called from antipiracy when a privateer has no prey and
- *  a haven is in reach. Returns true if it engaged (so the caller doesn't also sail past). */
+ *  a haven is in reach. Returns true if it engaged (so the caller holds station rather than sailing
+ *  past). A haven can be BATTERED AT MOST ONCE PER DAY: without this throttle the assault fires every
+ *  0.05s substep and a den is broken in a fraction of a day — never surviving long enough to build or
+ *  harbour a single pirate. So breaking a stronghold takes a hunter holding station for DAYS, which
+ *  is the drama: the haven spawns raiders and grows the whole time it is under siege. */
 export function assaultHaven(world, striker, haven) {
   const t = world.rules;
+  const day = Math.floor(world.simTime / t.SIM_DAY_SECONDS);
+  if (haven._assaultDay === day) return true; // already battered today — the hunter holds the blockade
+  haven._assaultDay = day;
   if (streamFloat(world, 'combat') < t.HAVEN_ASSAULT_RISK) {
     striker._sunk = true;
     logEvent(world, 'hunterlost', `${striker.name || 'A privateer'} was sunk assaulting the pirate haven of ${haven.name}.`, { islandId: haven.id, shipId: striker.id });
@@ -154,6 +165,7 @@ function redeem(world, isl) {
   isl.lawlessness = t.HAVEN_REDEEM_LAWLESS; // the scars of lawlessness linger, but order returns
   isl.loyalty = 0.5;
   isl.unrest = 0;
+  isl.grievance = Math.min(isl.grievance || 0, t.HAVEN_REDEEM_GRIEVANCE); // the pirate regime is gone — the worst resentment vents, so it doesn't instantly relapse
   isl._rebelCd = world.simTime + t.REBEL_COOLDOWN_DAYS * t.SIM_DAY_SECONDS;
   installMagistrate(world, isl); // a lawful regime retakes the port with a fresh agenda + re-targeted economy
   logEvent(world, 'redeemed', `The black flag is struck at ${isl.name} — privateers have retaken the haven; a lawful magistrate restores order.`, { islandId: isl.id });

@@ -80,6 +80,53 @@ test('lawlessness rises on a failing port and falls under prosperous, honest rul
   assert.ok(thriving.lawlessness < 0.6, 'prosperity + firm honest rule (and an order agenda) restores order');
 });
 
+test('crushing a rebellion (rather than yielding) deepens the populace grievance', () => {
+  const w = makeWorld();
+  const isl = w.islands[0];
+  // An iron-fisted veteran almost always crushes a revolt (high pQuell) — so we quickly observe a quell.
+  isl.magistrate = { name: 'Iron', xp: 8000, traits: { firmness: 1, generosity: 0.3, integrity: 0.5 }, ambition: { kind: 'order', progress: 0.35, milestone: false } };
+  isl.civ = 0.15; isl.stock.Food = 0; isl.population = 120; isl.grievance = 0;
+  let sawQuell = false;
+  for (let cycle = 0; cycle < 40 && !sawQuell; cycle++) {
+    isl.rebellion = { until: w.simTime }; // a standoff ready to resolve this tick
+    isl.loyalty = 0.02; isl.unrest = 0;
+    const before = isl.grievance, magBefore = isl.magistrate;
+    governance(w, w.rules.SIM_STEP);
+    if (isl.magistrate === magBefore && !isl.rebellion) { // same ruler, fire out ⇒ he crushed it
+      assert.ok(isl.grievance > before, 'a crushed revolt left the populace more resentful');
+      sawQuell = true;
+    }
+    w.simTime += w.rules.REBEL_COOLDOWN_DAYS * w.rules.SIM_DAY_SECONDS + w.rules.SIM_STEP;
+  }
+  assert.ok(sawQuell, 'the iron-fisted veteran crushed at least one revolt');
+});
+
+test('a resentful populace (grievance) makes a port markedly more lawless', () => {
+  const w = makeWorld();
+  const a = w.islands[0], b = w.islands[1];
+  const mag = () => ({ name: 'M', xp: 0, traits: { firmness: 0.5, generosity: 0.5, integrity: 0.5 }, ambition: { kind: 'grow', progress: 0.35 } });
+  for (const isl of [a, b]) { isl.magistrate = mag(); isl.civ = 0.4; isl.stock.Food = 500; isl.population = 100; isl.loyalty = 0.5; isl._rebelCd = 1e9; isl.lawlessness = 0.2; }
+  a.grievance = 0.8; b.grievance = 0; // otherwise identical ports
+  run(w, 3);
+  assert.ok(a.lawlessness > b.lawlessness + 0.05, 'the grieved port drifts more lawless than the content one');
+});
+
+test('grievance from past suppression makes the next revolt come sooner', () => {
+  const w = makeWorld();
+  const a = w.islands[0], b = w.islands[1];
+  const mag = () => ({ name: 'M', xp: 0, traits: { firmness: 0.5, generosity: 0.5, integrity: 0.5 }, ambition: { kind: 'grow', progress: 0.35 } });
+  for (const isl of [a, b]) { isl.magistrate = mag(); isl.loyalty = 0.05; isl.civ = 0.2; isl.stock.Food = 0; isl.population = 120; isl._rebelCd = 0; isl.unrest = 0; isl.lawlessness = 0.3; }
+  a.grievance = 0.95; b.grievance = 0;
+  let aDay = null, bDay = null;
+  for (let d = 1; d <= 20 && (aDay === null || bDay === null); d++) {
+    run(w, 1);
+    if (aDay === null && a.rebellion) aDay = d;
+    if (bDay === null && b.rebellion) bDay = d;
+  }
+  assert.ok(aDay !== null, 'the grieved port rose up within the window');
+  assert.ok(bDay === null || aDay <= bDay, 'the grieved port rebels no later than the content one');
+});
+
 test('installing a magistrate seats a named ruler with an agenda and re-targets the economy', () => {
   const w = makeWorld();
   const isl = w.islands[0];

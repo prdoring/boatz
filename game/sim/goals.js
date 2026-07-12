@@ -15,7 +15,7 @@ import { findBestPartner, nearestWhere, nearbyIslands, dist } from './queries.js
 import { tradeables } from './resources.js';
 import { bidAsk } from './pricing.js';
 import { intelAge, beliefMid, currentDay } from './beliefs.js';
-import { believedFoodDays, believedHaven } from './intel.js';
+import { believedFoodDays, believedHaven, believedCiv } from './intel.js';
 import { navProfile } from './captains.js';
 
 function emptyStop(islandId) { return { islandId, sell: {}, buy: {}, people: 0 }; }
@@ -185,8 +185,13 @@ export function planVoyage(world, home, ship) {
   addExports(t.EXPORT_RATIO);
 
   // (3) MIGRATION — people leave for a reason and pick where by opportunity (push + pull):
-  //   PUSH (must leave): famine (food-short) or overcrowding (pop near carrying capacity).
-  //   PULL (where to): the most attractive reachable haven — higher civ, food-secure, room.
+  //   PUSH (must leave): famine (food-short) or overcrowding (pop near carrying capacity). The home
+  //     knows its OWN plight live.
+  //   PULL (where to): the most attractive reachable port — but chosen on what the home has HEARD
+  //     (information travels by sea): believed PROSPERITY (civ) + believed FOOD security, from the
+  //     intel ships have carried back. People flock to a port they've heard is thriving; a place
+  //     nobody speaks of holds only the neutral pull of the unknown. Physical ROOM stays a live
+  //     check (a berth is a berth — like stock availability, deliberately common knowledge).
   //   A gentler TRICKLE also leaves a comfortable island when a MARKEDLY more prosperous
   //   neighbour beckons (opportunity/urbanisation) — but a healthy producer never bleeds
   //   its whole workforce to a hoarder, which would hollow out the islands that feed all.
@@ -195,11 +200,12 @@ export function planVoyage(world, home, ship) {
     const crowded = home.population > 0.85 * home.k;
     let best = null, bestScore = -Infinity;
     for (const p of nearbyIslands(world, home)) {
-      if (p.population >= 0.92 * p.k) continue;               // no room to take them
-      if (foodDays(p, t) < t.FOOD_SECURITY_DAYS) continue;    // must at least be able to feed them
-      const score = (p.civ - home.civ) * 3
-        + (foodDays(p, t) - foodDays(home, t)) * 0.04
-        - dist(home, p) * 0.0003;                             // travel is an opportunity cost
+      if (p.population >= 0.92 * p.k) continue;                         // no room to take them (live capacity)
+      if (believedFoodDays(world, home, p.id, day) < t.FOOD_SECURITY_DAYS) continue; // heard to be able to feed them
+      if (believedHaven(world, home, p.id, day)) continue;             // nobody emigrates to a known pirate den
+      const score = (believedCiv(world, home, p.id, day) - home.civ) * 3
+        + (believedFoodDays(world, home, p.id, day) - foodDays(home, t)) * 0.04
+        - dist(home, p) * 0.0003;                                      // travel is an opportunity cost
       if (score > bestScore) { bestScore = score; best = p; }
     }
     if (best && roomForStop(best.id)) {

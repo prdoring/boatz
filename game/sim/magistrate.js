@@ -150,12 +150,15 @@ function ambitionSignal(world, isl) {
   }
 }
 
-/** The lawlessness an island trends toward: hardship raises it, capable/honest/firm rule holds it. */
+/** The lawlessness an island trends toward: hardship raises it, capable/honest/firm rule holds it.
+ *  A populace nursing GRIEVANCE (ruled by force through past revolts) is more lawless — resentment
+ *  breeds crime, so a ruler who only ever crushes dissent slowly pushes his port toward the black flag. */
 function steadyLawlessness(isl, t) {
   const m = isl.magistrate;
   let s = t.LAWLESS_BASE
     + (1 - (isl.civ || 0)) * t.LAWLESS_POVERTY
-    + (isl.danger || 0) * t.LAWLESS_DANGER;
+    + (isl.danger || 0) * t.LAWLESS_DANGER
+    + (isl.grievance || 0) * t.LAWLESS_GRIEVANCE;
   if (foodDays(isl, t) < t.FAMINE_FOOD_DAYS) s += t.LAWLESS_FAMINE;
   if (m) {
     s -= magSkill(m, t) * t.LAWLESS_ORDER_SKILL;
@@ -218,9 +221,16 @@ export function governance(world, h) {
     }
 
     // LAWLESSNESS drifts toward its hardship/governance-set steady state (civil order, distinct
-    // from political loyalty). It drags civ + growth (population.js) and — later — is the metric a
-    // pirate haven grows from. A day's drift eases it toward where the island's fortunes put it.
+    // from political loyalty). It drags civ + growth (population.js) and is the metric a pirate
+    // haven grows from. A day's drift eases it toward where the island's fortunes put it.
     isl.lawlessness = clamp((isl.lawlessness || 0) + (steadyLawlessness(isl, t) - (isl.lawlessness || 0)) * t.LAWLESS_RECOVER * dDay, 0, 1);
+
+    // GRIEVANCE heals slowly as the wounds of past suppression fade — faster on a prosperous, content
+    // port (a well-fed people forgets), barely at all on a poor one still nursing its resentment.
+    if ((isl.grievance || 0) > 0) {
+      const heal = t.GRIEVANCE_HEAL_PER_DAY + (isl.civ || 0) * t.GRIEVANCE_HEAL_CIV;
+      isl.grievance = Math.max(0, isl.grievance - heal * dDay);
+    }
 
     // AMBITION — the magistrate governs toward an agenda. Track its progress; a thriving agenda
     // buoys his standing, and pressing on with grand designs while the port starves erodes it.
@@ -253,10 +263,12 @@ export function governance(world, h) {
     if (tr.integrity < 0.5) dm -= (0.5 - tr.integrity) * t.LOYALTY_GRAFT;                                 // corruption
     isl.loyalty = clamp((isl.loyalty != null ? isl.loyalty : t.LOYALTY_STEADY_BASE) + dm * dDay, 0, 1);
 
-    // UNREST → REBELLION. Firmness (fear) and a seasoned hand hold the streets longer.
+    // UNREST → REBELLION. Firmness (fear) and a seasoned hand hold the streets longer; a populace
+    // already embittered by past bloody suppression (grievance) rises again the sooner.
     if (isl.loyalty < t.REBEL_LOYALTY) isl.unrest = (isl.unrest || 0) + dDay;
     else isl.unrest = Math.max(0, (isl.unrest || 0) - dDay * 1.5);
-    const grace = t.REBEL_GRACE_DAYS + skill * t.REBEL_GRACE_SKILL + tr.firmness * t.REBEL_GRACE_FIRM;
+    const grace = Math.max(0.4, t.REBEL_GRACE_DAYS + skill * t.REBEL_GRACE_SKILL + tr.firmness * t.REBEL_GRACE_FIRM
+      - (isl.grievance || 0) * t.REBEL_GRACE_GRIEVANCE);
     if (isl.unrest >= grace && world.simTime >= (isl._rebelCd || 0)) {
       isl.rebellion = { until: world.simTime + t.REBELLION_DAYS * t.SIM_DAY_SECONDS };
       logEvent(world, 'rebellion', `Rebellion erupts on ${isl.name} — ${rebelCause(isl, t)} drove the people to the streets; the port is aflame.`, { islandId: isl.id });
@@ -266,19 +278,26 @@ export function governance(world, h) {
   }
 }
 
-/** The fire burns out: the magistrate crushes the revolt, or the island casts him out. */
+/** The fire burns out: the magistrate crushes the revolt, or the island casts him out. Crushing it
+ *  is never free: a populace put down by force nurses ever-deeper GRIEVANCE, so each revolt a ruler
+ *  survives makes the NEXT one come sooner (grace), harder to crush (pQuell), and the port more
+ *  lawless — the tyrant slowly digging his own grave, and the port's road toward the black flag. An
+ *  overthrow, by contrast, vents most of that resentment: the hated ruler is finally gone. */
 function resolveRebellion(world, isl) {
   const t = world.rules;
   const mag = isl.magistrate;
-  const pQuell = Math.min(0.9, t.QUELL_BASE_MAG + magSkill(mag, t) * t.QUELL_SKILL_MAG + mag.traits.firmness * t.QUELL_FIRM_MAG);
+  const pQuell = Math.min(0.9, t.QUELL_BASE_MAG + magSkill(mag, t) * t.QUELL_SKILL_MAG + mag.traits.firmness * t.QUELL_FIRM_MAG
+    - (isl.grievance || 0) * t.QUELL_GRIEVANCE_MAG);
   if (streamFloat(world, 'rebel') < pQuell) {
-    logEvent(world, 'quellReb', `${mag.name} crushed the rebellion on ${isl.name} and clung to power — but the grievances remain.`, { islandId: isl.id });
+    isl.grievance = clamp((isl.grievance || 0) + t.GRIEVANCE_PER_QUELL, 0, 1); // put down by force → resentment festers
+    logEvent(world, 'quellReb', `${mag.name} crushed the rebellion on ${isl.name} and clung to power — but the grievances deepen.`, { islandId: isl.id });
   } else {
     const newMag = installMagistrate(world, isl);     // a fresh regime takes over, with a fresh agenda + re-targeted economy
     logEvent(world, 'overthrow', `${isl.name} rose up and cast out ${mag.name}; ${newMag.name} seizes the ruined port with a mind to ${((AMBITION_META[newMag.ambition.kind] || {}).verb) || 'rebuild'} it.`, { islandId: isl.id });
     isl.civ *= (1 - t.OVERTHROW_CIV_HIT);            // the old order's works scattered
     isl.gold = Math.floor(isl.gold * (1 - t.OVERTHROW_GOLD_HIT)); // treasury looted
     isl.lawlessness = clamp((isl.lawlessness || 0) + t.LAWLESS_OVERTHROW_BUMP, 0, 1); // turmoil leaves the streets unruly
+    isl.grievance = (isl.grievance || 0) * t.GRIEVANCE_OVERTHROW_KEEP; // the tyrant is gone — the worst resentment vents
   }
   isl.loyalty = Math.max(isl.loyalty, 0.5); // order (of a sort) restored
   isl.unrest = 0;

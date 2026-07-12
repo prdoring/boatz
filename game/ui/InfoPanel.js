@@ -375,6 +375,8 @@ export class InfoPanel extends Panel {
     this._kv(ctx, 'Populace', st.label, c, st.color);
     const law = isl.lawlessness || 0;
     if (law > 0.05) this._gauge(ctx, 'Lawlessness', lawlessWord(law), law, lawlessColor(law), c);
+    const grv = isl.grievance || 0;
+    if (grv > 0.05) this._gauge(ctx, 'Grievance', grievanceWord(grv), grv, lawlessColor(grv), c); // resentment from revolts crushed by force
     const tr = m.traits;
     if (tr) {
       this._gauge(ctx, 'Firmness', '', tr.firmness, '#e0863a', c);
@@ -636,6 +638,14 @@ function lawlessWord(l) {
 }
 function lawlessColor(l) {
   return l >= 0.7 ? '#c0392b' : l >= 0.45 ? '#e0863a' : l >= 0.25 ? '#e0b24a' : '#8ee6a0';
+}
+
+/** Resentment label from an island's grievance scalar (rebellions crushed by force). */
+function grievanceWord(g) {
+  if (g >= 0.7) return 'seething';
+  if (g >= 0.45) return 'embittered';
+  if (g >= 0.25) return 'resentful';
+  return 'simmering';
 }
 
 /** Crew mood label + colour from morale (or open revolt). */

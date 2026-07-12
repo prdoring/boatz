@@ -62,9 +62,25 @@ test('privateers break a haven and it is redeemed under a fresh lawful magistrat
   runHavens(w, w.rules.HAVEN_FALL_DAYS + 2);
   assert.ok(isl.haven, 'a haven to break');
   const striker = { id: 'privTest', name: 'HMS Resolute', privateer: true, x: isl.x, y: isl.y, cargo: {}, captain: { name: 'X', xp: 0 }, morale: 0.9 };
-  for (let i = 0; i < 20 && isl.haven; i++) assaultHaven(w, striker, isl);
-  assert.ok(!isl.haven, 'sustained bombardment broke the haven');
+  // A blow lands at most ONCE PER DAY, so breaking a den takes a hunter holding station for days.
+  for (let d = 0; d < 15 && isl.haven; d++) { assaultHaven(w, striker, isl); w.simTime += w.rules.SIM_DAY_SECONDS; }
+  assert.ok(!isl.haven, 'sustained day-after-day bombardment broke the haven');
   assert.ok(isl.magistrate, 'a lawful magistrate retook the port');
   assert.ok(isl.magistrate.ambition, 'the new regime governs toward an agenda again');
   assert.ok(isl.lawlessness < 1, 'order is (partly) restored');
+});
+
+test('a haven can be battered only ONCE PER DAY — no instant redemption from tick-spam', () => {
+  const w = makeWorld();
+  w.rules = { ...w.rules, HAVEN_ASSAULT_RISK: 0 };
+  const isl = w.islands[0];
+  makeFailing(w, isl);
+  runHavens(w, w.rules.HAVEN_FALL_DAYS + 2);
+  assert.ok(isl.haven, 'a haven to besiege');
+  const striker = { id: 'p2', name: 'HMS Vigil', privateer: true, x: isl.x, y: isl.y, cargo: {}, captain: { name: 'Y', xp: 0 }, morale: 0.9 };
+  const before = isl.havenStrength;
+  // Fifty assaults in the SAME day (as the per-substep loop would): only the first lands.
+  for (let i = 0; i < 50; i++) assaultHaven(w, striker, isl);
+  assert.ok(isl.haven, 'the haven is NOT redeemed by same-day tick-spam');
+  assert.ok(Math.abs(isl.havenStrength - (before - w.rules.HAVEN_SUPPRESS_PER_HIT)) < 1e-9, 'exactly one blow landed all day');
 });

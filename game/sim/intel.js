@@ -7,6 +7,7 @@
 //   • danger       — how pirate-HAUNTED a port's waters are (a raided route).
 //   • haven        — whether a port has FALLEN to a pirate haven (raise the black flag).
 //   • foodDays     — how STARVING it is (so an ally answers a famine it has actually HEARD of).
+//   • civ          — how PROSPEROUS it is (so migrants follow prosperity they've actually heard of).
 //   • lawlessness  — how disorderly it is (colour for a magistrate's opinion; UI).
 // An island holds an `intel` book: the last thing it HEARD about each subject port, tagged
 // with the sim-day it heard it. A ship holds the same book as its LOGBOOK. A ship OBSERVES a
@@ -33,6 +34,7 @@ export function liveFact(world, island, day) {
     danger: island.danger || 0,
     haven: !!island.haven,
     foodDays: foodDays(island, world.rules),
+    civ: island.civ || 0,
     lawless: island.lawlessness || 0,
   };
 }
@@ -128,6 +130,20 @@ export function believedFoodDays(world, island, subjectId, day) {
   const safe = (world.rules.FOOD_SECURITY_DAYS || 2) * 2;
   const w = Math.min(1, Math.max(0, (day - rec.day) / stale));
   return (rec.foodDays != null ? rec.foodDays : safe) * (1 - w) + safe * w;
+}
+
+/** Believed PROSPERITY (civ, 0..1) of `subjectId`, as `island` understands it. This is what makes
+ *  migration follow REPORTED prosperity, not omniscient truth: people flock to a port they have
+ *  heard is thriving. Unknown → a neutral prior (you don't flock to a place nobody speaks of, but a
+ *  desperate refugee will still try it over a failing home). A known reading blends toward that
+ *  neutral prior as it ages — yesterday's boom town may since have foundered. */
+export function believedCiv(world, island, subjectId, day) {
+  const prior = world.rules.INTEL_CIV_PRIOR != null ? world.rules.INTEL_CIV_PRIOR : 0.3;
+  const rec = island.intel && island.intel[subjectId];
+  if (!rec) return prior;
+  const stale = world.rules.INTEL_STALE_DAYS || 12;
+  const w = Math.min(1, Math.max(0, (day - rec.day) / stale));
+  return (rec.civ != null ? rec.civ : prior) * (1 - w) + prior * w;
 }
 
 /** Compact per-island intel summary for the UI: how many other ports this island holds any

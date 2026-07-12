@@ -26,6 +26,7 @@ export function createIsland(spec, economy, tuning) {
     blight: null,   // { res, until } — a production shock on a resource (see events.js)
     plague: null,   // { until }      — population/production shock, spreads via ships
     wantsShip: false,
+    grievance: 0,       // accumulated resentment from rebellions crushed by force (magistrate.js)
     _shipBusySince: -1, // simTime since which every ship has been busy (for ship-buy hysteresis)
     _runs: 0,           // completed trade runs by this island's ships (metric)
   };

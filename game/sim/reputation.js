@@ -46,11 +46,20 @@ export function recordTrade(world, host, homeId, volume) {
 
   // Association: each third party shifts its opinion of the home toward its opinion of
   // the host it just dealt with (friend-of-my-friend / enemy-of-my-partner → blocs).
+  // INFORMATION TRAVELS BY SEA: a third party only revises its view of the trader if it is in
+  // CONTACT with the host it dealt with — a ship must recently have carried news from that host to
+  // it (fresh intel). Ports out of touch don't magically hear who traded with whom, so blocs
+  // propagate along the shipping network rather than instantly across the whole map. This gates
+  // (never amplifies) the old global rule — gentler, and it honours the no-omniscience invariant.
   const assoc = t.REP_ASSOC * g;
+  const stale = t.INTEL_STALE_DAYS || 12;
+  const day = Math.floor(world.simTime / t.SIM_DAY_SECONDS);
   for (const c of world.islands) {
     if (c === host || c.id === homeId || !c.rep) continue;
     const cHost = c.rep[host.id] || 0;
     if (cHost > -1e-3 && cHost < 1e-3) continue;
+    const rec = c.intel && c.intel[host.id];
+    if (!rec || day - rec.day > stale) continue; // c must be in contact with the host to hear of the deal
     c.rep[homeId] = clampRep((c.rep[homeId] || 0) + assoc * cHost);
   }
 }

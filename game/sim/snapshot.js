@@ -5,6 +5,7 @@
 
 import { bidAsk } from './pricing.js';
 import { GOLD, cargoUnits } from './resources.js';
+import { foodDays } from './island.js';
 import { intelSummary, currentDay } from './beliefs.js';
 import { factSummary } from './intel.js';
 import { rankOf, skill01 } from './captains.js';
@@ -112,6 +113,8 @@ export function snapshotEconomy(world) {
       population: Math.floor(isl.population), k: isl.k,
       gold: Math.floor(isl.gold),
       civ: round2(isl.civ),
+      foodDays: round1(foodDays(isl, world.rules)), // days of food on hand → panel + food overlay
+
       primary: isl.primary, secondary: isl.secondary, produces: isl.produces,
       stock, buy, sell,
       dockedShipIds: docked[isl.id] || [],
@@ -125,6 +128,7 @@ export function snapshotEconomy(world) {
       rebellion: !!isl.rebellion, // aflame in revolt → fire highlight on the map
       danger: round2(isl.danger || 0), // how pirate-haunted its waters are → panel/map cue
       lawlessness: round2(isl.lawlessness || 0), // civil disorder 0..1 → panel/map cue (seed of havens)
+      grievance: round2(isl.grievance || 0), // resentment from rebellions crushed by force → panel/map cue
       haven: isl.haven ? { strength: round2(isl.havenStrength || 0) } : null, // fallen to the black flag → map/panel
 
       contract: isl.contract ? { good: isl.contract.good, reward: Math.round(isl.contract.reward) } : null, // open WANTED posting

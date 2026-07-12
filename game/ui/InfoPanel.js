@@ -43,6 +43,7 @@ const EVENT_TEXT_COLOR = {
   storm: '#9fb2cc', stormloss: '#8fb6c6', season: '#c8b3ff',
   ambition: '#e8c15a', overreach: '#e0863a',
   haven: '#b0242e', redeemed: '#8ee6a0', assault: '#e0a24a',
+  lost: '#8fb6c6', shun: '#e0863a', reroute: '#6fd0e0',
 };
 
 export class InfoPanel extends Panel {
@@ -58,11 +59,15 @@ export class InfoPanel extends Panel {
     this.setRect(view.width - W - 16, 16, W, view.height - 32);
   }
 
-  /** The two tab-button rects (Stats / Story) at the top of the panel. */
+  /** The tab-button rects at the top of the panel. A SHIP gets a third tab — Log — for the intel
+   *  it is physically carrying (information travels only by sea, so a boat's logbook is a payload). */
   _tabRects() {
+    const sel = this.getSelection();
+    const ids = sel && sel.kind === 'ship' ? ['stats', 'log', 'story'] : ['stats', 'story'];
+    const LABEL = { stats: 'Stats', log: 'Log', story: 'Story' };
     const cx = this.x + PAD, cw = this.w - PAD * 2, y = this.y + 12, h = 22, gap = 6;
-    const bw = (cw - gap) / 2;
-    return [{ id: 'stats', label: 'Stats', x: cx, y, w: bw, h }, { id: 'story', label: 'Story', x: cx + bw + gap, y, w: bw, h }];
+    const bw = (cw - gap * (ids.length - 1)) / ids.length;
+    return ids.map((id, i) => ({ id, label: LABEL[id], x: cx + (bw + gap) * i, y, w: bw, h }));
   }
 
   onDown(px, py) {
@@ -82,7 +87,9 @@ export class InfoPanel extends Panel {
     this._drawTabs(ctx);
     const cx = this.x + PAD, cw = this.w - PAD * 2;
     const c = { y: this.y + 40, cx, cw, max: this.y + this.h - 10 };
+    if (this._tab === 'log' && sel.kind !== 'ship') this._tab = 'stats'; // Log is a ship-only tab
     if (this._tab === 'story') this._story(ctx, sel, c);
+    else if (this._tab === 'log' && sel.kind === 'ship') this._shipLog(ctx, sel.id, sel.data, c);
     else if (sel.kind === 'island') this._island(ctx, sel.data, c);
     else this._ship(ctx, sel.id, sel.data, c);
   }
@@ -172,6 +179,10 @@ export class InfoPanel extends Panel {
     // Reach of this port's price knowledge — how many other markets it has any read on, and
     // how many of those are current (it learns firsthand as its ships dock; see beliefs.js).
     if (isl.intel) this._kv(ctx, 'Price intel', `${isl.intel.known} known · ${isl.intel.fresh} fresh`, c, '#c8b3ff');
+    // Reach of its NON-price intel (danger/haven/famine sightings ships have carried home) and how
+    // many of its ships it is still awaiting from over the horizon (the outstanding-voyage ledger).
+    if (isl.facts) this._kv(ctx, 'World intel', `${isl.facts.known} known · ${isl.facts.fresh} fresh`, c, '#c8b3ff');
+    if (isl.awaiting > 0) this._kv(ctx, 'At sea', `${isl.awaiting} ship${isl.awaiting > 1 ? 's' : ''} awaited`, c, '#7fd0e0');
 
     // What it makes.
     if (isl.produces && isl.produces.length) {
@@ -255,6 +266,44 @@ export class InfoPanel extends Panel {
       this._cargoRow(ctx, isPeople ? 'Settlers' : k, String(cargo[k]), isPeople ? '#f2b8d0' : (RES_COLOR[k] || PALETTE.panelText), c);
     }
     if (!keys.length) this._line(ctx, 'No goods aboard', PALETTE.panelDim, c);
+  }
+
+  // ─── Ship logbook — the intel this ship is physically carrying ───────
+  _shipLog(ctx, id, s, c) {
+    const ctxt = this.getContext();
+    this._titleRow(ctx, s.name || shipLabel(id, ctxt.shipsById, ctxt.islandsById), { label: 'Logbook', color: '#6fd0e0' }, c);
+    this._subtitle(ctx, 'What this crew has seen — carried home by sea', c);
+    const log = Array.isArray(s.log) ? s.log : [];
+    this._section(ctx, `SIGHTINGS (${log.length})`, c);
+    if (!log.length) {
+      this._line(ctx, 'No word yet — a fresh crew with an empty log.', PALETTE.panelDim, c);
+      return;
+    }
+    for (const e of log) {
+      if (c.y > c.max - 18) break;
+      const nm = name(ctxt.islandsById, e.id);
+      const age = e.age <= 0 ? 'today' : `${e.age}d ago`;
+      let flag = 'quiet', col = '#8ee6a0';
+      if (e.haven) { flag = '☠ fallen'; col = '#e04a5a'; }
+      else if (e.danger > 0.25) { flag = `⚑ ${Math.round(e.danger * 100)}%`; col = '#e0863a'; }
+      else if (e.foodDays < 2) { flag = '⚑ famine'; col = '#d98a3a'; }
+      this._logRow(ctx, nm, age, flag, col, c);
+    }
+  }
+
+  _logRow(ctx, nm, age, flag, color, c) {
+    c.y += 19;
+    ctx.save();
+    ctx.font = '13px system-ui, sans-serif'; ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = PALETTE.panelText; ctx.textAlign = 'left';
+    ctx.fillText(clip(ctx, nm, c.cw - 120), c.cx, c.y);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = PALETTE.hudDim; ctx.font = '11px system-ui, sans-serif';
+    const aw = ctx.measureText(age).width;
+    ctx.fillText(age, c.cx + c.cw, c.y);
+    ctx.fillStyle = color; ctx.font = '12px system-ui, sans-serif';
+    ctx.fillText(flag, c.cx + c.cw - aw - 8, c.y);
+    ctx.restore();
   }
 
   _captain(ctx, s, ctxt, c) {

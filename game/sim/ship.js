@@ -6,8 +6,10 @@
 import { transfer, cargoUnits, capOf, GOLD, PEOPLE } from './resources.js';
 import { bidAsk } from './pricing.js';
 import { executeStop } from './trade.js';
-import { maybeSink, shipDockDisease, logEvent } from './events.js';
-import { observeAndGossip } from './beliefs.js';
+import { maybeSink, shipDockDisease, logEvent, logEventThrottled } from './events.js';
+import { observeAndGossip, beliefMid, currentDay } from './beliefs.js';
+import { observeFacts, sightAtSea } from './intel.js';
+import { noteDeparture, noteReturn } from './voyages.js';
 import { windMult, upwindness } from './wind.js';
 import { makeCaptain, skill01, awardVoyageXp, navProfile } from './captains.js';
 import { provisionCrew, deviationTarget } from './crew.js';
@@ -121,6 +123,7 @@ function aimAtStop(world, ship) {
  *  the ACTUAL distance covered, so a longer tacking path costs proportionally more risk. */
 function sail(world, ship, h) {
   const t = world.rules;
+  sightAtSea(world, ship); // the captain sees the ports it passes firsthand — fresher than home's orders
   const skill = skill01(ship.captain, t);
   const heading = Math.atan2(ship.targetY - ship.y, ship.targetX - ship.x);
   const eff = (ship.speed || t.SHIP_SPEED) * windMult(world, heading, skill); // per-hull speed (sloop fast, galleon slow)
@@ -215,9 +218,11 @@ function loadForVoyage(world, home, ship) {
   }
 
   let cost = 0;
+  const day = currentDay(world);
   for (const stop of v.stops) {
-    const p = world.islandsById.get(stop.islandId);
-    for (const good in stop.buy) cost += stop.buy[good] * bidAsk(p.price[good].mid, t.SPREAD).ask;
+    // Size the purse on the BELIEVED price at each remote stop (what the home reckons things cost),
+    // not live truth — the ship tops up from sales along the way and settles at real prices on arrival.
+    for (const good in stop.buy) cost += stop.buy[good] * bidAsk(beliefMid(world, home, stop.islandId, good, day), t.SPREAD).ask;
   }
   if (cost > 0) {
     // Coin is heavy: only load working capital that still FITS after the sell cargo, so the
@@ -282,6 +287,28 @@ function redirectResupply(world, ship, island) {
   ship.state = 'outbound';
 }
 
+/** A capable captain who has SEEN firsthand (at sea, sightAtSea) that the port ahead has fallen to
+ *  a pirate haven won't waste the leg sailing into it — he strikes it from the route and presses on
+ *  to the next stop (or turns for home). A less able captain sails in and finds out the hard way
+ *  (the 'trading' case), then carries that news home. Only acts on a sighting the ship actually
+ *  holds in its logbook, so it's the captain's own fresher knowledge, not the home's. */
+function rerouteFromFallen(world, ship) {
+  const t = world.rules;
+  if (skill01(ship.captain, t) < (t.CAPTAIN_REROUTE_MIN_SKILL || 0.35)) return false;
+  const v = ship.voyage;
+  const stop = v.stops[v.index];
+  const rec = ship.intel && ship.intel[stop.islandId];
+  if (!rec || !rec.haven) return false;
+  if (currentDay(world) - rec.day > (t.INTEL_HAVEN_FORGET || 25)) return false; // a sighting still current
+  const port = world.islandsById.get(stop.islandId);
+  logEventThrottled(world, 'reroute', t.SIM_DAY_SECONDS, `${ship.captain ? ship.captain.name : 'A captain'} steered ${ship.name || 'clear'} away from pirate-held ${port ? port.name : 'a fallen port'}.`, { x: ship.x, y: ship.y });
+  v.index++;
+  const home = world.islandsById.get(ship.homeId);
+  if (v.index < v.stops.length) aimAtStop(world, ship);
+  else { startLeg(world, ship, home.x, home.y); ship.state = 'inbound'; }
+  return true;
+}
+
 function updateShip(world, ship, h) {
   const t = world.rules;
   const home = world.islandsById.get(ship.homeId);
@@ -294,6 +321,7 @@ function updateShip(world, ship, h) {
         ship._waited = 0;
         loadForVoyage(world, home, ship);
         aimAtStop(world, ship);
+        noteDeparture(world, home, ship); // the home now EXPECTS this ship back (voyages.js ledger)
         ship.state = 'outbound';
       }
       break;
@@ -302,6 +330,7 @@ function updateShip(world, ship, h) {
       if (flee) { if (panicRun(world, ship, flee, h) === 'sunk') return; break; }
       const dev = deviationTarget(world, ship); // a worried captain runs for the nearest larder
       if (dev) { redirectResupply(world, ship, dev); break; }
+      if (rerouteFromFallen(world, ship)) break; // a capable captain skips a port he KNOWS has fallen
       const r = sail(world, ship, h);
       if (r === 'sunk') return; // lost at sea
       if (r === 'arrived') { ship.state = 'trading'; ship.dockTimer = t.DOCK_SECONDS; }
@@ -311,10 +340,20 @@ function updateShip(world, ship, h) {
       ship.dockTimer -= h;
       if (ship.dockTimer <= 0) {
         const island = world.islandsById.get(v.stops[v.index].islandId);
-        executeStop(world, island, ship, v.stops[v.index]);
-        shipDockDisease(world, island, ship);   // plague may pass between ship and port
-        observeAndGossip(world, island, ship);  // the ship reads this port's prices + trades rumor
-        provisionCrew(world, island, ship);     // top up the crew's stores at every port
+        if (island.haven) {
+          // Sailed in on stale orders to find the port has RAISED THE BLACK FLAG — no honest market
+          // here now. The crew sees the truth firsthand (carried home as fresh intel) and slips away
+          // without trading. This is the price of acting on out-of-date information.
+          observeAndGossip(world, island, ship);
+          observeFacts(world, island, ship);
+          logEventThrottled(world, 'shun', t.SIM_DAY_SECONDS, `${ship.name || 'A merchant'} found ${island.name} fallen to pirates and fled without trading.`, { x: island.x, y: island.y });
+        } else {
+          executeStop(world, island, ship, v.stops[v.index]);
+          shipDockDisease(world, island, ship);   // plague may pass between ship and port
+          observeAndGossip(world, island, ship);  // the ship reads this port's prices + trades rumor
+          observeFacts(world, island, ship);      // …and its live facts (danger/haven/food), reporting its logbook
+          provisionCrew(world, island, ship);     // top up the crew's stores at every port
+        }
         v.index++;
         if (v.index < v.stops.length) { aimAtStop(world, ship); ship.state = 'outbound'; }
         else { startLeg(world, ship, home.x, home.y); ship.state = 'inbound'; }
@@ -328,6 +367,8 @@ function updateShip(world, ship, h) {
       if (r === 'arrived') {
         unloadHome(world, home, ship);
         observeAndGossip(world, home, ship);            // the ship reports everything it saw back home
+        observeFacts(world, home, ship);                // …including all the facts it gathered abroad
+        noteReturn(home, ship);                         // safely home — clear it from the ledger
         awardVoyageXp(ship.captain, t, v.stops.length); // the captain earns experience for the run
         ship.infected = false; // crew rotates / quarantines on returning home
         home._runs++;

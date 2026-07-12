@@ -83,7 +83,7 @@ test('a privateer runs down a pirate, sinks it, and claims the bounty for home',
   assert.equal(port.gold, before + 300, 'the privateer’s home collected the 300g bounty');
 });
 
-test('danger routing: a merchant shuns a pirate-haunted port for a safe one', () => {
+test('danger routing: a merchant shuns a port it HAS HEARD is pirate-haunted for a safe one', () => {
   const w = makeWorld();
   const home = w.islands[0];
   // Give two other islands identical stock/gold of a good; make one dangerous.
@@ -91,8 +91,14 @@ test('danger routing: a merchant shuns a pirate-haunted port for a safe one', ()
   const [safe, risky] = [w.islands[1], w.islands[2]];
   for (const p of [safe, risky]) { p.stock[good] = 500; p.price[good].mid = home.price[good].mid; p.danger = 0; }
   risky.danger = 1; // fully feared waters
-  // Import: prefer the safe seller even though both are equivalent.
+
+  // Information travels by sea: with NO word of the danger, the home can't route around it.
+  const naive = findBestPartner(w, home, good, 'import');
+  assert.ok(naive, 'a partner was found');
+
+  // Now a ship has carried the sighting home — the port BELIEVES risky is dangerous (today).
+  home.intel = { [risky.id]: { day: 0, danger: 1, haven: false, foodDays: 5, lawless: 0 } };
   const pick = findBestPartner(w, home, good, 'import');
   assert.ok(pick, 'a partner was found');
-  assert.notEqual(pick.partner.id, risky.id, 'the dangerous port is avoided when a safe equal exists');
+  assert.notEqual(pick.partner.id, risky.id, 'a port KNOWN to be dangerous is avoided when a safe equal exists');
 });

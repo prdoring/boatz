@@ -6,6 +6,7 @@
 import { bidAsk } from './pricing.js';
 import { GOLD, cargoUnits } from './resources.js';
 import { intelSummary, currentDay } from './beliefs.js';
+import { factSummary } from './intel.js';
 import { rankOf, skill01 } from './captains.js';
 import { foodDaysAboard } from './crew.js';
 import { magRank, magSkill, ambitionLabel } from './magistrate.js';
@@ -13,7 +14,22 @@ import { magRank, magSkill, ambitionLabel } from './magistrate.js';
 // StateBuffer field descriptors for ships (the interpolated `entities` map).
 export const SHIP_LERP = ['x', 'y'];
 export const SHIP_ANGLE = ['heading'];
-export const SHIP_COPY = ['state', 'type', 'homeId', 'destId', 'reason', 'eta', 'cargo', 'gold', 'route', 'cap', 'used', 'sick', 'captain', 'morale', 'foodDays', 'revolt', 'name', 'pirate', 'privateer', 'bounty'];
+export const SHIP_COPY = ['state', 'type', 'homeId', 'destId', 'reason', 'eta', 'cargo', 'gold', 'route', 'cap', 'used', 'sick', 'captain', 'morale', 'foodDays', 'revolt', 'name', 'pirate', 'privateer', 'bounty', 'log'];
+
+/** A ship's LOGBOOK for the panel — the ports it currently carries intel on, freshest first, each
+ *  tagged with how many days old the sighting is and any danger/haven it noted. This is the physical
+ *  information payload the ship is carrying (destroy/interrogate it and that knowledge is lost). */
+function shipLog(world, ship, day) {
+  const intel = ship.intel;
+  if (!intel) return [];
+  const out = [];
+  for (const id in intel) {
+    const r = intel[id];
+    out.push({ id, age: day - r.day, danger: round2(r.danger || 0), haven: !!r.haven, foodDays: round1(r.foodDays != null ? r.foodDays : 0) });
+  }
+  out.sort((a, b) => a.age - b.age);
+  return out.slice(0, 14); // the freshest dozen-odd — enough for the panel, bounded on the wire
+}
 
 // Display state (for art + panel) from the internal sim state.
 function displayState(s) {
@@ -34,6 +50,7 @@ function compactCargo(cargo) {
 /** id → ship, the map StateBuffer interpolates. */
 export function snapshotShips(world) {
   const out = {};
+  const day = currentDay(world);
   for (const s of world.ships) {
     const v = s.voyage;
     const cur = v ? v.stops[v.index] : null;
@@ -57,6 +74,7 @@ export function snapshotShips(world) {
       pirate: !!s.pirate, // flying the black flag → distinct art + panel + map marker
       privateer: !!s.privateer, // a commissioned pirate-hunter → distinct art + panel + marker
       bounty: Math.round(s.bounty || 0), // gold on this (pirate's) head — shown in the panel/tip
+      log: shipLog(world, s, day), // the intel this ship is carrying (its logbook) — for the panel's Log tab
       morale: round2(s.morale != null ? s.morale : 1),
       foodDays: round1(foodDaysAboard(world, s)),
       revolt: !!s.uprising, // crew in open revolt (dead in the water) → highlighted on the map
@@ -101,6 +119,8 @@ export function snapshotEconomy(world) {
       blight: isl.blight ? isl.blight.res : null, // afflicted resource, for the map/panel
       plague: !!isl.plague,
       intel: intelSummary(world, isl, day), // { known, fresh } — reach of its price knowledge
+      facts: factSummary(world, isl, day),  // { known, fresh } — reach of its NON-price intel (danger/haven/food)
+      awaiting: isl.expecting ? Object.keys(isl.expecting).length : 0, // ships it still expects home (voyages.js ledger)
       loyalty: round2(isl.loyalty != null ? isl.loyalty : 1),
       rebellion: !!isl.rebellion, // aflame in revolt → fire highlight on the map
       danger: round2(isl.danger || 0), // how pirate-haunted its waters are → panel/map cue

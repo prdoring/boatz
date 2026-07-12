@@ -31,7 +31,7 @@ export function development(world, h) {
     // Source a hull: its own yard if it is one with stock, else the nearest shipyard that has a
     // Ship to sell and hasn't embargoed it.
     const src = (isl.stock.Ships || 0) >= 1 ? isl
-      : nearestWhere(world, isl, (p) => (p.stock.Ships || 0) >= 1 && !isEmbargoed(p, isl.id, t) && !isEmbargoed(isl, p.id, t));
+      : nearestWhere(world, isl, (p) => (p.stock.Ships || 0) >= 1 && !p.haven && !isEmbargoed(p, isl.id, t) && !isEmbargoed(isl, p.id, t));
     if (!src) continue;
 
     const ask = bidAsk(src.price.Ships.mid, t.SPREAD).ask;

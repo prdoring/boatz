@@ -5,6 +5,7 @@
 import { bidAsk } from './pricing.js';
 import { repPriceMult, isEmbargoed } from './reputation.js';
 import { beliefMid, currentDay } from './beliefs.js';
+import { believedDanger, believedHaven } from './intel.js';
 
 export function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
 
@@ -30,7 +31,10 @@ export function findBestPartner(world, island, good, mode, travelMult = 1) {
   const day = currentDay(world);
   let best = null, bestScore = -Infinity;
   for (const p of nearbyIslands(world, island)) {
-    if (p.haven) continue; // a pirate haven is no honest trade partner — merchants give it a wide berth
+    // A pirate haven is no honest trade partner — but the island only shuns one it has HEARD has
+    // fallen (intel.js). A ship dispatched to a port that fell after word last reached home sails
+    // in unawares and finds no market (executeStop) — stale news gets you into trouble.
+    if (believedHaven(world, island, p.id, day)) continue;
     // An embargo (either side's deep hostility) shuts the port — it's simply not an option.
     if (isEmbargoed(p, island.id, t) || isEmbargoed(island, p.id, t)) continue;
     const d = dist(island, p);
@@ -41,9 +45,10 @@ export function findBestPartner(world, island, good, mode, travelMult = 1) {
     // on the prices it has HEARD (stale rumor away from its routes). Availability (stock/gold/
     // demand) stays common knowledge, so ships still route to real producers with real surplus.
     const partnerMid = beliefMid(world, island, p.id, good, day);
-    // Pirate-haunted waters are shunned: a feared port is a worse trade partner (this is what lets
-    // piracy strangle a route — and motivates the port to pay for privateers to clear it).
-    const peril = (p.danger || 0) * t.DANGER_ROUTE_WEIGHT;
+    // Pirate-haunted waters are shunned — but again only on BELIEVED danger (a sighting a ship
+    // carried home), which decays as it ages. An island can't fear a raided lane it hasn't heard
+    // about, so news of piracy (and of its clearing) travels by sea like everything else.
+    const peril = believedDanger(world, island, p.id, day) * t.DANGER_ROUTE_WEIGHT;
     if (mode === 'import') {
       if ((p.stock[good] || 0) < 1) continue;
       // The ask WE'D actually pay reflects how `p` feels about us (friends discount).

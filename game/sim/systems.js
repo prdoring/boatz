@@ -20,6 +20,7 @@ import { governance } from './magistrate.js';
 import { havens } from './havens.js';
 import { development } from './development.js';
 import { contracts } from './contracts.js';
+import { reckonVoyages } from './voyages.js';
 
 export const SIM_SYSTEMS = [
   applyIntents,
@@ -41,4 +42,5 @@ export const SIM_SYSTEMS = [
   havens,     // failed islands fall to pirate havens (harbour/build pirates); privateers redeem them — after governance (reads lawlessness) + antipiracy (assaults land this tick)
   development, // wealthy ports invest surplus gold into new hulls (fleet growth + a gold sink), daily
   contracts,   // ports post paid contracts for goods they acutely lack (directed relief), daily
+  reckonVoyages, // the outstanding-voyage ledger: presume long-overdue ships lost at sea, daily
 ];

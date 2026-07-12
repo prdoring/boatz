@@ -9,6 +9,7 @@ import { planVoyage } from './goals.js';
 import { recordTrade, repPriceMult, tradeBarred, bumpRep } from './reputation.js';
 import { logEvent, logEventThrottled } from './events.js';
 import { contractPayout } from './contracts.js';
+import { fleetBelievedByHome } from './voyages.js';
 
 /**
  * Set island.wantsShip via hysteresis: a port wealthy enough to buy a ship AND keep a
@@ -18,9 +19,12 @@ import { contractPayout } from './contracts.js';
  * Fleet size is then bounded on the paying side by upkeep (a big fleet drains gold below
  * the buy threshold) plus the per-island / global hard caps.
  */
-function updateShipDemand(world, island) {
+function updateShipDemand(world, island, liveIds) {
   const t = world.rules;
-  const owned = world.ships.filter((s) => s.homeId === island.id).length;
+  // Plan around the fleet the port BELIEVES it has: ships afloat under its flag PLUS any lost at
+  // sea it hasn't yet given up for missing (voyages.js). So it won't rush to replace a ship it
+  // still expects home — a sunk vessel only frees a berth once it's presumed lost.
+  const owned = fleetBelievedByHome(world, island, liveIds);
   const pressure = owned > 0
     && owned < t.MAX_SHIPS_PER_ISLAND
     && world.ships.length < t.MAX_SHIPS_TOTAL
@@ -36,7 +40,9 @@ function updateShipDemand(world, island) {
 
 /** Assign a voyage to each idle, un-tasked NPC ship at its home island. */
 export function dispatch(world) {
-  for (const island of world.islands) { if (!island.haven) updateShipDemand(world, island); }
+  const liveIds = new Set();
+  for (const s of world.ships) liveIds.add(s.id);
+  for (const island of world.islands) { if (!island.haven) updateShipDemand(world, island, liveIds); }
   for (const ship of world.ships) {
     if (ship.state !== 'idle' || ship.voyage) continue;
     const agent = world.agents[ship.ownerId];

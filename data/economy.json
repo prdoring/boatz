@@ -108,6 +108,17 @@
     "SCOUT_SUPPLY_WEIGHT": 45,
     "SCOUT_SEEK_STALE": 4,
 
+    "_doc_intel": "Information travels only by sea (intel.js): beyond price, an island learns another port's danger (pirate sightings), haven status, and food distress ONLY from docking ships. INTEL_STALE_DAYS — a danger sighting decays to nil over this many days (old trouble is assumed cleared). INTEL_HAVEN_FORGET — a haven sighting is trusted this long, then discounted (may have been redeemed). INTEL_FORGET_DAYS — intel older than this is dropped. INTEL_MAX_SUBJECTS — per-book cap on remembered ports (the scaling guard toward ~1000 islands). SIGHT_RANGE_AT_SEA — a sailing ship sees a port's live facts firsthand within this range (why a captain holds fresher info than the home port). CAPTAIN_REROUTE_MIN_SKILL — a captain this skilled will proactively skip a stop it firsthand-knows has fallen to a haven.",
+    "INTEL_STALE_DAYS": 12,
+    "INTEL_HAVEN_FORGET": 25,
+    "INTEL_FORGET_DAYS": 40,
+    "INTEL_MAX_SUBJECTS": 64,
+    "SIGHT_RANGE_AT_SEA": 700,
+    "CAPTAIN_REROUTE_MIN_SKILL": 0.35,
+
+    "_doc_ledger": "Outstanding-voyage ledger (voyages.js): a home port does NOT instantly know a ship was sunk out at sea — it keeps EXPECTING it back until it is overdue. VOYAGE_GRACE_DAYS is the slack beyond the estimated return before a missing ship is presumed lost (and only THEN does the port know to seek a replacement). Until then the lost hull still counts toward the port's believed fleet, so it doesn't over-order — and a pirate that sank it has delayed that knowledge.",
+    "VOYAGE_GRACE_DAYS": 6,
+
     "WIND_EFFECT": 0.5,
     "WIND_MULT_MIN": 0.4,
     "WIND_STR_MIN": 0.25,

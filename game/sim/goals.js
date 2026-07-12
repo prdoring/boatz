@@ -14,7 +14,8 @@ import { foodDays, producesRaw } from './island.js';
 import { findBestPartner, nearestWhere, nearbyIslands, dist } from './queries.js';
 import { tradeables } from './resources.js';
 import { bidAsk } from './pricing.js';
-import { intelAge, currentDay } from './beliefs.js';
+import { intelAge, beliefMid, currentDay } from './beliefs.js';
+import { believedFoodDays, believedHaven } from './intel.js';
 import { navProfile } from './captains.js';
 
 function emptyStop(islandId) { return { islandId, sell: {}, buy: {}, people: 0 }; }
@@ -97,6 +98,7 @@ export function planVoyage(world, home, ship) {
   const roomForStop = (id) => stops.length < t.MAX_STOPS || stops.some((s) => s.islandId === id);
 
   const nav = navProfile(ship.captain, t); // the captain's personality shapes the choices below
+  const day = currentDay(world); // all cross-island reads below are on BELIEVED prices/facts, not live truth
 
   let capLeft = cap;
   let goldLeft = home.gold * t.GOLD_SPEND_FRACTION;
@@ -129,11 +131,15 @@ export function planVoyage(world, home, ship) {
   //      own food-security floor + a cooldown, so a port never beggars itself being generous, and
   //      only fires when the home isn't itself scrambling for food.
   if (!foodBought && foodDays(home, t) >= t.AID_DONOR_FOOD_DAYS && world.simTime >= (home._aidCd || 0)) {
-    let ally = null;
+    // An island answers a famine it has actually HEARD of: it sends aid on BELIEVED food distress
+    // (intel a ship carried home), not omniscient live truth. A friend it's had no word from is
+    // assumed to be coping — so relief follows the shipping lanes that also carry the bad news.
+    let ally = null, allyFd = Infinity;
     for (const p of nearbyIslands(world, home)) {
       if ((home.rep ? home.rep[p.id] || 0 : 0) < t.REP_ALLY_AID_MIN) continue; // a true friend
-      if (foodDays(p, t) >= t.SURVIVAL_DAYS) continue;                          // in real trouble
-      if (!ally || foodDays(p, t) < foodDays(ally, t)) ally = p;                // the most desperate one
+      const fd = believedFoodDays(world, home, p.id, day);
+      if (fd >= t.SURVIVAL_DAYS) continue;                                      // believed to be in real trouble
+      if (fd < allyFd) { ally = p; allyFd = fd; }                              // the most desperate one it knows of
     }
     if (ally && roomForStop(ally.id)) {
       const sparable = Math.max(0, home.stock.Food - home.targets.Food * 0.6);
@@ -154,9 +160,9 @@ export function planVoyage(world, home, ship) {
     const owned = world.ships.filter((s) => s.homeId === home.id).length;
     const inflight = world.ships.filter((s) => s.homeId === home.id && s.voyage && s.voyage.reason === 'buyShip').length;
     if (owned + inflight < t.MAX_SHIPS_PER_ISLAND && world.ships.length + inflight < t.MAX_SHIPS_TOTAL) {
-      const yard = nearestWhere(world, home, (p) => (p.stock.Ships || 0) >= 1);
+      const yard = nearestWhere(world, home, (p) => (p.stock.Ships || 0) >= 1 && !believedHaven(world, home, p.id, day));
       if (yard && roomForStop(yard.id)) {
-        const ask = bidAsk(yard.price.Ships.mid, t.SPREAD).ask;
+        const ask = bidAsk(beliefMid(world, home, yard.id, 'Ships', day), t.SPREAD).ask; // the price the home BELIEVES the yard charges
         if (goldLeft >= ask) { stopFor(yard.id).buy.Ships = 1; goldLeft -= ask; shipBought = true; }
       }
     }
@@ -212,7 +218,8 @@ export function planVoyage(world, home, ship) {
     for (const s of stops) {
       const p = world.islandsById.get(s.islandId);
       if (!p || (p.stock[deficit] || 0) < 1 || s.buy[deficit]) continue;
-      const ask = bidAsk(p.price[deficit].mid, t.SPREAD).ask;
+      const ask = bidAsk(beliefMid(world, home, p.id, deficit, day), t.SPREAD).ask; // sized on the BELIEVED price
+
       if (ask <= 0) continue;
       const room = Math.max(0, home.targets[deficit] - home.stock[deficit]);
       const qty = Math.min(perGoodCap, capLeft, goldLeft / ask, room);

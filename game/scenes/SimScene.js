@@ -31,6 +31,7 @@ const EVENT_COLOR = {
   storm: '#9fb2cc', stormloss: '#8fb6c6', season: '#c8b3ff',
   ambition: '#e8c15a', overreach: '#e0863a',
   haven: '#b0242e', redeemed: '#8ee6a0', assault: '#e0a24a',
+  lost: '#8fb6c6', shun: '#e0863a', reroute: '#6fd0e0',
 };
 const SEASON_ICON = { Spring: '🌱', Summer: '☀', Autumn: '🍂', Winter: '❄' };
 const NEWS_ROWS = 9; // how many recent events the ticker shows

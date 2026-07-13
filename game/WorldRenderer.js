@@ -500,7 +500,11 @@ export class WorldRenderer {
     for (const id in shipsById) {
       const s = shipsById[id];
       if (s.pirate || s.privateer) continue;
-      if (s.state !== 'idle' && s.state !== 'trading') continue;
+      // Berth every ship that's IN PORT. The client stream carries DISPLAY states (snapshot.js
+      // displayState): a ship idle at home reads 'idle'; one trading at a stop reads 'docked' (the
+      // sim's 'trading'). Under way is 'sailing'/'outbound'/'inbound' → never berthed. (Accept the raw
+      // sim 'trading' too, so this is correct whether fed the wire snapshot or a sim ship directly.)
+      if (s.state !== 'idle' && s.state !== 'docked' && s.state !== 'trading') continue;
       let isl = islandsById.get(s.homeId); // fast path: an idle ship rests at home
       if (!isl || Math.hypot(isl.x - s.x, isl.y - s.y) > islandRadius(isl) * 1.6) isl = this._islandAt(s.x, s.y, islandsById);
       if (!isl) continue;

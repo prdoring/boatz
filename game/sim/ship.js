@@ -15,6 +15,7 @@ import { makeCaptain, skill01, awardVoyageXp, navProfile } from './captains.js';
 import { provisionCrew, deviationTarget } from './crew.js';
 import { shipName } from './naming.js';
 import { computeFleetByHome, fleetAt } from './fleet.js';
+import { setAct } from './piracy.js';
 import { buildShipGrid, anyShipInRange, countShipsInRange, nearestIsland as gridNearestIsland } from './grid.js';
 
 /** The build a port chooses for a new hull, by its situation: a threatened port arms with a
@@ -351,27 +352,31 @@ function updateShip(world, ship, h) {
         const boldness = (ship.captain && ship.captain.traits && ship.captain.traits.boldness);
         const boldCap = (boldness != null ? boldness : 0.5) >= t.MERCHANT_RUN_BLOCKADE_TRAIT;
         if (!boldCap && v.reason !== 'food' && home
-            && anyShipInRange(world._pirateGrid, home.x, home.y, t.PIRATE_EVADE_RANGE)) break;
-        if (shouldWaitForWind(world, ship, home, v)) { ship._waited += h; break; } // hold for a shift
+            && anyShipInRange(world._pirateGrid, home.x, home.y, t.PIRATE_EVADE_RANGE)) {
+          setAct(ship, 'shelter', home.id); break; // riding out a blockade in harbour
+        }
+        if (shouldWaitForWind(world, ship, home, v)) { setAct(ship, 'wait', home ? home.id : null); ship._waited += h; break; }
         ship._waited = 0;
         loadForVoyage(world, home, ship);
         aimAtStop(world, ship);
         noteDeparture(world, home, ship); // the home now EXPECTS this ship back (voyages.js ledger)
         ship.state = 'outbound';
-      }
+      } else setAct(ship, 'idle', ship.homeId); // lying at anchor, awaiting orders
       break;
     case 'outbound': {
       const flee = fleeTarget(world, ship); // pirate near → sprint for the nearest port
-      if (flee) { if (panicRun(world, ship, flee, h) === 'sunk') return; break; }
+      if (flee) { setAct(ship, 'flee', ship._fleeTo); if (panicRun(world, ship, flee, h) === 'sunk') return; break; }
       const dev = deviationTarget(world, ship); // a worried captain runs for the nearest larder
-      if (dev) { redirectResupply(world, ship, dev); break; }
+      if (dev) { setAct(ship, 'resupply', dev.id); redirectResupply(world, ship, dev); break; }
       if (rerouteFromFallen(world, ship)) break; // a capable captain skips a port he KNOWS has fallen
+      setAct(ship, 'sailTo', v.stops[v.index] ? v.stops[v.index].islandId : ship.homeId);
       const r = sail(world, ship, h);
       if (r === 'sunk') return; // lost at sea
       if (r === 'arrived') { ship.state = 'trading'; ship.dockTimer = t.DOCK_SECONDS; }
       break;
     }
     case 'trading':
+      setAct(ship, 'tradeAt', v.stops[v.index] ? v.stops[v.index].islandId : ship.homeId);
       ship.dockTimer -= h;
       if (ship.dockTimer <= 0) {
         const island = world.islandsById.get(v.stops[v.index].islandId);
@@ -396,7 +401,8 @@ function updateShip(world, ship, h) {
       break;
     case 'inbound': {
       const flee = fleeTarget(world, ship);
-      if (flee) { if (panicRun(world, ship, flee, h) === 'sunk') return; break; }
+      if (flee) { setAct(ship, 'flee', ship._fleeTo); if (panicRun(world, ship, flee, h) === 'sunk') return; break; }
+      setAct(ship, 'home', home ? home.id : null);
       const r = sail(world, ship, h);
       if (r === 'sunk') return; // lost at sea
       if (r === 'arrived') {

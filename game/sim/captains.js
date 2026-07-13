@@ -111,3 +111,12 @@ export function awardVoyageXp(captain, rules, stops) {
   if (!captain) return;
   captain.xp = (captain.xp || 0) + rules.XP_PER_RUN * (1 + rules.XP_STOP_BONUS * Math.max(0, stops - 1));
 }
+
+/** Award experience for a COMBAT exploit — a prize taken, a pirate hunted down, a haven skirmish won.
+ *  This is how a pirate or privateer captain climbs the ranks (a merchant's equivalent is a completed
+ *  voyage), so a feared raider or a celebrated hunter grows more skilled the longer it survives — and
+ *  that rising skill feeds back into how far it reaches and which fights it will press. */
+export function awardCombatXp(captain, amount) {
+  if (!captain) return;
+  captain.xp = (captain.xp || 0) + (amount || 0);
+}

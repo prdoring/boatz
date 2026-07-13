@@ -14,9 +14,10 @@
 import { streamFloat } from './rng.js';
 import { transfer, cargoUnits, GOLD } from './resources.js';
 import { logEvent, maybeSink } from './events.js';
-import { makeCaptain, skill01 } from './captains.js';
+import { makeCaptain, skill01, awardCombatXp } from './captains.js';
 import { windMult } from './wind.js';
-import { combatStrength } from './piracy.js';
+import { combatStrength, setAct } from './piracy.js';
+import { foodDaysAboard } from './crew.js';
 import { payBounty } from './bounty.js';
 import { assaultHaven } from './havens.js';
 import { computeFleetByHome, fleetAt } from './fleet.js';
@@ -102,15 +103,21 @@ export function antipiracy(world, h) {
     // no pirate to chase, patrols. Falls back to home for a hand-commissioned hull with no _guard.
     const guard = world.islandsById.get(priv._guard) || home;
 
+    // EXPERIENCE widens a hunter's reach: a seasoned captain watches and runs down threats over a wider
+    // sea (a keen lookout and a nose for a raider); a green one only reacts to what comes close. Neutral
+    // at average skill, so it adds spread without shifting the baseline navy behaviour.
+    const skill = skill01(priv.captain, t);
+    const reach = 1 + (skill - 0.5) * (t.PRIVATEER_SKILL_REACH || 0);
+
     // Acquire targets FIRST, so stand-down can tell a needed hull from a surplus one. Nearest haven,
     // then a pirate — one bearing down on the privateer OR one menacing the guarded port (a wider WATCH
     // than its raw hunt range: it actively watches its charge, not just reacting at gun-range).
     let haven = null, hd = Infinity;
     for (const hv of havenList) { const d = dist(priv, hv); if (d < hd) { hd = d; haven = hv; } }
     let prey = priv._prey ? pirates.find((p) => p.id === priv._prey && !p._sunk) : null;
-    if (!prey || dist(priv, prey) > t.PRIVATEER_HUNT_RANGE) {
-      prey = nearestShip(pirateGrid, priv.x, priv.y, null, t.PRIVATEER_HUNT_RANGE)
-          || (guard && nearestShip(pirateGrid, guard.x, guard.y, null, t.PRIVATEER_WATCH_RANGE));
+    if (!prey || dist(priv, prey) > t.PRIVATEER_HUNT_RANGE * reach) {
+      prey = nearestShip(pirateGrid, priv.x, priv.y, null, t.PRIVATEER_HUNT_RANGE * reach)
+          || (guard && nearestShip(pirateGrid, guard.x, guard.y, null, t.PRIVATEER_WATCH_RANGE * reach));
       priv._prey = prey ? prey.id : null;
     }
     // Captain character: a cautious privateer won't charge a raider it can't beat — it holds its patrol
@@ -119,7 +126,9 @@ export function antipiracy(world, h) {
     // heavily-gunned pirate — exactly when discretion is the better part of valour.)
     const bold = ((priv.captain && priv.captain.traits && priv.captain.traits.boldness) != null
       ? priv.captain.traits.boldness : 0.5) >= t.PRIVATEER_BOLD_TRAIT;
-    if (prey && !bold && combatStrength(world, priv) < combatStrength(world, prey) * t.PRIVATEER_TIMID_ODDS) prey = null;
+    const oddsBar = t.PRIVATEER_TIMID_ODDS - (skill - 0.5) * (t.PRIVATEER_SKILL_NERVE || 0); // veterans press harder odds
+    if (prey && !bold && combatStrength(world, priv) < combatStrength(world, prey) * oddsBar) prey = null;
+    const preyDist = prey ? dist(priv, prey) : Infinity;
 
     // Stand down (pay off the crew, back to honest trade) when the commission lapses, the seas are truly
     // clear (no pirates AND no havens), or this hull is SURPLUS — the navy already over-covers the threat
@@ -129,21 +138,57 @@ export function antipiracy(world, h) {
     const surplus = activePriv > threatBudget && !prey && !havenInReach;
     if (world.simTime >= (priv.privateerUntil || 0) || (pirates.length === 0 && havenList.length === 0) || surplus) {
       activePriv--; // one fewer effective hunter this tick — keep the budget/surplus test consistent
+      setAct(priv, 'standdown', home ? home.id : null);
       if (home && moveToward(priv, home.x, home.y, speed, h)) standDown(world, priv, home);
       else if (!home) standDown(world, priv, null);
       continue;
     }
 
-    if (haven && hd <= t.HAVEN_SUPPRESS_RANGE) {
+    // EMPTY LARDER — a hungry crew forces the hunter off station (siege or patrol) to victual at its guard
+    // port, the same drastic action a starving pirate takes to a haven. It won't quit a foe already at
+    // gun-range, but anything short of that yields to the empty stores (so a long siege can be broken by
+    // provisions running out — the haven feeds its own defenders, the besieger must supply from afar).
+    if (foodDaysAboard(world, priv) < t.PRIVATEER_RESUPPLY_DAYS && !(prey && preyDist <= t.PIRATE_COMBAT_RANGE)) {
+      const larder = guard || home;
+      setAct(priv, 'resupply', larder ? larder.id : null);
+      if (larder && moveToward(priv, larder.x, larder.y, speed, h)) victualPrivateer(world, larder, priv);
+      continue;
+    }
+
+    // A pirate lying within the haven's DEFENDED waters is its screen — cleared before the walls are
+    // battered (no more parking off a den, bombarding once a day, and ignoring the raiders guarding it).
+    const besieging = haven && hd <= t.HAVEN_SUPPRESS_RANGE;
+    const defender = besieging && prey && dist(haven, prey) <= t.HAVEN_DEFEND_RANGE ? prey : null;
+
+    if (prey && preyDist <= t.PIRATE_COMBAT_RANGE) {
+      // A foe at gun-range is ALWAYS fought — even mid-bombardment. Paced by _fightCd (COMBAT_ROUND_SEC)
+      // so the duel plays out over a few seconds instead of an instant kill: a running battle, not a
+      // vanishing. The cadence also stops this hunt double-resolving a pair the pirate already skirmished.
+      setAct(priv, 'hunt', prey.id);
+      if (world.simTime >= (priv._fightCd || 0)) {
+        priv._fightCd = world.simTime + (t.COMBAT_ROUND_SEC || 1.2);
+        if (resolveHunt(world, priv, prey)) sunk = true;
+        if (prey._sunk || priv._sunk) priv._prey = null;
+      }
+    } else if (defender) {
+      // Run down the haven's screen before it can pound the siege line.
+      setAct(priv, 'hunt', defender.id);
+      if (sailHunter(world, priv, defender.x, defender.y, speed, h)) sunk = true;
+    } else if (besieging) {
+      // No defender close enough to matter — batter the walls (once/day; holds station otherwise).
+      setAct(priv, 'assault', haven.id);
       if (assaultHaven(world, priv, haven) && priv._sunk) sunk = true;
-    } else if (prey && (!haven || dist(priv, prey) <= hd)) {
-      if (dist(priv, prey) <= t.PIRATE_COMBAT_RANGE) { if (resolveHunt(world, priv, prey)) sunk = true; priv._prey = null; }
-      else if (sailHunter(world, priv, prey.x, prey.y, speed, h)) sunk = true;
+    } else if (prey && (!haven || preyDist <= hd)) {
+      // Chase a pirate — one near the guarded port, or nearer than a distant haven.
+      setAct(priv, 'hunt', prey.id);
+      if (sailHunter(world, priv, prey.x, prey.y, speed, h)) sunk = true;
     } else if (haven) {
-      if (sailHunter(world, priv, haven.x, haven.y, speed, h)) sunk = true; // close on the den
+      setAct(priv, 'assault', haven.id);
+      if (sailHunter(world, priv, haven.x, haven.y, speed, h)) sunk = true; // bear down on a distant den
     } else if (guard) {
       // Patrol: circle the guarded port's approaches rather than mooring at the wharf, so it is
       // positioned to intercept the moment a raider ventures near — not reacting from a standstill.
+      setAct(priv, 'patrol', guard.id);
       const p = orbitPoint(guard.x, guard.y, priv.x, priv.y, t.PRIVATEER_PATROL_RANGE, orbitDir(priv.id), orbitStep(speed, t.PRIVATEER_PATROL_RANGE, h));
       sailHunter(world, priv, p.x, p.y, speed, h);
     }
@@ -179,6 +224,18 @@ function commissionPrivateer(world, isl, ship) {
   logEvent(world, 'privateer', `${isl.name} commissioned the privateer ${ship.name} under Capt. ${ship.captain.name} to hunt the pirates plaguing its waters.`, { islandId: isl.id, shipId: ship.id });
 }
 
+/** Victual a privateer from a friendly port's stores — FREE (the state feeds its own navy, the way a
+ *  haven feeds its raiders). The hunger valve calls this when a starving hunter breaks off station; it
+ *  tops up toward a full cruise's food and the fresh stores lift morale a touch. */
+function victualPrivateer(world, port, priv) {
+  const t = world.rules;
+  const want = t.CREW_FOOD_PER_DAY * (t.PRIVATEER_COMMISSION_DAYS + 3) - (priv.cargo.Food || 0);
+  const space = Math.max(0, priv.capacity - cargoUnits(priv, t.GOLD_PER_CARGO_UNIT));
+  const load = Math.min(Math.max(0, want), port.stock.Food || 0, space);
+  if (load >= 1) transfer(port.stock, 'Food', priv.cargo, 'Food', load);
+  priv.morale = Math.min(1, (priv.morale || 0.7) + 0.05);
+}
+
 /** Pay off the crew and return the ship to honest trade (its guns go back to the armoury). */
 function standDown(world, priv, home) {
   priv.privateer = false;
@@ -207,6 +264,7 @@ function resolveHunt(world, priv, pirate) {
   burn(pirate, t.COMBAT_WEAPON_BURN * (privWins ? 1.2 : 0.6));
   if (privWins) {
     pirate._sunk = true;
+    awardCombatXp(priv.captain, t.XP_PER_KILL); // a pirate run down — the hunter's renown (and skill) grows
     const paid = payBounty(world, pirate, priv.homeId);
     priv.morale = Math.min(1, (priv.morale || 0.7) + 0.1);
     logEvent(world, 'hunted', `The privateer ${priv.name} ran down ${pirate.name} and sank her — Capt. ${priv.captain.name} claimed ${paid}g in bounty.`, { x: pirate.x, y: pirate.y, shipId: priv.id });

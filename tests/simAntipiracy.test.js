@@ -77,10 +77,53 @@ test('a privateer runs down a pirate, sinks it, and claims the bounty for home',
   port.gold = 1000;
 
   const before = port.gold;
+  const xpBefore = priv.captain.xp;
   antipiracy(w, w.rules.SIM_STEP);
 
   assert.ok(!w.ships.includes(pirate) || pirate._sunk, 'the pirate was sunk');
   assert.equal(port.gold, before + 300, 'the privateer’s home collected the 300g bounty');
+  assert.ok(priv.captain.xp > xpBefore, 'the hunter’s captain earned experience for the kill (grows more skilled)');
+});
+
+test('a besieging privateer CLEARS the haven’s screen before battering the walls', () => {
+  const w = makeWorld();
+  const den = w.islands[0];
+  den.haven = true; den.havenStrength = 0.85;
+  const priv = w.ships[0];
+  priv.privateer = true; priv.homeId = w.islands[1].id; priv._guard = w.islands[1].id;
+  priv.privateerUntil = w.simTime + 10 * w.rules.SIM_DAY_SECONDS;
+  priv.cargo = { Gold: 0, People: 0, Food: 200, Weapons: 26 };
+  priv.x = den.x + 300; priv.y = den.y; // inside HAVEN_SUPPRESS_RANGE → besieging
+  const pirate = w.ships[1];
+  turnPirate(w, pirate);
+  pirate.cargo = { Gold: 0, People: 0, Food: 999, Weapons: 6 };
+  pirate.x = den.x + 500; pirate.y = den.y; // a defender within HAVEN_DEFEND_RANGE of the den, not at gun-range
+  w.ships = w.ships.filter((s) => s === priv || s === pirate);
+  w.rules = { ...w.rules, SINK_PER_1000: 0 };
+
+  antipiracy(w, w.rules.SIM_STEP);
+  assert.ok(priv._act && priv._act.k === 'hunt' && priv._act.id === pirate.id,
+    'the privateer turned on the defending pirate rather than blindly bombarding the haven');
+});
+
+test('a STARVING privateer breaks off to victual at its guard port (hunger forces the drastic action)', () => {
+  const w = makeWorld();
+  const guard = w.islands[0];
+  guard.stock.Food = 200;
+  const priv = w.ships[0];
+  priv.privateer = true; priv.homeId = guard.id; priv._guard = guard.id;
+  priv.privateerUntil = w.simTime + 10 * w.rules.SIM_DAY_SECONDS;
+  priv.cargo = { Gold: 0, People: 0, Food: 0.2, Weapons: 20 }; // provisions all but gone
+  priv.x = guard.x; priv.y = guard.y;                          // right at the port → it victuals this step
+  const pirate = w.ships[1]; turnPirate(w, pirate);            // a threat exists (so it doesn't stand down)…
+  pirate.x = guard.x + 5000; pirate.y = guard.y;               // …but far off, so it isn't at gun-range
+  w.ships = w.ships.filter((s) => s === priv || s === pirate);
+  w.rules = { ...w.rules, SINK_PER_1000: 0 };
+
+  const before = priv.cargo.Food || 0;
+  antipiracy(w, w.rules.SIM_STEP);
+  assert.ok(priv._act && priv._act.k === 'resupply', 'the hungry hunter is making for its larder');
+  assert.ok((priv.cargo.Food || 0) > before, 'it topped up food free from the guard port’s stores');
 });
 
 test('danger routing: a merchant shuns a port it HAS HEARD is pirate-haunted for a safe one', () => {

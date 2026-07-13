@@ -25,6 +25,28 @@ const GOAL = {
 const STATE = { idle: 'In port', sailing: 'Sailing', docked: 'Docked' };
 const STATE_COLOR = { idle: '#9fb6bd', sailing: '#5fd0e0', docked: '#8fc6ff' };
 
+// The ship's specific live ACTION (snapshot.js `act`/`actId`), turned into a plain-language line with the
+// island/ship it concerns resolved by name — so a pirate reads "Blockading Ironpeak", a privateer
+// "Assaulting Skullport", a merchant "Fleeing to Havenrock", rather than a bare "Sailing"/"Pirate".
+const ACT = {
+  blockade:  (n) => n ? `Blockading ${n}` : 'Blockading a port',
+  hunt:      (n) => n ? `Hunting ${n}` : 'Hunting for prey',
+  raid:      (n) => n ? `Raiding ${n}` : 'Raiding a port',
+  resupply:  (n) => n ? `Making for ${n} to resupply` : 'Running low — resupplying',
+  defend:    (n) => n ? `Defending ${n}` : 'Defending the haven',
+  assault:   (n) => n ? `Assaulting ${n}` : 'Assaulting a haven',
+  patrol:    (n) => n ? `Patrolling off ${n}` : 'On patrol',
+  standdown: (n) => n ? `Standing down at ${n}` : 'Standing down',
+  flee:      (n) => n ? `Fleeing to ${n}` : 'Fleeing a pirate',
+  shelter:   (n) => n ? `Sheltering at ${n}` : 'Sheltering in port',
+  wait:      ()  => 'Holding for a fair wind',
+  rove:      ()  => 'Roving the sea lanes',
+  sailTo:    (n) => n ? `Sailing to ${n}` : 'Under way',
+  tradeAt:   (n) => n ? `Trading at ${n}` : 'Trading',
+  home:      (n) => n ? `Bound home for ${n}` : 'Bound home',
+  idle:      ()  => 'Lying at anchor',
+};
+
 const RES_COLOR = {
   Grain: '#e2c85a', Wood: '#5fb84f', Meat: '#cf9b6a', Fiber: '#a8c85a', Iron: '#9aa6b2', PreciousMetal: '#dfe4ec',
   Food: '#e0a83f', Ale: '#b07a3a', Clothing: '#d06a9a', Weapons: '#7f8790', LuxuryGoods: '#ffe36a', Ships: '#c8a06a',
@@ -236,9 +258,12 @@ export class InfoPanel extends Panel {
       c.y += 8; this._banner(ctx, '⚔ PRIVATEER — pirate-hunter', '#6fa8d8', c);
     }
 
-    // Errand banner (merchants only).
+    // Errand banner (merchants only) — the PURPOSE of the voyage.
     const goal = GOAL[s.reason] || (s.reason ? { label: cap(s.reason), color: PALETTE.panelText } : null);
     if (goal && !s.pirate && !s.privateer) { c.y += 8; this._banner(ctx, goal.label, goal.color, c); }
+
+    // The specific live ACTION — what this hull is doing this moment, and to whom/where.
+    this._activity(ctx, s, ctxt, c);
 
     // Captain — identity, experience, personality, and how the wind sits for them.
     if (s.captain) this._captain(ctx, s, ctxt, c);
@@ -266,6 +291,17 @@ export class InfoPanel extends Panel {
       this._cargoRow(ctx, isPeople ? 'Settlers' : k, String(cargo[k]), isPeople ? '#f2b8d0' : (RES_COLOR[k] || PALETTE.panelText), c);
     }
     if (!keys.length) this._line(ctx, 'No goods aboard', PALETTE.panelDim, c);
+  }
+
+  /** The ship's specific current action, drawn as a prominent banner (coloured by faction). Falls back to
+   *  nothing when the sim hasn't tagged an activity (e.g. a mid-transition tick). */
+  _activity(ctx, s, ctxt, c) {
+    if (!s.act) return;
+    const fn = ACT[s.act];
+    const text = fn ? fn(actName(s.actId, ctxt)) : cap(s.act);
+    const color = s.pirate ? '#e0863a' : s.privateer ? '#8fc6ff' : '#8ee6a0';
+    c.y += 8;
+    this._banner(ctx, '▸ ' + text, color, c);
   }
 
   // ─── Ship logbook — the intel this ship is physically carrying ───────
@@ -673,6 +709,14 @@ function fmt(n) { return Math.round(n || 0).toLocaleString('en-US'); }
 function num2(n) { return n == null ? '—' : (Math.round(n * 100) / 100).toFixed(2); }
 function cap(s) { return s ? s[0].toUpperCase() + s.slice(1) : ''; }
 function name(map, id) { const i = map && map.get(id); return i ? i.name : '—'; }
+/** Resolve an activity target id → display name. Island ids live in islandsById (lowercase-alpha, never
+ *  the s-<num> shape of a ship id), so try that first, then fall back to a ship label. */
+function actName(actId, ctxt) {
+  if (actId == null) return null;
+  const isl = ctxt.islandsById && ctxt.islandsById.get(actId);
+  if (isl) return isl.name;
+  return shipLabel(actId, ctxt.shipsById, ctxt.islandsById);
+}
 function shipLabel(id, ships, islandsById) {
   const s = ships && ships[id];
   const home = s ? (islandsById && islandsById.get(s.homeId)) : null;

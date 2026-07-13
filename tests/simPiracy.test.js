@@ -8,6 +8,7 @@ import { makeWorld } from './helpers/simWorld.js';
 import {
   combatStrength, weaponsAboard, pirateCount, canTurnPirate, turnPirate, piracy,
 } from '/game/sim/piracy.js';
+import { snapshotShipsCold } from '/game/sim/snapshot.js';
 import { GOLD } from '/game/sim/resources.js';
 
 test('combat strength rises with guns, skill, morale — and a pirate fights harder', () => {
@@ -107,6 +108,48 @@ test('a blockading pirate circles a port (never camps it) and stokes the fear of
   assert.ok(w.islands.some((i) => (i.danger || 0) > 0), 'the blockade stoked danger, summoning the law');
 });
 
+test('a pirate DEFENDS its haven — it turns on a besieging privateer instead of standing off', () => {
+  const w = makeWorld();
+  const den = w.islands[0];
+  den.haven = true; den.havenStrength = 0.85; // a stronghold under threat
+  const pirate = w.ships.find((s) => s.pirate) || w.ships[0];
+  turnPirate(w, pirate);
+  pirate.cargo = { Gold: 0, People: 0, Food: 999, Weapons: 30 }; // fed (won't resupply) + strong (matched → charges)
+  pirate.x = den.x + 300; pirate.y = den.y; pirate._huntCd = 0; pirate._prey = null; pirate._raidCd = 0;
+  // A privateer come to assault the haven, within its defended waters but not yet at gun-range.
+  const priv = w.ships.find((s) => s !== pirate && !s.pirate) || w.ships[1];
+  priv.privateer = true; priv.pirate = false; priv.homeId = w.islands[1].id;
+  priv.cargo = { Gold: 0, People: 0, Food: 200, Weapons: 4 };
+  priv.x = den.x - 200; priv.y = den.y;
+  w.ships = w.ships.filter((s) => s === pirate || s === priv);
+  w.rules = { ...w.rules, SINK_PER_1000: 0 }; // deterministic: no foundering mid-test
+
+  const before = Math.hypot(pirate.x - priv.x, pirate.y - priv.y);
+  let defended = false;
+  for (let i = 0; i < 30; i++) { piracy(w, w.rules.SIM_STEP); if (pirate._act && pirate._act.k === 'defend') defended = true; }
+  const after = Math.hypot(pirate.x - priv.x, pirate.y - priv.y);
+  assert.ok(defended, 'the raider marked itself defending the haven');
+  assert.ok(after < before - 50 || pirate._sunk || priv._sunk || (priv.cargo.Weapons || 0) < 4,
+    'it closed on the besieger / traded blows rather than ignoring it');
+});
+
+test('a ship’s specific ACTIVITY rides the wire to the client (a blockader reads "blockade")', () => {
+  const w = makeWorld();
+  const pirate = w.ships.find((s) => s.pirate) || w.ships[0];
+  turnPirate(w, pirate);
+  pirate.cargo = { Gold: 0, People: 0, Food: 999, Weapons: 10 }; // fed + not laden → it blockades
+  pirate._huntCd = 0; pirate._prey = null;
+  const isle = w.islands[0];
+  pirate.x = isle.x + 120; pirate.y = isle.y;
+  for (const s of w.ships) if (!s.pirate) s.state = 'idle'; // no prey at sea
+  for (let i = 0; i < 20; i++) piracy(w, w.rules.SIM_STEP);
+
+  assert.equal(pirate._act && pirate._act.k, 'blockade', 'the sim tagged what it is actually doing');
+  const cold = snapshotShipsCold(w);
+  assert.equal(cold[pirate.id].act, 'blockade', 'and that activity is projected onto the cold snapshot');
+  assert.ok(cold[pirate.id].actId, 'with the blockaded port’s id, so the panel can name it');
+});
+
 test('a pirate that catches a merchant plunders its coin and cargo (weapons burn as a sink)', () => {
   const w = makeWorld();
   const pirate = w.ships[0], victim = w.ships[1];
@@ -127,4 +170,19 @@ test('a pirate that catches a merchant plunders its coin and cargo (weapons burn
   assert.ok(tookLoot, 'the pirate carried off coin and/or cargo');
   assert.ok(victimStripped, 'the merchant lost its coin (or went under)');
   assert.ok(weaponsAboard(pirate) < pirateWeaponsBefore, 'guns were spent in the fight (a weapons sink)');
+});
+
+test('a pirate captain EARNS experience from taking a prize (like a merchant does from a voyage)', () => {
+  const w = makeWorld();
+  const pirate = w.ships[0], victim = w.ships[1];
+  turnPirate(w, pirate);
+  pirate.x = 1200; pirate.y = 1200; pirate.morale = 1; pirate._huntCd = 0;
+  pirate.cargo = { Gold: 0, People: 0, Weapons: 40 }; // heavily armed → very likely to win the boarding
+  pirate.captain.xp = 200;
+  victim.x = 1200; victim.y = 1200; victim.state = 'outbound'; victim.pirate = false;
+  victim.morale = 0.1; victim.cargo = { Gold: 500, People: 0, Food: 30, Weapons: 1 };
+  victim.captain.xp = 0;
+  const xpBefore = pirate.captain.xp;
+  piracy(w, w.rules.SIM_STEP);
+  assert.ok(pirate.captain.xp > xpBefore, 'the raider’s captain gained experience for the prize (grows more skilled)');
 });

@@ -95,6 +95,8 @@ export function snapshotShipsCold(world) {
       log: shipLog(world, s, day), // the intel this ship is carrying (its logbook) — for the panel's Log tab
       morale: round2(s.morale != null ? s.morale : 1),
       foodDays: round1(foodDaysAboard(world, s)),
+      act: s._act ? s._act.k : null,     // what it is DOING right now (blockade/hunt/assault/flee…) — panel activity line
+      actId: s._act ? (s._act.id || null) : null, // the island/ship that action concerns (client resolves the name)
       revolt: !!s.uprising, // crew in open revolt (dead in the water) → highlighted on the map
       captain: s.captain ? {
         name: s.captain.name, rank: rankOf(s.captain), xp: Math.round(s.captain.xp || 0),

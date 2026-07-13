@@ -12,7 +12,7 @@
 import { streamFloat } from './rng.js';
 import { transfer, cargoUnits, GOLD, PEOPLE } from './resources.js';
 import { logEvent, maybeSink } from './events.js';
-import { makePirateCaptain, skill01 } from './captains.js';
+import { makePirateCaptain, skill01, awardCombatXp } from './captains.js';
 import { windMult } from './wind.js';
 import { markDanger, postBounty, payBounty } from './bounty.js';
 import { computeFleetByHome } from './fleet.js';
@@ -20,6 +20,13 @@ import { nearestIsland as gridNearestIsland, buildShipGrid, eachShipInRange, nea
 import { orbitPoint, orbitStep, orbitDir, awayPoint } from './steering.js';
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+
+/** Record what a ship is doing right now, for the info panel's activity line. k is a short activity key,
+ *  id the island/ship it concerns (or null). Mutates a reused object so it makes no per-tick garbage. */
+export function setAct(s, k, id) {
+  if (!s._act) s._act = { k, id: id || null };
+  else { s._act.k = k; s._act.id = id || null; }
+}
 
 /** Local straight-line move (piracy can't import ship.js — that would cycle). Returns arrival. */
 function moveToward(ship, tx, ty, speed, h) {
@@ -98,14 +105,49 @@ export function piracy(world, h) {
     const timid = (tr.boldness != null ? tr.boldness : 0.5) <= t.PIRATE_TIMID_TRAIT;
     const wander = (tr.wanderlust != null ? tr.wanderlust : 0.5) >= t.PIRATE_WANDER_TRAIT;
     const minPrize = (tr.greed != null ? tr.greed : 0.5) >= 0.6 ? t.PIRATE_GREED_MIN_PRIZE : 0; // the greedy scorn a lean hull
+    // EXPERIENCE shapes the hunt: a seasoned raider's nose for a prize reaches farther (a green hand
+    // engages only what stumbles across its bow); a veteran also presses a defence a novice would flinch
+    // from. Neutral at average skill, so it adds spread without shifting the baseline.
+    const skill = skill01(ship.captain, t);
+    const reach = 1 + (skill - 0.5) * (t.PIRATE_SKILL_REACH || 0);
 
     // A TIMID raider that spots a privateer closing in BREAKS OFF and runs — no prize is worth the noose.
     if (timid) {
       const hunter = nearestShip(privGrid, ship.x, ship.y, null, t.PIRATE_FLEE_PRIVATEER_RANGE);
       if (hunter) {
         ship._blockadeId = null; ship._prey = null;
+        setAct(ship, 'flee', hunter.id);
         const away = awayPoint(hunter.x, hunter.y, ship.x, ship.y, t.PIRATE_HUNT_RANGE);
         if (sail(world, ship, away.x, away.y, speed, h) === 'sunk') sunk = true;
+        continue;
+      }
+    }
+
+    // DEFEND THE HAVEN — a raider lying off its stronghold turns on a privateer come to assault it (home and
+    // larder are worth a fight). With the privateer now clearing this screen before it bombards
+    // (antipiracy.js), this turns the old "two lines facing off, nobody engaging" into a real battle. A
+    // pirate that can trade blows CHARGES to board; one plainly outgunned SHADOWS the besieger at a menacing
+    // distance — ready to pounce if its guns run dry or a consort closes — rather than throwing itself away.
+    // Only the BOLD press the attack (pirates skew bold, so most do).
+    const den = nearestHaven(havenList, ship);
+    if (den && dist(ship, den) <= t.HAVEN_DEFEND_RANGE) {
+      const besieger = nearestShip(privGrid, den.x, den.y, null, t.HAVEN_DEFEND_RANGE);
+      if (besieger) {
+        ship._blockadeId = null;
+        setAct(ship, 'defend', den.id);
+        const oddsBar = t.PIRATE_DEFEND_ODDS - (skill - 0.5) * (t.PIRATE_DEFEND_SKILL_EDGE || 0); // the seasoned press closer fights
+        const matched = combatStrength(world, ship) >= combatStrength(world, besieger) * oddsBar;
+        if (bold && matched) {
+          ship._prey = besieger.id;
+          if (dist(ship, besieger) <= t.PIRATE_COMBAT_RANGE) {
+            if (world.simTime >= (ship._fightCd || 0) && skirmish(world, ship, besieger)) sunk = true;
+          } else if (sail(world, ship, besieger.x, besieger.y, speed, h) === 'sunk') sunk = true;
+        } else { // outmatched or cautious: shadow the hunter, keeping the haven's waters contested
+          ship._prey = null;
+          const radius = t.PIRATE_BLOCKADE_RANGE;
+          const p = orbitPoint(besieger.x, besieger.y, ship.x, ship.y, radius, orbitDir(ship.id), orbitStep(speed, radius, h));
+          if (sail(world, ship, p.x, p.y, speed, h) === 'sunk') sunk = true;
+        }
         continue;
       }
     }
@@ -115,12 +157,13 @@ export function piracy(world, h) {
     // that come close, rather than chasing distant traffic and abandoning the port); a rover ranges wide.
     const resting = world.simTime < (ship._huntCd || 0);
     const holding = !wander && ship._blockadeId && world.simTime < (ship._blockadeUntil || 0);
-    const preyRange = holding ? t.PIRATE_BLOCKADE_SNAP : t.PIRATE_HUNT_RANGE;
+    const preyRange = (holding ? t.PIRATE_BLOCKADE_SNAP : t.PIRATE_HUNT_RANGE) * reach;
     let prey = null;
     if (!resting && ship._prey) { const p = world._shipsById.get(ship._prey); if (p && !p.pirate && !p._sunk && dist(ship, p) <= preyRange) prey = p; }
     if (!resting && !prey) { prey = nearestPrey(world, ship, preyRange, minPrize); ship._prey = prey ? prey.id : null; }
 
     if (prey) {
+      setAct(ship, 'hunt', prey.id);
       if (dist(ship, prey) <= t.PIRATE_COMBAT_RANGE) { resolveCombat(world, ship, prey); ship._prey = null; }
       else if (sail(world, ship, prey.x, prey.y, speed, h) === 'sunk') sunk = true; // ran down at sea
       continue;
@@ -134,6 +177,7 @@ export function piracy(world, h) {
     const haven = nearestHaven(havenList, ship);
     if (haven && (hungry || laden)) {
       ship._blockadeId = null;
+      setAct(ship, 'resupply', haven.id);
       if (dist(ship, haven) > t.HAVEN_RESUPPLY_RANGE * 0.5 && sail(world, ship, haven.x, haven.y, speed, h) === 'sunk') sunk = true;
       // else: loitering in the haven's roads — resupply/fence happens in havens.js this same tick
       continue;
@@ -146,11 +190,13 @@ export function piracy(world, h) {
     if (willRaid && isle && dist(ship, isle) <= t.PIRATE_RAID_RANGE
         && world.simTime >= (ship._raidCd || 0) && world.simTime >= (isle._raidCd || 0)) {
       ship._blockadeId = null;
+      setAct(ship, 'raid', isle.id);
       raidIsland(world, ship, isle);
       continue;
     }
     if (willRaid && isle) { // starving with no haven to run to: close on a port to raid it (the crew must eat)
       ship._blockadeId = null;
+      setAct(ship, 'raid', isle.id);
       if (sail(world, ship, isle.x, isle.y, speed, h) === 'sunk') sunk = true;
       continue;
     }
@@ -162,6 +208,7 @@ export function piracy(world, h) {
     const seaPrey = wander ? nearestSeaMerchant(world, ship) : null;
     if (seaPrey) {
       ship._blockadeId = null;
+      setAct(ship, 'hunt', seaPrey.id);
       if (sail(world, ship, seaPrey.x, seaPrey.y, speed, h) === 'sunk') sunk = true;
     } else if (isle) {
       if (!ship._blockadeId || world.simTime >= (ship._blockadeUntil || 0) || !world.islandsById.has(ship._blockadeId)) {
@@ -169,6 +216,7 @@ export function piracy(world, h) {
         ship._blockadeUntil = world.simTime + t.PIRATE_BLOCKADE_DAYS * t.SIM_DAY_SECONDS;
       }
       const port = world.islandsById.get(ship._blockadeId) || isle;
+      setAct(ship, 'blockade', port.id);
       if (ship._blockadeDay !== day) { // once a day, word of the blockade makes these waters feared (draws privateers)
         ship._blockadeDay = day;
         port.danger = Math.min(1, (port.danger || 0) + t.PIRATE_BLOCKADE_DANGER);
@@ -179,6 +227,7 @@ export function piracy(world, h) {
       if (sail(world, ship, p.x, p.y, speed, h) === 'sunk') sunk = true;
     } else { // no port anywhere in reach (open ocean) — drift toward any moving trade
       const target = nearestSeaMerchant(world, ship);
+      setAct(ship, target ? 'hunt' : 'rove', target ? target.id : null);
       if (target && sail(world, ship, target.x, target.y, speed, h) === 'sunk') sunk = true;
     }
   }
@@ -240,6 +289,7 @@ function resolveCombat(world, pirate, victim) {
 
   if (pirateWins) {
     const loot = plunder(world, pirate, victim);
+    awardCombatXp(pirate.captain, t.XP_PER_PRIZE); // a prize taken — the captain's legend (and skill) grows
     pirate.morale = Math.min(1, (pirate.morale || 0.6) + t.PIRATE_MORALE_PLUNDER);
     markDanger(world, victim.x, victim.y, 'plunder');           // these waters are now feared
     postBounty(world, pirate, victim.homeId, 'plunder');        // the robbed ship's home wants blood
@@ -266,6 +316,43 @@ function resolveCombat(world, pirate, victim) {
       logEvent(world, 'fended', `${victim.name || 'A merchant'} fought off ${pirate.name} — Capt. ${victim.captain ? victim.captain.name : 'the master'}'s guns drove the pirates back.`, { x: victim.x, y: victim.y, shipId: victim.id });
     }
   }
+}
+
+/** A HAVEN-DEFENCE skirmish: a pirate trades broadsides with a besieging privateer — a fight for the den,
+ *  not a robbery (no plunder). Symmetric weapon burn; the loser may go down. Paced by _fightCd on BOTH ships
+ *  (COMBAT_ROUND_SEC) so a duel plays out over several seconds instead of resolving in a single substep —
+ *  which is what makes a siege read as a running battle — and so antipiracy's hunt doesn't double-resolve
+ *  the same pair this same tick. Returns true if a hull was sunk. */
+function skirmish(world, pirate, priv) {
+  const t = world.rules;
+  const round = t.COMBAT_ROUND_SEC || 1.2;
+  pirate._fightCd = world.simTime + round;
+  priv._fightCd = world.simTime + round;
+  const sP = combatStrength(world, pirate), sV = combatStrength(world, priv);
+  const pirateWins = streamFloat(world, 'combat') < sP / (sP + sV);
+  burn(pirate, t.COMBAT_WEAPON_BURN * (pirateWins ? 0.6 : 1.2));
+  burn(priv, t.COMBAT_WEAPON_BURN * (pirateWins ? 1.2 : 0.6));
+  if (pirateWins) {
+    pirate.morale = Math.min(1, (pirate.morale || 0.6) + 0.08);
+    priv.morale = Math.max(0, (priv.morale || 0.7) - 0.12);
+    if (streamFloat(world, 'combat') < t.PRIVATEER_LOSS_SINK) {
+      priv._sunk = true;
+      awardCombatXp(pirate.captain, t.XP_PER_DEFENSE); // drove off the hunter — a defender's renown
+      logEvent(world, 'hunterlost', `${priv.name || 'A privateer'} was beaten off a pirate haven and sunk by ${pirate.name || 'a raider'}.`, { x: priv.x, y: priv.y, shipId: pirate.id });
+      return true;
+    }
+  } else {
+    priv.morale = Math.min(1, (priv.morale || 0.7) + 0.06);
+    pirate.morale = Math.max(0, (pirate.morale || 0.6) - 0.12);
+    if (streamFloat(world, 'combat') < t.PIRATE_SINK_ON_FEND) {
+      pirate._sunk = true;
+      awardCombatXp(priv.captain, t.XP_PER_KILL); // cut down a raider defending its den
+      const paid = payBounty(world, pirate, priv.homeId);
+      logEvent(world, 'hunted', `${priv.name || 'A privateer'} cut down ${pirate.name || 'a raider'} defending its haven${paid ? ` — ${paid}g bounty claimed` : ''}.`, { x: pirate.x, y: pirate.y, shipId: priv.id });
+      return true;
+    }
+  }
+  return false;
 }
 
 /** Strip a beaten merchant: all its coin, then its cargo (food first — pirates must eat) into the
@@ -303,6 +390,7 @@ function raidIsland(world, pirate, island) {
   const gold = Math.floor((island.gold || 0) * t.PIRATE_RAID_GOLD_FRAC);
   transfer(island, 'gold', pirate.cargo, GOLD, gold);
   if (island.loyalty != null) island.loyalty = Math.max(0, island.loyalty - t.PIRATE_RAID_LOYALTY_HIT);
+  awardCombatXp(pirate.captain, t.XP_PER_PRIZE); // a port sacked — hard-won experience
   pirate.morale = Math.min(1, (pirate.morale || 0.6) + 0.15);
   markDanger(world, island.x, island.y, 'raid');       // a sacked port's waters are the most feared
   postBounty(world, pirate, island.id, 'raid');        // and it puts a price on the raider's head

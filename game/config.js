@@ -39,3 +39,4 @@ export const RENDER_DELAY = 150;    // ms interpolation buffer (~1.5x the 100ms 
 export const ISLAND_RADIUS = 58;    // draw radius for islands
 export const SHIP_RADIUS = 15;      // draw radius for ships
 export const WAKE_EVERY = 3;        // emit a wake trail point every N frames per ship
+export const WAKE_MIN_ZOOM = 0.3;   // below this zoom, ships draw as LOD dots — wakes are invisible clutter, so skip them

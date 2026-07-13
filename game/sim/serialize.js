@@ -4,7 +4,7 @@
 // (snapshot.js). Rules/roster reload from data by version, not persisted inline.
 // PURE.
 
-import { prepareEconomy } from './world.js';
+import { prepareEconomy, scaleTuningForCount } from './world.js';
 
 export function serializeWorld(world) {
   return JSON.parse(JSON.stringify({
@@ -47,6 +47,7 @@ export function serializeWorld(world) {
 export function deserializeWorld(data, economy) {
   prepareEconomy(economy);
   const d = JSON.parse(JSON.stringify(data));
+  scaleTuningForCount(economy.tuning, d.islands.length); // match the count-scaled caps buildWorld applied
   return {
     seed: d.seed,
     rngStreams: d.rngStreams,

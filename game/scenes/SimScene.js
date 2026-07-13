@@ -11,8 +11,13 @@ import { SimControls } from '../ui/SimControls.js';
 import { islandRadius, OVERLAYS, heatColor } from '../WorldRenderer.js';
 import { SPEEDS } from '../protocol.js';
 import {
-  PALETTE, OCEAN, SHIP_HIT, ZOOM_STEP, PAN_SPEED, WAKE_EVERY,
+  PALETTE, OCEAN, SHIP_HIT, ZOOM_STEP, PAN_SPEED, WAKE_EVERY, WAKE_MIN_ZOOM,
 } from '../config.js';
+
+// How often (ms) the hover tooltip re-runs its O(N+S) hit-test while the cursor sits still. On
+// cursor-move it recomputes immediately; parked, it refreshes at this cadence so a ship gliding
+// underneath still updates the card — without a full island+ship scan on every one of 60 frames/s.
+const HOVER_PICK_MS = 120;
 
 const PAN_KEYS = {
   ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1],
@@ -123,15 +128,24 @@ export class SimScene extends Scene {
 
   enter() {
     this.keys.clear();
-    const { camera, canvas } = this.shared;
-    camera.x = OCEAN.width / 2;
-    camera.y = OCEAN.height / 2;
-    // Fit the whole archipelago on entry (works for any ocean/viewport size).
-    const vw = canvas.clientWidth || canvas.width || 1280;
-    const vh = canvas.clientHeight || canvas.height || 720;
-    camera.setZoom(Math.min(vw / OCEAN.width, vh / OCEAN.height) * 0.92);
+    // Fit to the best size we know now (config fallback); re-fit once the server's real
+    // map dimensions arrive in WELCOME (the ocean scales with island count → not a constant).
+    this._fitCamera();
+    this._fitted = !!this.sim.mapW; // if already connected (re-entry), the real size is known
     this.sim.connect();
     this._layout();
+  }
+
+  /** Center + zoom-to-fit the whole ocean. Uses the server's real map size when known,
+   *  else the config default. Works for any ocean/viewport size. */
+  _fitCamera() {
+    const { camera, canvas } = this.shared;
+    const w = this.sim.mapW || OCEAN.width, h = this.sim.mapH || OCEAN.height;
+    camera.x = w / 2;
+    camera.y = h / 2;
+    const vw = canvas.clientWidth || canvas.width || 1280;
+    const vh = canvas.clientHeight || canvas.height || 720;
+    camera.setZoom(Math.min(vw / w, vh / h) * 0.92);
   }
 
   exit() {
@@ -151,6 +165,7 @@ export class SimScene extends Scene {
 
     const world = this.sim.getWorld(now);
     this._world = world;
+    if (!this._fitted && this.sim.mapW) { this._fitCamera(); this._fitted = true; } // one-time fit to the real ocean size
     this._selection = this.sim.getSelected(world);
     this.infoPanel.visible = !!(this._selection && this._selection.data);
     this.controls.visible = this.sim.status === 'live';
@@ -183,6 +198,7 @@ export class SimScene extends Scene {
   _emitWakes(now, world) {
     this._wakeTick++;
     if (!world || !world.entities || this._wakeTick % WAKE_EVERY !== 0) return;
+    if (this.shared.camera.getZoom() < WAKE_MIN_ZOOM) return; // ships are LOD dots out here — wakes would be invisible clutter
     const b = this.shared.camera.getVisibleBounds();
     for (const id in world.entities) {
       const s = world.entities[id];
@@ -340,7 +356,7 @@ export class SimScene extends Scene {
       worldRenderer.beginFrame();
       worldRenderer.drawIslands(econ.islands, bounds, now, highlightIsland);
       if (this._overlayIdx > 0) worldRenderer.drawOverlay(econ.islands, bounds, OVERLAYS[this._overlayIdx].key, now);
-      worldRenderer.drawWakes(effects.getTrails(), now);
+      if (camera.getZoom() >= WAKE_MIN_ZOOM) worldRenderer.drawWakes(effects.getTrails(), now); // skipped at overview (see _emitWakes)
       worldRenderer.drawStorms(this.sim.storms, bounds, now); // named tempests, under the ships
       worldRenderer.drawShips(world.entities, this.sim.islandsById, bounds, now, highlightHome);
       worldRenderer.drawEffects(effects, now); // shipwreck splashes + debris
@@ -350,7 +366,7 @@ export class SimScene extends Scene {
       this._windIndicator(ctx);
       this._overlayLegend(ctx); // active data-overlay key + gradient scale
       this._newsFeed(ctx);
-      this._hoverTooltip(ctx); // drawn before the UI so a docked panel occludes it cleanly
+      this._hoverTooltip(ctx, now); // drawn before the UI so a docked panel occludes it cleanly
     } else {
       this._overlay(ctx);
     }
@@ -358,12 +374,29 @@ export class SimScene extends Scene {
     this.ui.draw(ctx);
   }
 
+  /** The hover-tooltip's hit-test, memoised. Brute-force picking is O(N+S); running it on every
+   *  frame even over empty water was the R4 render hotspot at scale. Recompute only when the cursor
+   *  actually moved, or on a slow throttle (so a ship drifting under a parked cursor still refreshes
+   *  the card). The click-path pick (`_pickAt`) stays uncached — a click always tests fresh. */
+  _hoverPick(now) {
+    const c = this._cursor;
+    if (!c) return null;
+    const lp = this._lastPickCursor;
+    const moved = !lp || lp.sx !== c.sx || lp.sy !== c.sy;
+    if (moved || this._hoverPickTime == null || (now - this._hoverPickTime) >= HOVER_PICK_MS) {
+      this._hoverPickResult = this._pickTarget(c.sx, c.sy);
+      this._lastPickCursor = { sx: c.sx, sy: c.sy };
+      this._hoverPickTime = now;
+    }
+    return this._hoverPickResult;
+  }
+
   /** A small quick-facts card that follows the cursor over an island or ship. Recomputed
    *  each frame from the last cursor position, so it tracks ships moving underneath it. */
-  _hoverTooltip(ctx) {
+  _hoverTooltip(ctx, now) {
     const c = this._cursor;
     if (!c || (this._press && this._press.moved)) return; // hidden while dragging the map
-    const t = this._pickTarget(c.sx, c.sy);
+    const t = this._hoverPick(now);
     if (!t) return;
     const lines = t.kind === 'island' ? this._islandTip(t.id) : this._shipTip(t.id);
     if (!lines || !lines.length) return;

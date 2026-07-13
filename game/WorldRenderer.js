@@ -67,6 +67,14 @@ const PRIVATEER_HULL = '#2f4b6e';
 // Hull class reads at a glance from size: a nimble sloop is small, a brig standard, a galleon big.
 const SHIP_TYPE_SCALE = { sloop: 0.82, brig: 1.0, galleon: 1.32 };
 
+// Overview level-of-detail thresholds (screen-space radius, px). Zoomed far enough out that
+// EVERY island/ship is on-screen at once, the full procedural silhouette / declarative ship art
+// is both illegible AND the dominant cost (per-island shadow-blur blobs, per-ship art). Below
+// these sizes we draw a cheap flat dot instead — the overview stays smooth at 1000s of ports/ships.
+// Above them the detailed path is byte-for-byte the same as before (LOD is purely additive).
+const ISLE_LOD_MIN = 8;
+const SHIP_LOD_MIN = 5;
+
 export class WorldRenderer {
   constructor(ctx, camera, art, vfx, effectsRenderer) {
     this.ctx = ctx;
@@ -96,9 +104,15 @@ export class WorldRenderer {
       const rad = islandRadius(isl);
       if (!inBounds(isl.x, isl.y, rad * 1.5, bounds)) continue;
       this._seen.add('i:' + isl.id);
-      const L = this._layout(isl.id, isl.type);
       const { sx, sy } = this.camera.worldToScreen(isl.x, isl.y);
       const R = rad * zoom;
+
+      // Overview LOD: below a legible size (zoomed right out, where all N ports are on-screen)
+      // draw a flat dot + a single static trouble-ring, skipping the whole procedural silhouette
+      // (3 shadow-blur blobs), town, badges, dock, and animated affliction rings.
+      if (R < ISLE_LOD_MIN) { this._islandDot(ctx, isl, sx, sy, R, now, highlightIslandId); continue; }
+
+      const L = this._layout(isl.id, isl.type);
 
       // Shallows halo.
       ctx.save();
@@ -150,6 +164,30 @@ export class WorldRenderer {
 
       if (zoom > 0.32) this._label(isl.name, sx, sy, R);
     }
+  }
+
+  /** Overview LOD stand-in for an island: a flat dot (shallows + interior colour, no shadow-blur)
+   *  plus a single static ring for its worst affliction — the "something's wrong here" cue that the
+   *  animated rings give up close, kept legible at overview zoom without their per-frame cost. */
+  _islandDot(ctx, isl, sx, sy, R, now, highlightIslandId) {
+    const r = Math.max(2, R);
+    ctx.save();
+    ctx.fillStyle = 'rgba(99, 207, 228, 0.30)'; // faint shallows so a speck still reads as land-in-water
+    ctx.beginPath(); ctx.arc(sx, sy, r * 1.5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = isl.color || '#8fbf5a';
+    ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    // Worst affliction first (haven > rebellion > plague > blight > danger) → one cheap static stroke.
+    const trouble = isl.haven ? '#8a1420' : isl.rebellion ? '#ff5a1e' : isl.plague ? '#cf7bee'
+      : isl.blight ? '#ff9a3c' : (isl.danger > 0.25 ? '#c0392b' : null);
+    if (trouble) {
+      ctx.save();
+      ctx.globalAlpha = 0.85;
+      ctx.strokeStyle = trouble; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(sx, sy, Math.max(r + 3, 6), 0, Math.PI * 2); ctx.stroke();
+      ctx.restore();
+    }
+    if (highlightIslandId && isl.id === highlightIslandId) this._homeIslandRing(sx, sy, Math.max(R * 1.35, 26), now);
   }
 
   /** Data overlay: tint every visible port by one stat (a heatmap layer). Drawn over the islands
@@ -426,7 +464,11 @@ export class WorldRenderer {
       // Hull tint tells faction at a glance: pirate crimson-black, privateer naval blue, else home.
       const hull = s.pirate ? PIRATE_HULL : s.privateer ? PRIVATEER_HULL : color;
       const r = SHIP_RADIUS * (SHIP_TYPE_SCALE[s.type] || 1); // size reads the hull class
-      this._drawArtAt(def, s.x, s.y, r, hull, s.state || 'sailing', now, this._trans('s:' + id), s.heading || 0);
+      // Overview LOD: a ship shrunk to a speck draws as a flat hull-colour dot instead of full
+      // declarative art. The clamped faction markers below still draw, so pirates/privateers/
+      // revolts stay spottable at any zoom — only the mass of merchants become cheap dots.
+      if (r * zoom < SHIP_LOD_MIN) this._shipDot(s.x, s.y, hull);
+      else this._drawArtAt(def, s.x, s.y, r, hull, s.state || 'sailing', now, this._trans('s:' + id), s.heading || 0);
       // A crew in open revolt (mutiny/defection standoff) — a stark pulsing marker, clamped so
       // it's spotted anywhere on the map even at overview zoom.
       if (s.revolt) this._revoltRing(s.x, s.y, Math.max(SHIP_RADIUS * 1.9 * zoom, 13), now);
@@ -560,6 +602,16 @@ export class WorldRenderer {
     if (!ring) return;
     const r = sel.kind === 'island' ? islandRadius(sel.data) * 1.3 : SHIP_RADIUS * 2.0;
     this.effectsRenderer.drawEffectAt(ring, sel.data.x, sel.data.y, null, r, now);
+  }
+
+  /** Overview LOD stand-in for a ship: a small flat hull-colour dot (no heading, no art interpreter). */
+  _shipDot(wx, wy, color) {
+    const { sx, sy } = this.camera.worldToScreen(wx, wy);
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(sx, sy, 2.2, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
   }
 
   _drawArtAt(def, wx, wy, r, color, state, now, transition, rotation = 0) {

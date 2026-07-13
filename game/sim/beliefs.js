@@ -49,6 +49,33 @@ function record(book, islandId, good, mid, day) {
   if (!cur || day >= cur.day) per[good] = { mid, day };
 }
 
+/** The sim-day of the freshest good in a subject's price sub-book. */
+function freshestDay(per) {
+  let d = -1e9;
+  for (const g in per) if (per[g].day > d) d = per[g].day;
+  return d;
+}
+
+/** Drop price beliefs past the forget horizon, and — the SCALING guard — if a book still holds more
+ *  than BELIEF_MAX_SUBJECTS ports, keep only the freshest. Mirrors intel.js.prune (the fact book was
+ *  already bounded this way). DYNAMICS-SAFE for the forget pass: a belief older than BELIEF_STALE_DAYS
+ *  has already fully reverted to the base-price prior in beliefMid, so a fully-stale entry is
+ *  behaviourally identical to "never heard of it" — dropping it changes no trade decision. The cap is
+ *  the hard memory bound that lets an island reach ~1000 neighbours without remembering every market;
+ *  it never bites below BELIEF_MAX_SUBJECTS ports (so small worlds are untouched). */
+function prune(world, book, day) {
+  const t = world.rules;
+  const forget = t.BELIEF_FORGET_DAYS || 30;
+  const cap = t.BELIEF_MAX_SUBJECTS || 64;
+  let ids = Object.keys(book);
+  for (const id of ids) if (day - freshestDay(book[id]) > forget) delete book[id];
+  ids = Object.keys(book);
+  if (ids.length > cap) {
+    ids.sort((a, b) => freshestDay(book[b]) - freshestDay(book[a])); // freshest first
+    for (const id of ids.slice(cap)) delete book[id];
+  }
+}
+
 /** A ship docks at `port`: it OBSERVES the port's live prices firsthand, then hands the port
  *  its logbook — what it has seen on its OWN travels. The port thereby learns the prices at
  *  the islands THIS ship has actually visited (with the ages it saw them).
@@ -74,6 +101,7 @@ export function observeAndGossip(world, port, ship) {
     const per = ship.knows[islId];
     for (const good in per) record(port.beliefs, islId, good, per[good].mid, per[good].day);
   }
+  prune(world, port.beliefs, day); // bound the port's price book (forget horizon + subject cap)
 }
 
 /** Compact per-island intel summary for the UI: how many other markets this island has any

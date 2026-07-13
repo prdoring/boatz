@@ -7,20 +7,23 @@ import { ServerLoop } from '../engine/net/ServerLoop.js';
 import { serialize, deserialize } from '../engine/net/protocol.js';
 import { M, SPEEDS, PROTOCOL_VERSION } from '../game/protocol.js';
 import { buildWorld, stepWorld, worldTotals } from '../game/sim/world.js';
-import { snapshotShips, snapshotEconomy, snapshotLayout, windSnapshot, stormsSnapshot } from '../game/sim/snapshot.js';
+import { snapshotShips, snapshotShipsCold, snapshotEconomy, snapshotLayout, windSnapshot, stormsSnapshot } from '../game/sim/snapshot.js';
 import { generateRoster } from '../game/sim/roster.js';
 import economyRaw from '../data/economy.json' with { type: 'json' };
 
 const TICK_MS = 50;             // 20 Hz real tick
-const SHIP_EVERY = 2;          // ships every 2 ticks -> ~10 Hz
-const ECON_EVERY = 20;         // economy every 20 ticks -> ~1 Hz
+const SHIP_EVERY = 2;          // hot ships every 2 ticks -> ~10 Hz
+const ECON_EVERY = 20;         // economy + cold ships every 20 ticks -> ~1 Hz
 const HEARTBEAT_MS = 15000;
-const MAX_BUFFERED = 512 * 1024; // drop a snapshot for a client backed up past this
+// Backpressure ceiling: skip broadcasting to a client buffered past this (it's fallen behind — send
+// it fresh state, don't grow a backlog). Must comfortably exceed one message; the cold ship + econ
+// frames scale with the world, so this is generous enough for ~1000s of islands/ships.
+const MAX_BUFFERED = 8 * 1024 * 1024;
 
-export function attachSimServer(server, { tickMs = TICK_MS, seed = 0xB0A7, rosterSeed } = {}) {
+export function attachSimServer(server, { tickMs = TICK_MS, seed = 0xB0A7, rosterSeed, islandCount } = {}) {
   // A fresh sea of islands every boot (unless a rosterSeed is pinned, e.g. in tests).
   const rSeed = (rosterSeed != null ? rosterSeed : (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0);
-  const roster = generateRoster(rSeed);
+  const roster = generateRoster(rSeed, islandCount); // islandCount undefined → roster default (fast for tests)
   const world = buildWorld({ economy: structuredClone(economyRaw), roster, seed });
   world.rosterSeed = rSeed; // recorded so a specific sea can be reproduced
   const wss = new WebSocketServer({ server, maxPayload: 64 * 1024 });
@@ -51,6 +54,9 @@ export function attachSimServer(server, { tickMs = TICK_MS, seed = 0xB0A7, roste
   function econMessage(tick) {
     return serialize({ type: M.STATE_ECON, tick, ...snapshotEconomy(world) });
   }
+  function shipsColdMessage(tick) {
+    return serialize({ type: M.STATE_SHIPS_COLD, tick, entities: snapshotShipsCold(world) });
+  }
 
   function sendThrottled(ws, msg) {
     if (ws.readyState !== 1) return;
@@ -64,8 +70,9 @@ export function attachSimServer(server, { tickMs = TICK_MS, seed = 0xB0A7, roste
       for (const ws of wss.clients) sendThrottled(ws, msg);
     }
     if (tick % ECON_EVERY === 0) {
-      const msg = econMessage(tick);
-      for (const ws of wss.clients) sendThrottled(ws, msg);
+      const econ = econMessage(tick);
+      const cold = shipsColdMessage(tick);
+      for (const ws of wss.clients) { sendThrottled(ws, cold); sendThrottled(ws, econ); }
     }
   }
 
@@ -84,6 +91,7 @@ export function attachSimServer(server, { tickMs = TICK_MS, seed = 0xB0A7, roste
       layout: snapshotLayout(world), shipInterval: tickMs * SHIP_EVERY,
     });
     sendNow(ws, { type: M.STATE_ECON, tick: loop.tick, ...snapshotEconomy(world) });
+    sendNow(ws, { type: M.STATE_SHIPS_COLD, tick: loop.tick, entities: snapshotShipsCold(world) });
     sendNow(ws, {
       type: M.STATE_SHIPS, tick: loop.tick, full: true, sentAt: Date.now(),
       simTime: world.simTime, speed: world.speed, paused: world.paused,

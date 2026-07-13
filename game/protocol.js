@@ -10,7 +10,8 @@ import { defineMessageTypes } from '../engine/net/protocol.js';
 
 export const M = defineMessageTypes(
   'WELCOME',      // S->C on connect: { protocolVersion, clientId, tickMs, mapW, mapH, goods, layout, shipInterval }
-  'STATE_SHIPS',  // S->C ~10Hz:      { tick, full, sentAt, simTime, speed, paused, entities:{id:ship} }
+  'STATE_SHIPS',  // S->C ~10Hz HOT:  { tick, full, sentAt, simTime, speed, paused, entities:{id:{x,y,heading,state,type,pirate,privateer}} }
+  'STATE_SHIPS_COLD', // S->C ~1Hz:   { tick, entities:{id:{captain,log,route,cargo,...}} } — panel/slow bulk, merged by id
   'STATE_ECON',   // S->C ~1Hz:       { tick, islands:[...], economy:{...} }
   'SET_SPEED',    // C->S:            { speed?, paused? }  (gated by allowTimeScale)
   'SET_VIEW',     // C->S (reserved): { x, y, w, h, zoom } — AOI viewport, unused in pass 1

@@ -15,6 +15,7 @@
 
 import { streamFloat } from './rng.js';
 import { foodDays } from './island.js';
+import { fleetAt } from './fleet.js';
 
 const CROPS = new Set(['Grain', 'Meat', 'Fiber', 'Wood']); // organic → can blight
 
@@ -72,10 +73,9 @@ export function maybeSink(world, ship, distance) {
   const t = world.rules;
   if (!t.SINK_PER_1000 || distance <= 0) return false;
   // Never sink a port's LAST ship — with no ship it couldn't even sail to buy a
-  // replacement, so it would be stranded (can't import food) forever.
-  let homeFleet = 0;
-  for (const s of world.ships) if (s.homeId === ship.homeId) homeFleet++;
-  if (homeFleet <= 1) return false;
+  // replacement, so it would be stranded (can't import food) forever. (O(1) census read —
+  // the movement systems rebuild world.fleetByHome at their start; see fleet.js.)
+  if (fleetAt(world, ship.homeId).total <= 1) return false;
   if (streamFloat(world, 'sink') >= t.SINK_PER_1000 * distance / 1000) return false;
   const home = world.islandsById.get(ship.homeId);
   logEvent(world, 'wreck', `${ship.name || 'A merchant ship'} foundered and sank${home ? ' — a ' + home.name + ' vessel' : ''}.`, { x: ship.x, y: ship.y });

@@ -26,6 +26,7 @@
 
 import { currentDay } from './beliefs.js';
 import { foodDays } from './island.js';
+import { eachIslandInRange } from './grid.js';
 
 /** The live, observable facts about a port — what a ship sees with its own eyes on arrival. */
 export function liveFact(world, island, day) {
@@ -87,14 +88,12 @@ export function observeFacts(world, port, ship) {
 export function sightAtSea(world, ship) {
   const t = world.rules;
   const range = t.SIGHT_RANGE_AT_SEA || 700;
-  const r2 = range * range;
   const day = currentDay(world);
   if (!ship.intel) ship.intel = {};
-  for (const isl of world.islands) {
-    const dx = isl.x - ship.x, dy = isl.y - ship.y;
-    if (dx * dx + dy * dy > r2) continue;
-    note(ship.intel, isl.id, liveFact(world, isl, day));
-  }
+  // Static island grid → only the ports within sight range are visited, not the whole roster.
+  // Exact: same set as the full-scan distance filter; note() is newest-wins and every sighting
+  // carries the same `day`, so visitation order is immaterial.
+  eachIslandInRange(world, ship.x, ship.y, range, (isl) => note(ship.intel, isl.id, liveFact(world, isl, day)));
 }
 
 /** Believed pirate-danger of `subjectId`, as `island` understands it on `day`. Unknown → 0

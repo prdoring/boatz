@@ -13,6 +13,7 @@
 import { currentDay } from './beliefs.js';
 import { logEvent } from './events.js';
 import { dist } from './queries.js';
+import { fleetAt } from './fleet.js';
 
 /** Estimate the sim-day a voyage should be back by: the full round-trip path length at the ship's
  *  speed, plus a dock spell per stop, plus a generous grace for wind, waiting, and detours. */
@@ -53,8 +54,7 @@ export function noteReturn(home, ship) {
  *  merely late. Hard fleet caps (launch/development) still use the LIVE count — beliefs guide
  *  decisions, truth guards invariants. */
 export function fleetBelievedByHome(world, island, liveIds) {
-  let owned = 0;
-  for (const s of world.ships) if (s.homeId === island.id) owned++;
+  const owned = fleetAt(world, island.id).total; // ships afloat under its flag (O(1) census read)
   let ghosts = 0;
   const exp = island.expecting;
   if (exp) {

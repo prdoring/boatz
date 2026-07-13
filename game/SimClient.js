@@ -23,6 +23,11 @@ export class SimClient {
       renderDelay: RENDER_DELAY, maxSnapshots: 12,
       fields: { lerp: SHIP_LERP, lerpAngle: SHIP_ANGLE, copy: SHIP_COPY },
     });
+    // Ship COLD fields (captain, intel log, route, cargo, morale…) arrive on a separate ~1 Hz
+    // channel and are merged by id onto the interpolated hot entity in getWorld — keeps the heavy,
+    // slow-changing bulk off the 10 Hz stream. Full snapshot each tick (replaced wholesale → prunes
+    // ships that are gone).
+    this._shipCold = new Map();
 
     this.islandsById = new Map();  // id -> island (static layout enriched by econ, merged by id)
     this.islands = [];             // array view (insertion order)
@@ -51,6 +56,7 @@ export class SimClient {
     this.net
       .on(M.WELCOME, (m) => this._onWelcome(m))
       .on(M.STATE_SHIPS, (m) => this._onShips(m))
+      .on(M.STATE_SHIPS_COLD, (m) => this._onShipsCold(m))
       .on(M.STATE_ECON, (m) => this._onEcon(m))
       .onOpen(() => { if (this.status === 'disconnected') this.status = 'connecting'; })
       .onClose(() => { this.status = 'disconnected'; })
@@ -95,6 +101,11 @@ export class SimClient {
     if (this.status !== 'disconnected') this.status = 'live';
   }
 
+  _onShipsCold(m) {
+    // Full snapshot of every ship's cold fields — replace wholesale so ships that are gone drop out.
+    this._shipCold = new Map(Object.entries(m.entities || {}));
+  }
+
   _onEcon(m) {
     for (const isl of (m.islands || [])) this._mergeIsland(isl);
     if (m.economy) this.economy = m.economy;
@@ -132,8 +143,19 @@ export class SimClient {
   }
 
   // ─── Reads (called by scene / renderer / panels each frame) ──────
-  /** Interpolated world snapshot `{ entities:{id:ship}, simTime, speed, paused, ... }` or null. */
-  getWorld(now) { return this.buffer.getInterpolated(now); }
+  /** Interpolated world snapshot `{ entities:{id:ship}, simTime, speed, paused, ... }` or null. The
+   *  ship COLD fields (from the ~1 Hz channel) are merged by id onto each interpolated entity here,
+   *  so scenes/panels see a whole ship (position from the hot stream, detail from the cold one). */
+  getWorld(now) {
+    const w = this.buffer.getInterpolated(now);
+    if (w && w.entities && this._shipCold.size) {
+      for (const id in w.entities) {
+        const cold = this._shipCold.get(id);
+        if (cold) Object.assign(w.entities[id], cold);
+      }
+    }
+    return w;
+  }
 
   getEcon() {
     return {

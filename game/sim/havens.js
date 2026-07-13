@@ -15,6 +15,7 @@ import { createShip } from './ship.js';
 import { turnPirate, pirateCount, canTurnPirate } from './piracy.js';
 import { shipName } from './naming.js';
 import { installMagistrate } from './magistrate.js';
+import { computeFleetByHome, fleetAt } from './fleet.js';
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
@@ -29,6 +30,7 @@ export function havens(world, h) {
   const daily = day !== world._havenDay;
   if (daily) world._havenDay = day;
   const dDay = h / t.SIM_DAY_SECONDS;
+  computeFleetByHome(world); // per-home pirate counts for driveHaven's build gate (O(S))
 
   const havenList = [];
   for (const isl of world.islands) {
@@ -115,7 +117,7 @@ function driveHaven(world, isl, dDay, daily) {
 
   // BUILD a pirate from fenced plunder + hull timber and iron (a real cost — nothing free).
   if (daily && world.simTime >= (isl._havenBuildCd || 0)) {
-    const based = world.ships.reduce((n, s) => n + (s.pirate && s.homeId === isl.id ? 1 : 0), 0);
+    const based = fleetAt(world, isl.id).pirate;
     const roomInSeas = pirateCount(world) < Math.max(2, Math.floor(world.ships.length * t.PIRATE_MAX_FRAC * 2.5)); // havens lift the ceiling a touch
     if (based < t.HAVEN_MAX_PIRATES_EACH && roomInSeas
         && (isl.gold || 0) >= t.HAVEN_BUILD_GOLD + t.HAVEN_BUILD_RESERVE

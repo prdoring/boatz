@@ -17,7 +17,29 @@ import { makeCaptain } from './captains.js';
 import { installMagistrate } from './magistrate.js';
 import { turnPirate } from './piracy.js';
 import { shipName } from './naming.js';
+import { REFERENCE_ISLANDS } from './roster.js';
 import { GOLD, PEOPLE } from './resources.js';
+
+/** Scale the count-dependent caps to the SIZE of the sea, relative to the REFERENCE_ISLANDS (60)
+ *  baseline the economy was tuned at — so density stays constant as the island count grows: the
+ *  global fleet cap tracks the fleet (else a 250-island sea starts over-cap and its fleet only
+ *  decays → ports can't replace lost ships → famine), and pirate presence keeps pace (else the
+ *  seeded rogues + the at-large floor are lost in a far bigger ocean). A NO-OP at N ≤ REFERENCE
+ *  (max/guard keeps the tuned values), so seeded 60-island tests stay byte-identical. Mutates the
+ *  per-world tuning clone (the host deep-clones the economy per world, so this is once-per-world). */
+export function scaleTuningForCount(tuning, n) {
+  const f = n / REFERENCE_ISLANDS;
+  if (f <= 1) return; // small seas keep the tuned constants exactly
+  // The global fleet cap tracks the sea so a bigger world isn't born already over-cap — otherwise its
+  // fleet can only DECAY (the cap forbids replacement), ports can't rebuild lost hulls, and remote
+  // outposts starve into abandonment. NOTE we deliberately do NOT raise START_SHIPS_PER_ISLAND with N:
+  // adding ships globally never reaches an orphaned outpost (it keeps 0 ships homed either way) and only
+  // adds crew-food demand + upkeep drain — measured, it makes the starving-island tail slightly WORSE.
+  tuning.MAX_SHIPS_TOTAL = Math.max(tuning.MAX_SHIPS_TOTAL, Math.round(n * tuning.START_SHIPS_PER_ISLAND * 2.2));
+  // Pirate presence keeps pace with the sea so the seeded rogues + at-large floor aren't lost in it.
+  tuning.START_PIRATES = Math.round((tuning.START_PIRATES || 0) * f);
+  tuning.MIN_PIRATES_AT_LARGE = Math.round((tuning.MIN_PIRATES_AT_LARGE || 0) * f);
+}
 
 /** A starting hull for a port's fleet, reflecting its size: big ports launch brigs and the odd
  *  galleon; modest ports run fast little sloops — with seeded variety so no two fleets are alike. */
@@ -41,6 +63,7 @@ export function prepareEconomy(economy) {
 export function buildWorld({ economy, roster, seed = 1337 }) {
   prepareEconomy(economy);
   const tuning = economy.tuning;
+  scaleTuningForCount(tuning, roster.islands.length); // count-dependent caps scale with the sea (no-op at N≤60)
 
   const world = {
     seed: seed >>> 0,

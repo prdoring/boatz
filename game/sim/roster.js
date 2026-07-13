@@ -29,7 +29,10 @@ const NAMEPRE = {
 const SHIPPRE = ['Keel', 'Harbor', 'Dock', 'Mast', 'Anchor'];
 const SUF = ['peak', 'holm', 'hold', 'moor', 'bay', 'field', 'vale', 'cliff', 'port', 'fell', 'haven', 'reach', 'watch', 'ford', 'shoal', 'cove', 'ridge', 'strand', 'wick', 'mere', 'crag', 'landing', 'point', 'stead'];
 
-const OCEAN_W = 9600, OCEAN_H = 6800, N = 60;
+// Density reference: a 60-island sea in a 9600×6800 ocean. Larger seas keep this island
+// density by scaling the ocean ∝√N, so spacing/travel-times stay comparable at any count.
+const BASE_W = 9600, BASE_H = 6800, BASE_N = 60;
+export const REFERENCE_ISLANDS = BASE_N; // the density/tuning reference (60-island sea)
 
 function goodsFor(p, s, shipyard) {
   const has = new Set([p, s]);
@@ -45,7 +48,7 @@ function goodsFor(p, s, shipyard) {
 }
 
 /** Scatter island positions into organic archipelagos. Returns {positions, clusterOf}. */
-function scatter(rng) {
+function scatter(rng, N, OCEAN_W, OCEAN_H) {
   const clusters = [];
   for (let rem = N; rem > 0;) {
     const roll = rng();
@@ -99,12 +102,20 @@ function pickScale(rng) {
 }
 const kFor = (base, rng) => Math.max(24, Math.round(base * pickScale(rng)));
 
-export function generateRoster(seed = 1) {
+export function generateRoster(seed = 1, count = BASE_N) {
+  // N islands in an ocean scaled ∝√N (constant density). At the default N=60 this reduces
+  // EXACTLY to the historical roster (same ocean, same per-resource count, 5 shipyards) so
+  // seeded tests stay byte-identical — larger counts only extend the same construction.
+  const N = Math.max(1, Math.round(count));
+  const scale = Math.sqrt(N / BASE_N);
+  const OCEAN_W = Math.round(BASE_W * scale), OCEAN_H = Math.round(BASE_H * scale);
+  const perRes = Math.ceil(N / RES.length);   // producers per base resource (10 at N=60)
+  const nYards = Math.max(5, Math.round(N / 12)); // shipyards ∝ N (5 at N=60)
   const rng = makeRng(seed);
 
   // Resources shuffled so archipelagos get a diverse mix (food reachable within a cluster).
   const resPool = [];
-  for (const r of RES) for (let i = 0; i < 10; i++) resPool.push(r);
+  for (const r of RES) for (let i = 0; i < perRes; i++) resPool.push(r);
   for (let i = resPool.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [resPool[i], resPool[j]] = [resPool[j], resPool[i]]; }
 
   // Try a few scatterings; keep the one where the farthest island is closest to some food
@@ -112,7 +123,7 @@ export function generateRoster(seed = 1) {
   const foodPrimary = new Set(['Grain', 'Meat']);
   let best = null, bestScore = Infinity;
   for (let attempt = 0; attempt < 12; attempt++) {
-    const { positions, clusterOf } = scatter(rng);
+    const { positions, clusterOf } = scatter(rng, N, OCEAN_W, OCEAN_H);
     const foodIdx = [];
     for (let i = 0; i < N; i++) if (foodPrimary.has(resPool[i])) foodIdx.push(i);
     let worst = 0;
@@ -140,18 +151,18 @@ export function generateRoster(seed = 1) {
     islands.push({ id: idFor(nm), name: nm, x: positions[i].x, y: positions[i].y, type, color, primary, secondary, k, produces: goodsFor(primary, secondary, false), _cluster: clusterOf[i] });
   }
 
-  // 5 shipyards among Iron+Wood islands, one per cluster where possible.
+  // nYards shipyards (∝ N; 5 at N=60) among Iron+Wood islands, one per cluster where possible.
   let made = 0; const usedClusters = new Set();
   for (const isl of islands) {
-    if (made >= 5) break;
+    if (made >= nYards) break;
     const has = new Set([isl.primary, isl.secondary]);
     if (has.has('Iron') && has.has('Wood') && !usedClusters.has(isl._cluster)) {
       isl.type = 'shipyard'; isl.color = '#b08a5a'; isl.k = kFor(KBASE.shipyard, rng);
-      isl.name = uniqName(SHIPPRE[made] + SUF[(made * 7) % SUF.length]); isl.produces = goodsFor(isl.primary, isl.secondary, true);
+      isl.name = uniqName(SHIPPRE[made % SHIPPRE.length] + SUF[(made * 7) % SUF.length]); isl.produces = goodsFor(isl.primary, isl.secondary, true);
       usedClusters.add(isl._cluster); made++;
     }
   }
-  for (const isl of islands) { if (made >= 5) break; const has = new Set([isl.primary, isl.secondary]); if (has.has('Iron') && has.has('Wood') && isl.type !== 'shipyard') { isl.type = 'shipyard'; isl.color = '#b08a5a'; isl.produces = goodsFor(isl.primary, isl.secondary, true); made++; } }
+  for (const isl of islands) { if (made >= nYards) break; const has = new Set([isl.primary, isl.secondary]); if (has.has('Iron') && has.has('Wood') && isl.type !== 'shipyard') { isl.type = 'shipyard'; isl.color = '#b08a5a'; isl.produces = goodsFor(isl.primary, isl.secondary, true); made++; } }
   for (const isl of islands) delete isl._cluster;
 
   return { ocean: { width: OCEAN_W, height: OCEAN_H }, islands };

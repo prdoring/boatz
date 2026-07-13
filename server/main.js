@@ -8,7 +8,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { PORT, HOST, EDITOR_PASSWORD, DIRS, MIME, MAX_BACKUPS, getSaveAllowlist } from './config.js';
+import { PORT, HOST, EDITOR_PASSWORD, ISLANDS, DIRS, MIME, MAX_BACKUPS, getSaveAllowlist } from './config.js';
 import { handleSaveData, handleManageCollection, readBody } from './saveData.js';
 import { attachSimServer } from './simHost.js'; // side-effect-free import; opens no socket until called
 
@@ -233,7 +233,7 @@ const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv
 if (isMain) {
   // The authoritative economy simulation + its WebSocket server, sharing this HTTP
   // port. Browser viewers connect with `new NetworkClient()` (same host/port).
-  const sim = attachSimServer(server);
+  const sim = attachSimServer(server, { islandCount: ISLANDS });
 
   server.listen(PORT, HOST, () => {
     console.log(`Pat_Engine running → http://localhost:${PORT}/  (editor: /editor)  [bound ${HOST}:${PORT}]`);

@@ -12,10 +12,14 @@ import { rankOf, skill01 } from './captains.js';
 import { foodDaysAboard } from './crew.js';
 import { magRank, magSkill, ambitionLabel } from './magistrate.js';
 
-// StateBuffer field descriptors for ships (the interpolated `entities` map).
+// StateBuffer field descriptors for ships (the interpolated `entities` map). Only the HOT fields
+// ride the ~10 Hz channel (position lerps; the art/marker fields copy). Everything else — the panel
+// detail and slow-changing bulk (captain, the intel LOG, route, cargo, morale…) — travels on the
+// ~1 Hz COLD channel (snapshotShipsCold) and is merged client-side by id. At ~2000 ships the log +
+// captain alone were ~60% of a 2 MB/frame stream; splitting them off cuts the hot frame ~7×.
 export const SHIP_LERP = ['x', 'y'];
 export const SHIP_ANGLE = ['heading'];
-export const SHIP_COPY = ['state', 'type', 'homeId', 'destId', 'reason', 'eta', 'cargo', 'gold', 'route', 'cap', 'used', 'sick', 'captain', 'morale', 'foodDays', 'revolt', 'name', 'pirate', 'privateer', 'bounty', 'log'];
+export const SHIP_COPY = ['state', 'type', 'pirate', 'privateer']; // hot, non-interpolated (art/marker)
 
 /** A ship's LOGBOOK for the panel — the ports it currently carries intel on, freshest first, each
  *  tagged with how many days old the sighting is and any danger/haven it noted. This is the physical
@@ -48,8 +52,26 @@ function compactCargo(cargo) {
   return out;
 }
 
-/** id → ship, the map StateBuffer interpolates. */
+/** id → ship HOT fields (position + art/marker state) — the ~10 Hz interpolated stream. Kept small:
+ *  the panel-detail and slow bulk go on the cold channel (snapshotShipsCold). */
 export function snapshotShips(world) {
+  const out = {};
+  for (const s of world.ships) {
+    out[s.id] = {
+      x: s.x, y: s.y, heading: s.heading,
+      state: displayState(s.state),
+      type: s.type,
+      pirate: !!s.pirate, // flying the black flag → distinct art + panel + map marker
+      privateer: !!s.privateer, // a commissioned pirate-hunter → distinct art + panel + marker
+    };
+  }
+  return out;
+}
+
+/** id → ship COLD fields — the slow-changing / panel-only bulk, sent at ~1 Hz and merged client-side
+ *  by id onto the interpolated hot entity. The intel LOG and captain object dominate the payload and
+ *  barely change frame-to-frame, so this is where the bandwidth savings live. */
+export function snapshotShipsCold(world) {
   const out = {};
   const day = currentDay(world);
   for (const s of world.ships) {
@@ -58,9 +80,6 @@ export function snapshotShips(world) {
     const moving = s.state === 'outbound' || s.state === 'inbound';
     const eta = moving ? Math.round(Math.hypot(s.targetX - s.x, s.targetY - s.y) / s.speed) : 0;
     out[s.id] = {
-      x: s.x, y: s.y, heading: s.heading,
-      state: displayState(s.state),
-      type: s.type,
       homeId: s.homeId,
       destId: cur ? cur.islandId : (s.state === 'inbound' ? s.homeId : null),
       reason: v ? v.reason : null,
@@ -72,8 +91,6 @@ export function snapshotShips(world) {
       gold: Math.round(s.cargo[GOLD] || 0),
       sick: !!s.infected,
       name: s.name || null,
-      pirate: !!s.pirate, // flying the black flag → distinct art + panel + map marker
-      privateer: !!s.privateer, // a commissioned pirate-hunter → distinct art + panel + marker
       bounty: Math.round(s.bounty || 0), // gold on this (pirate's) head — shown in the panel/tip
       log: shipLog(world, s, day), // the intel this ship is carrying (its logbook) — for the panel's Log tab
       morale: round2(s.morale != null ? s.morale : 1),
@@ -107,15 +124,16 @@ export function snapshotEconomy(world) {
       sell[res] = round2(ask);  // price the island CHARGES to sell to a ship
       stock[res] = Math.round(isl.stock[res]);
     }
-    const rel = repSummary(isl);
+    const rel = repSummary(world, isl, day);
     return {
-      id: isl.id, x: isl.x, y: isl.y, name: isl.name, type: isl.type, color: isl.color,
-      population: Math.floor(isl.population), k: isl.k,
+      // STATIC layout (id/x/y/name/type/color/k/primary/secondary/produces) travels ONCE in WELCOME
+      // and the client merges by id — so it's omitted here (only `id` stays, as the merge key).
+      id: isl.id,
+      population: Math.floor(isl.population),
       gold: Math.floor(isl.gold),
       civ: round2(isl.civ),
       foodDays: round1(foodDays(isl, world.rules)), // days of food on hand → panel + food overlay
 
-      primary: isl.primary, secondary: isl.secondary, produces: isl.produces,
       stock, buy, sell,
       dockedShipIds: docked[isl.id] || [],
       allies: rel.allies, rivals: rel.rivals,
@@ -160,20 +178,36 @@ export function stormsSnapshot(world) {
   return world.storms.map((s) => ({ id: s.id, name: s.name, x: Math.round(s.x), y: Math.round(s.y), r: Math.round(s.r) }));
 }
 
-/** Static island layout for the WELCOME message (positions never change). */
+/** Static island layout for the WELCOME message (positions/identity/production never change), so it
+ *  is sent once and the ~1 Hz econ frame omits it (merged by id on the client). */
 export function snapshotLayout(world) {
-  return world.islands.map((i) => ({ id: i.id, x: i.x, y: i.y, name: i.name, type: i.type, color: i.color, k: i.k }));
+  return world.islands.map((i) => ({
+    id: i.id, x: i.x, y: i.y, name: i.name, type: i.type, color: i.color, k: i.k,
+    primary: i.primary, secondary: i.secondary, produces: i.produces,
+  }));
 }
 
-/** Top few allies (fondest) and rivals (most hostile) for the info panel. */
-function repSummary(isl) {
-  if (!isl.rep) return { allies: [], rivals: [] };
-  const es = [];
-  for (const id in isl.rep) es.push({ id, v: round2(isl.rep[id]) });
-  es.sort((a, b) => b.v - a.v);
-  const allies = es.filter((e) => e.v > 0.05).slice(0, 3);
-  const rivals = es.filter((e) => e.v < -0.05).slice(-3).reverse();
-  return { allies, rivals };
+/** Top few allies (fondest) and rivals (most hostile) for the info panel. This is a PURELY COSMETIC
+ *  wire field (never read by the sim), and an island's dense rep map only shifts materially on the
+ *  once-per-sim-day reputation tick — so it's cached per sim-day in an off-island map (world._repTop,
+ *  not serialized) rather than re-sorting every island's whole rep map on every ~1 Hz broadcast
+ *  (the O(N² log N) econ wall). Intra-day trade nudges show up on the next day's refresh. */
+function repSummary(world, isl, day) {
+  let cache = world._repTop;
+  if (!cache) cache = world._repTop = new Map();
+  const hit = cache.get(isl.id);
+  if (hit && hit.day === day) return hit;
+  let allies = [], rivals = [];
+  if (isl.rep) {
+    const es = [];
+    for (const id in isl.rep) es.push({ id, v: round2(isl.rep[id]) });
+    es.sort((a, b) => b.v - a.v);
+    allies = es.filter((e) => e.v > 0.05).slice(0, 3);
+    rivals = es.filter((e) => e.v < -0.05).slice(-3).reverse();
+  }
+  const entry = { allies, rivals, day };
+  cache.set(isl.id, entry);
+  return entry;
 }
 
 function round2(v) { return Math.round(v * 100) / 100; }

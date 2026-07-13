@@ -11,18 +11,36 @@
 //   reason  — dominant purpose, for the UI (buyShip > migrate > food > trade).
 
 import { foodDays, producesRaw } from './island.js';
-import { findBestPartner, nearestWhere, nearbyIslands, dist } from './queries.js';
+import { findBestPartner, nearestWhere, dist } from './queries.js';
 import { tradeables } from './resources.js';
 import { bidAsk } from './pricing.js';
 import { intelAge, beliefMid, currentDay } from './beliefs.js';
 import { believedFoodDays, believedHaven, believedCiv } from './intel.js';
 import { navProfile } from './captains.js';
+import { fleetAt } from './fleet.js';
 
 function emptyStop(islandId) { return { islandId, sell: {}, buy: {}, people: 0 }; }
 
 /** Whether `island` is a source of `res` — either a manufactured good it makes, or a raw it mines
  *  (raws live on primary/secondary, NOT in `produces`, which lists only finished goods). */
 function makesRes(island, res) { return island.produces.includes(res) || producesRaw(island, res); }
+
+const EMPTY = Object.freeze([]);
+
+/** Islands that can SOURCE `res` (make the good or mine the raw). Production capability is fixed for
+ *  the roster, so the per-good producer lists are built once and cached on the world (rebuilt only on
+ *  an island-count change / after a load — never serialized). Lets soughtSupply weigh only real
+ *  producers of a good instead of scanning all N islands per needed good. */
+function producersOf(world, res) {
+  let idx = world._producers;
+  if (!idx || idx._n !== world.islands.length) {
+    idx = new Map(); idx._n = world.islands.length;
+    const goods = tradeables(world.economy);
+    for (const p of world.islands) for (const g of goods) if (makesRes(p, g)) { const b = idx.get(g); if (b) b.push(p); else idx.set(g, [p]); }
+    world._producers = idx;
+  }
+  return idx.get(res) || EMPTY;
+}
 
 /** Goods the home needs but whose cheapest KNOWN producer is DEAR (or that it knows no producer of
  *  at all) — the things it ought to shop around for. Returns { good: extraOverBase }, a positive
@@ -40,8 +58,8 @@ export function soughtSupply(world, home) {
     if ((home.stock[res] || 0) >= t.IMPORT_RATIO * home.targets[res]) continue; // not actually short
     const base = Math.max(1, t.PRICE_BASE[res] || 1);
     let bestKnown = Infinity, knownAny = false;
-    for (const p of nearbyIslands(world, home)) {
-      if (!makesRes(p, res)) continue;
+    for (const p of producersOf(world, res)) { // only real producers of `res`, not all N islands
+      if (p === home) continue;
       const per = home.beliefs && home.beliefs[p.id];
       if (!per || !per[res]) continue;                                          // price here is unknown — a scout candidate, not a known quote
       knownAny = true;
@@ -85,7 +103,7 @@ function collectExports(world, home, ratio, perGoodCap, travelMult = 1) {
   return out;
 }
 
-export function planVoyage(world, home, ship) {
+export function planVoyage(world, home, ship, ctx = null) {
   const t = world.rules;
   const cap = ship.capacity;
   const perGoodCap = Math.max(1, cap * t.PER_GOOD_CAP_FRACTION);
@@ -135,7 +153,8 @@ export function planVoyage(world, home, ship) {
     // (intel a ship carried home), not omniscient live truth. A friend it's had no word from is
     // assumed to be coping — so relief follows the shipping lanes that also carry the bad news.
     let ally = null, allyFd = Infinity;
-    for (const p of nearbyIslands(world, home)) {
+    for (const p of world.islands) {
+      if (p === home) continue;
       if ((home.rep ? home.rep[p.id] || 0 : 0) < t.REP_ALLY_AID_MIN) continue; // a true friend
       const fd = believedFoodDays(world, home, p.id, day);
       if (fd >= t.SURVIVAL_DAYS) continue;                                      // believed to be in real trouble
@@ -157,8 +176,12 @@ export function planVoyage(world, home, ship) {
   //     (A rich exporter is rich precisely because its voyages are full of sales, which
   //     would otherwise crowd the purchase out — the catch-22 that meant nobody ever bought.)
   if (home.wantsShip) {
-    const owned = world.ships.filter((s) => s.homeId === home.id).length;
-    const inflight = world.ships.filter((s) => s.homeId === home.id && s.voyage && s.voyage.reason === 'buyShip').length;
+    // Owned + in-flight-purchase counts. In a real dispatch pass `ctx` carries the O(S) census +
+    // the running in-flight tally (fresh as voyages are assigned this pass); a bare 3-arg call
+    // (unit tests) falls back to the exact live scans.
+    const owned = ctx ? fleetAt(world, home.id).total : world.ships.filter((s) => s.homeId === home.id).length;
+    const inflight = ctx ? (ctx.inflight.get(home.id) || 0)
+      : world.ships.filter((s) => s.homeId === home.id && s.voyage && s.voyage.reason === 'buyShip').length;
     if (owned + inflight < t.MAX_SHIPS_PER_ISLAND && world.ships.length + inflight < t.MAX_SHIPS_TOTAL) {
       const yard = nearestWhere(world, home, (p) => (p.stock.Ships || 0) >= 1 && !believedHaven(world, home, p.id, day));
       if (yard && roomForStop(yard.id)) {
@@ -199,7 +222,8 @@ export function planVoyage(world, home, ship) {
     const foodShort = foodDays(home, t) < t.FOOD_SECURITY_DAYS;
     const crowded = home.population > 0.85 * home.k;
     let best = null, bestScore = -Infinity;
-    for (const p of nearbyIslands(world, home)) {
+    for (const p of world.islands) {
+      if (p === home) continue;
       if (p.population >= 0.92 * p.k) continue;                         // no room to take them (live capacity)
       if (believedFoodDays(world, home, p.id, day) < t.FOOD_SECURITY_DAYS) continue; // heard to be able to feed them
       if (believedHaven(world, home, p.id, day)) continue;             // nobody emigrates to a known pirate den
@@ -278,16 +302,19 @@ export function planVoyage(world, home, ship) {
   const addScoutStops = () => {
     const day = currentDay(world);
     const staleBar = shopping ? Math.min(nav.scoutStale, t.SCOUT_SEEK_STALE) : nav.scoutStale;
-    const cand = nearbyIslands(world, home)
-      .map((p) => ({ p, age: intelAge(home, p.id, day) }))
-      .filter((c) => c.age >= staleBar)
-      .map((c) => {
-        let supply = 0; // potential supplier of something the home lacks — and more so if it's overpaying for it
-        for (const g in sought) if (makesRes(c.p, g)) supply += (1 + sought[g]) * t.SCOUT_SUPPLY_WEIGHT;
-        for (const g of needs) if (!sought[g] && makesRes(c.p, g)) supply += t.SCOUT_SUPPLY_WEIGHT * 0.35;
-        return { ...c, score: c.age + supply - dist(home, c.p) * t.SCOUT_DIST_WEIGHT };
-      })
-      .sort((a, b) => b.score - a.score);
+    // Single pass over the islands (world.islands order preserved into the stable sort) — same
+    // candidates, ages and scores as the old map/filter/map chain, without its intermediate arrays.
+    const cand = [];
+    for (const p of world.islands) {
+      if (p === home) continue;
+      const age = intelAge(home, p.id, day);
+      if (age < staleBar) continue;
+      let supply = 0; // potential supplier of something the home lacks — and more so if it's overpaying for it
+      for (const g in sought) if (makesRes(p, g)) supply += (1 + sought[g]) * t.SCOUT_SUPPLY_WEIGHT;
+      for (const g of needs) if (!sought[g] && makesRes(p, g)) supply += t.SCOUT_SUPPLY_WEIGHT * 0.35;
+      cand.push({ p, age, score: age + supply - dist(home, p) * t.SCOUT_DIST_WEIGHT });
+    }
+    cand.sort((a, b) => b.score - a.score);
     for (const c of cand.slice(0, nav.scoutStops)) { if (roomForStop(c.p.id)) { stopFor(c.p.id); scouting = true; } }
   };
   if (stops.length === 0) addScoutStops();

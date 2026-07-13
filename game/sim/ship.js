@@ -14,6 +14,8 @@ import { windMult, upwindness } from './wind.js';
 import { makeCaptain, skill01, awardVoyageXp, navProfile } from './captains.js';
 import { provisionCrew, deviationTarget } from './crew.js';
 import { shipName } from './naming.js';
+import { computeFleetByHome, fleetAt } from './fleet.js';
+import { buildShipGrid, anyShipInRange, countShipsInRange, nearestIsland as gridNearestIsland } from './grid.js';
 
 /** The build a port chooses for a new hull, by its situation: a threatened port arms with a
  *  fighting BRIG, a wealthy hub hauls volume in a GALLEON, and a modest port runs a cheap, fast
@@ -169,8 +171,7 @@ function shouldWaitForWind(world, ship, home, v) {
 function armForDefence(world, home, ship) {
   const t = world.rules;
   const bold = (ship.captain && ship.captain.traits && ship.captain.traits.boldness) || 0.5;
-  let near = 0;
-  for (const s of world.ships) if (s.pirate && Math.hypot(s.x - home.x, s.y - home.y) < t.PIRATE_HUNT_RANGE) near++;
+  const near = countShipsInRange(world._pirateGrid, home.x, home.y, t.PIRATE_HUNT_RANGE);
   const danger = Math.min(1, near / 2);
   const spec = t.SHIP_TYPES && t.SHIP_TYPES[ship.type];
   const wcap = spec ? spec.weaponCap : t.COMBAT_WEAPON_CAP; // a hull mounts only so many guns
@@ -259,7 +260,7 @@ function unloadHome(world, home, ship) {
     // parallel path (island development) may have filled the last berth while this hull was in
     // transit. Any hull that won't fit is shelved as re-sellable stock rather than overflowing the
     // cap (or vanishing) — it cost Wood+Iron to build, so its value is kept.
-    const owned = world.ships.reduce((n, s) => n + (s.homeId === home.id ? 1 : 0), 0);
+    const owned = fleetAt(world, home.id).total;
     const room = Math.max(0, Math.min(t.MAX_SHIPS_PER_ISLAND - owned, t.MAX_SHIPS_TOTAL - world.ships.length));
     const launch = Math.min(bought, room);
     for (let i = 0; i < launch; i++) spawnShip(world, home);
@@ -271,12 +272,9 @@ function unloadHome(world, home, ship) {
  *  island (or null). Pirates disrupt trade this way even when they never catch anyone. */
 function fleeTarget(world, ship) {
   const t = world.rules;
-  let threat = false;
-  for (const s of world.ships) { if (s.pirate && Math.hypot(s.x - ship.x, s.y - ship.y) < t.PIRATE_EVADE_RANGE) { threat = true; break; } }
-  if (!threat) return null;
-  let best = null, bestD = Infinity;
-  for (const p of world.islands) { const d = (p.x - ship.x) ** 2 + (p.y - ship.y) ** 2; if (d < bestD) { bestD = d; best = p; } }
-  return best;
+  // Any pirate within evasion range? One pirate-grid query, not a full-fleet scan per sailing ship.
+  if (!anyShipInRange(world._pirateGrid, ship.x, ship.y, t.PIRATE_EVADE_RANGE)) return null;
+  return gridNearestIsland(world, ship.x, ship.y); // sprint for the nearest port (island grid)
 }
 
 /** Divert a sailing ship to `island` to reprovision — abandons the old plan; docks there
@@ -383,6 +381,11 @@ function updateShip(world, ship, h) {
 
 /** The ship SIM system. Removes any vessels that foundered this step. */
 export function ship(world, h) {
+  computeFleetByHome(world); // fresh per-home census for maybeSink's last-ship guard (O(S), was O(S²))
+  // Pirate positions are fixed for this whole pass (only `piracy`, which runs later, moves them),
+  // so one O(P) grid replaces the per-merchant full-fleet pirate scans in fleeTarget/armForDefence
+  // (the O(S²) wall). Stored on the world so the deep-nested voyage machine can read it.
+  world._pirateGrid = buildShipGrid(world, world.ships.filter((s) => s.pirate && !s._sunk));
   let sunk = false;
   for (const s of world.ships) {
     if (s.pirate || s.privateer) continue; // driven by piracy / antipiracy, not merchant logic

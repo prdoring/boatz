@@ -6,10 +6,12 @@
 import { transfer, cargoUnits, GOLD, PEOPLE } from './resources.js';
 import { bidAsk } from './pricing.js';
 import { planVoyage } from './goals.js';
+import { buildPartnerIndex, clearPartnerIndex } from './queries.js';
 import { recordTrade, repPriceMult, tradeBarred, bumpRep } from './reputation.js';
 import { logEvent, logEventThrottled } from './events.js';
 import { contractPayout } from './contracts.js';
 import { fleetBelievedByHome } from './voyages.js';
+import { computeFleetByHome } from './fleet.js';
 
 /**
  * Set island.wantsShip via hysteresis: a port wealthy enough to buy a ship AND keep a
@@ -40,18 +42,39 @@ function updateShipDemand(world, island, liveIds) {
 
 /** Assign a voyage to each idle, un-tasked NPC ship at its home island. */
 export function dispatch(world) {
+  const t = world.rules;
+  // Per-home ship census (O(S)) — replaces the O(N·S) full-fleet scan that ship-demand did per
+  // island, and the buy-ship gate's per-plan scan. Also track in-flight buy-ship voyages per home
+  // so a wealthy port doesn't queue a second purchase in the same pass (recomputed live below as
+  // voyages are assigned, exactly as the old per-plan filter did).
+  computeFleetByHome(world);
+  // Per-good SELL/BUY candidate index for this pass — every planVoyage's findBestPartner scans only
+  // real candidates for the good, not all N islands (island stock/gold are frozen through dispatch).
+  buildPartnerIndex(world);
   const liveIds = new Set();
-  for (const s of world.ships) liveIds.add(s.id);
+  const inflight = new Map();
+  for (const s of world.ships) {
+    liveIds.add(s.id);
+    if (s.voyage && s.voyage.reason === 'buyShip') inflight.set(s.homeId, (inflight.get(s.homeId) || 0) + 1);
+  }
+  const ctx = { inflight };
   for (const island of world.islands) { if (!island.haven) updateShipDemand(world, island, liveIds); }
   for (const ship of world.ships) {
     if (ship.state !== 'idle' || ship.voyage) continue;
+    // Re-plan cooldown: a ship that just found NO viable voyage waits a short spell before scanning
+    // again, instead of re-running the full O(N) planner every substep forever (the idle-churn
+    // hotspot). A productive ship never hits this — a successful plan leaves the idle state at once,
+    // and one just home has a long-lapsed cooldown, so it plans immediately.
+    if (world.simTime < (ship._planCd || 0)) continue;
     const agent = world.agents[ship.ownerId];
     if (!agent || agent.kind !== 'npc') continue; // player ships are driven by intents
     const home = world.islandsById.get(ship.homeId);
     if (!home || home.haven) continue; // a pirate haven runs no honest trade
-    const v = planVoyage(world, home, ship);
-    if (v) ship.voyage = v;
+    const v = planVoyage(world, home, ship, ctx);
+    if (v) { ship.voyage = v; if (v.reason === 'buyShip') inflight.set(home.id, (inflight.get(home.id) || 0) + 1); }
+    else ship._planCd = world.simTime + t.SHIP_REPLAN_COOLDOWN; // nothing to do — recheck later, not every substep
   }
+  clearPartnerIndex(world); // out-of-dispatch callers must fall back to a live scan
 }
 
 /**

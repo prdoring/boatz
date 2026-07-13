@@ -12,6 +12,7 @@ import { transfer, GOLD } from './resources.js';
 import { spawnShip, chooseShipType } from './ship.js';
 import { nearestWhere } from './queries.js';
 import { isEmbargoed } from './reputation.js';
+import { computeFleetByHome, fleetAt } from './fleet.js';
 
 export function development(world, h) {
   const t = world.rules;
@@ -19,13 +20,14 @@ export function development(world, h) {
   if (day === world._devDay) return;
   world._devDay = day;
   if (world.ships.length >= t.MAX_SHIPS_TOTAL) return;
+  computeFleetByHome(world); // per-home census (daily; spawnShip keeps it fresh as hulls launch)
 
   for (const isl of world.islands) {
     if (world.ships.length >= t.MAX_SHIPS_TOTAL) break;
     if (world.simTime < (isl._devCd || 0)) continue;
     if ((isl.gold || 0) < t.DEVELOP_SHIP_GOLD) continue;          // only a flush port invests
     if (isl.rebellion || isl.haven) continue;                      // a port aflame or turned pirate builds no honest fleet
-    const owned = world.ships.filter((s) => s.homeId === isl.id).length;
+    const owned = fleetAt(world, isl.id).total;
     if (owned >= t.MAX_SHIPS_PER_ISLAND) continue;                 // fleet already at its cap
 
     // Source a hull: its own yard if it is one with stock, else the nearest shipyard that has a

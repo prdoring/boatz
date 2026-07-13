@@ -15,6 +15,8 @@ import { logEvent, maybeSink } from './events.js';
 import { makePirateCaptain, skill01 } from './captains.js';
 import { windMult } from './wind.js';
 import { markDanger, postBounty, payBounty } from './bounty.js';
+import { computeFleetByHome } from './fleet.js';
+import { nearestIsland as gridNearestIsland, buildShipGrid, eachShipInRange, nearestShip } from './grid.js';
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
@@ -70,6 +72,16 @@ export function turnPirate(world, ship) {
 /** SIM system: drive every pirate — hunt, chase, fight, or raid a port for provisions. */
 export function piracy(world, h) {
   const t = world.rules;
+  computeFleetByHome(world); // fresh per-home census for maybeSink's last-ship guard (O(S))
+  // Havens are few and change slowly; scan a per-substep haven list (built O(N) once) instead of
+  // sweeping all N islands per pirate. Preserves world.islands order → same nearest tie-break.
+  const havenList = world.islands.filter((i) => i.haven);
+  // Prey (non-pirate ships) are fixed for this pass — only `ship`/`antipiracy` move them, and both
+  // ran / run outside piracy — so one O(S) grid replaces the per-pirate full-fleet prey scans (the
+  // O(P·S) walls in nearestPrey/nearestSeaMerchant). A by-id map turns the per-pirate `_prey`
+  // re-lookup from an O(S) find into O(1). Both are rebuilt fresh each substep (ships move).
+  world._merchGrid = buildShipGrid(world, world.ships.filter((s) => !s.pirate && !s._sunk));
+  world._shipsById = new Map(world.ships.map((s) => [s.id, s]));
   let sunk = false;
   for (const ship of world.ships) {
     if (!ship.pirate || ship._sunk) continue;
@@ -77,7 +89,8 @@ export function piracy(world, h) {
 
     // Between raids a pirate lies low with its loot (a cooldown) — no fresh fights, just roams.
     const resting = world.simTime < (ship._huntCd || 0);
-    let prey = (!resting && ship._prey) ? world.ships.find((s) => s.id === ship._prey && !s.pirate && !s._sunk) : null;
+    let prey = null;
+    if (!resting && ship._prey) { const p = world._shipsById.get(ship._prey); if (p && !p.pirate && !p._sunk) prey = p; }
     if (!resting && (!prey || dist(ship, prey) > t.PIRATE_HUNT_RANGE)) { prey = nearestPrey(world, ship); ship._prey = prey ? prey.id : null; }
 
     if (prey) {
@@ -92,12 +105,12 @@ export function piracy(world, h) {
     // nearby port when starving, else roam the hunting grounds.
     const hungry = (ship.cargo.Food || 0) < t.CREW_FOOD_PER_DAY;
     const laden = cargoUnits(ship) > ship.capacity * 0.5 || (ship.cargo[GOLD] || 0) > 150;
-    const haven = nearestHaven(world, ship);
+    const haven = nearestHaven(havenList, ship);
     if (haven && (hungry || laden)) {
       if (dist(ship, haven) > t.HAVEN_RESUPPLY_RANGE * 0.5 && sail(world, ship, haven.x, haven.y, speed, h) === 'sunk') sunk = true;
       // else: loitering in the haven's roads — resupply/fence happens in havens.js this same tick
     } else {
-      const isle = nearestIsland(world, ship);
+      const isle = gridNearestIsland(world, ship.x, ship.y);
       if (hungry && isle && dist(ship, isle) <= t.PIRATE_RAID_RANGE
           && world.simTime >= (ship._raidCd || 0) && world.simTime >= (isle._raidCd || 0)) {
         raidIsland(world, ship, isle);
@@ -126,39 +139,29 @@ function sail(world, ship, tx, ty, speed, h) {
   return 'sailing';
 }
 
-/** Nearest merchant (non-pirate, at sea) within the hunt range — the fatter the prize the better. */
+/** Nearest merchant (non-pirate, at sea) within the hunt range — the fatter the prize the better.
+ *  Visits only the ships the merchant grid holds within hunt range (grid excludes pirates); keeps
+ *  the exact in-port skip, range bound, and prize scoring. */
 function nearestPrey(world, ship) {
   const t = world.rules;
   let best = null, bestScore = -Infinity;
-  for (const s of world.ships) {
-    if (s.pirate || s._sunk || s.state === 'idle' || s.state === 'trading') continue; // ships in port are safe
+  eachShipInRange(world._merchGrid, ship.x, ship.y, t.PIRATE_HUNT_RANGE, (s) => {
+    if (s._sunk || s.state === 'idle' || s.state === 'trading') return; // ships in port are safe
     const d = dist(ship, s);
-    if (d > t.PIRATE_HUNT_RANGE) continue;
     const prize = (s.cargo[GOLD] || 0) + cargoUnits(s) * 10; // rough worth of the haul
     const score = prize - d * 2; // near + rich preferred
     if (score > bestScore) { bestScore = score; best = s; }
-  }
-  return best;
-}
-
-function nearestIsland(world, ship) {
-  let best = null, bestD = Infinity;
-  for (const p of world.islands) { const d = dist(ship, p); if (d < bestD) { bestD = d; best = p; } }
+  });
   return best;
 }
 
 /** Nearest merchant already UNDER WAY (outbound/inbound) — a pirate's real prey lives on the lanes,
  *  not in port (ships in harbour are safe and are skipped by nearestPrey). No range cap: it gives a
- *  prowling pirate a heading toward wherever trade is actually moving. */
+ *  prowling pirate a heading toward wherever trade is actually moving. Expanding-ring nearest over
+ *  the merchant grid (excludes pirates); same lowest-index tie-break as the old first-min scan. */
 function nearestSeaMerchant(world, ship) {
-  let best = null, bestD = Infinity;
-  for (const s of world.ships) {
-    if (s.pirate || s.privateer || s._sunk) continue;
-    if (s.state !== 'outbound' && s.state !== 'inbound') continue;
-    const d = (s.x - ship.x) ** 2 + (s.y - ship.y) ** 2;
-    if (d < bestD) { bestD = d; best = s; }
-  }
-  return best;
+  return nearestShip(world._merchGrid, ship.x, ship.y,
+    (s) => !s.privateer && !s._sunk && (s.state === 'outbound' || s.state === 'inbound'));
 }
 
 /** Where a fed, prey-less pirate heads: toward the nearest merchant under way (hunt the lanes), else
@@ -177,10 +180,11 @@ function prowlTarget(world, ship, isle) {
 }
 
 /** Nearest pirate HAVEN — a stronghold a raider can run to for food and to fence loot (havens.js).
- *  Reads the plain `island.haven` field so piracy needn't import havens.js (avoids a cycle). */
-function nearestHaven(world, ship) {
+ *  Scans the pre-filtered per-substep haven list (built once in piracy()), which preserves
+ *  world.islands order so the first-min tie-break is unchanged. */
+function nearestHaven(havens, ship) {
   let best = null, bestD = Infinity;
-  for (const p of world.islands) { if (!p.haven) continue; const d = dist(ship, p); if (d < bestD) { bestD = d; best = p; } }
+  for (const p of havens) { const d = dist(ship, p); if (d < bestD) { bestD = d; best = p; } }
   return best;
 }
 

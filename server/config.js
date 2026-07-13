@@ -17,6 +17,10 @@ export const HOST = process.env.HOST || '127.0.0.1';
 // the right choice for local single-machine development.
 export const EDITOR_PASSWORD = process.env.EDITOR_PASSWORD || null;
 
+// Number of islands in the procedurally-generated sea. The ocean scales ∝√N so island
+// density (and travel times) stay constant as N grows — safe to raise. Override with ISLANDS=<n>.
+export const ISLANDS = Number(process.env.ISLANDS) || 250;
+
 export const DIRS = {
   root: ROOT,
   engine: path.join(ROOT, 'engine'),

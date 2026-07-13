@@ -17,6 +17,8 @@ import { skill01, makeCaptain } from './captains.js';
 import { logEvent } from './events.js';
 import { streamFloat } from './rng.js';
 import { turnPirate, canTurnPirate } from './piracy.js';
+import { nearestIsland } from './grid.js';
+import { fleetAt } from './fleet.js';
 
 const perDay = (world, ratePerDay, h) => ratePerDay * (h / world.rules.SIM_DAY_SECONDS);
 const days = (world, h) => h / world.rules.SIM_DAY_SECONDS;
@@ -200,30 +202,19 @@ function resolveUprising(world, ship) {
   ship.targetX = food.x; ship.targetY = food.y; ship.state = 'outbound';
 }
 
-/** Nearest island (home included) holding some spare food — where a ship runs to reprovision. */
+/** Nearest island (home included) holding some spare food — where a ship runs to reprovision.
+ *  Static island grid → expanding-ring nearest; same set + first-min tie-break as the old scan. */
 function nearestFood(world, ship) {
-  let best = null, bestD = Infinity;
-  for (const p of world.islands) {
-    if ((p.stock.Food || 0) < 15) continue;
-    const d = (p.x - ship.x) ** 2 + (p.y - ship.y) ** 2;
-    if (d < bestD) { bestD = d; best = p; }
-  }
-  return best;
+  return nearestIsland(world, ship.x, ship.y, (p) => (p.stock.Food || 0) >= 15);
 }
 
-/** Where a fed-up crew defects to: the nearest OTHER island with food to spare and fleet room. */
+/** Where a fed-up crew defects to: the nearest OTHER island with food to spare and fleet room.
+ *  Fleet room reads the per-home census (fleetAt self-heals if stale) instead of an O(S) rescan
+ *  per candidate; nearest via the island grid. */
 function defectionTarget(world, ship) {
   const r = world.rules;
-  let best = null, bestD = Infinity;
-  for (const p of world.islands) {
-    if (p.id === ship.homeId) continue;
-    if ((p.stock.Food || 0) < 20) continue;
-    const owned = world.ships.reduce((n, s) => n + (s.homeId === p.id ? 1 : 0), 0);
-    if (owned >= r.MAX_SHIPS_PER_ISLAND) continue;
-    const d = (p.x - ship.x) ** 2 + (p.y - ship.y) ** 2;
-    if (d < bestD) { bestD = d; best = p; }
-  }
-  return best;
+  return nearestIsland(world, ship.x, ship.y, (p) =>
+    p.id !== ship.homeId && (p.stock.Food || 0) >= 20 && fleetAt(world, p.id).total < r.MAX_SHIPS_PER_ISLAND);
 }
 
 /** Should a worried captain abandon his plan and run for the nearest larder? True when food is
@@ -235,12 +226,6 @@ export function deviationTarget(world, ship) {
   const worryDays = r.WORRY_FOOD_DAYS + skill01(ship.captain, r) * r.WORRY_FOOD_SKILL;
   if (foodDaysAboard(world, ship) > worryDays && ship.morale > 0.4) return null;
   const nextId = ship.voyage.stops[ship.voyage.index] ? ship.voyage.stops[ship.voyage.index].islandId : null;
-  let best = null, bestD = Infinity;
-  for (const p of world.islands) {
-    if (p.id === ship.homeId || p.id === nextId) continue;
-    if ((p.stock.Food || 0) < 15) continue;
-    const d = (p.x - ship.x) ** 2 + (p.y - ship.y) ** 2;
-    if (d < bestD) { bestD = d; best = p; }
-  }
-  return best;
+  return nearestIsland(world, ship.x, ship.y, (p) =>
+    p.id !== ship.homeId && p.id !== nextId && (p.stock.Food || 0) >= 15);
 }

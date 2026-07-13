@@ -154,7 +154,9 @@ async function main() {
   //    its WebSocket server (as `npm start` does) so the game page actually connects
   //    and renders live islands/ships — any render/net error then surfaces here.
   const server = http.createServer(requestHandler);
-  const sim = attachSimServer(server);
+  // ISLANDS=<n> smoke-tests a specific sea size (e.g. the shipped 250); unset → roster default (fast).
+  const islandCount = process.env.ISLANDS ? Number(process.env.ISLANDS) : undefined;
+  const sim = attachSimServer(server, { islandCount });
   await new Promise(r => server.listen(0, '127.0.0.1', r));
   const port = server.address().port;
   const origin = `http://127.0.0.1:${port}`;

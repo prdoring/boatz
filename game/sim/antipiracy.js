@@ -19,6 +19,8 @@ import { windMult } from './wind.js';
 import { combatStrength } from './piracy.js';
 import { payBounty } from './bounty.js';
 import { assaultHaven } from './havens.js';
+import { computeFleetByHome, fleetAt } from './fleet.js';
+import { buildShipGrid, anyShipInRange, nearestShip } from './grid.js';
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
@@ -39,16 +41,25 @@ function pirateCount(world) { let n = 0; for (const s of world.ships) if (s.pira
 export function antipiracy(world, h) {
   const t = world.rules;
   const dDay = h / t.SIM_DAY_SECONDS;
+  computeFleetByHome(world); // per-home privateer counts + fresh census for maybeSink (O(S))
   let sunk = false;
 
-  // Peace lets fear fade from the waters.
+  // Peace lets fear fade from the waters. Collect the (sparse) still-dangerous ports in the same
+  // O(N) pass so `mostDangerous` scans only them, not all N islands per privateer. Preserves
+  // world.islands order → unchanged first-max tie-break.
+  const dangerList = [];
   for (const isl of world.islands) {
     if (isl.danger > 0) isl.danger = Math.max(0, isl.danger - t.DANGER_DECAY * dDay);
+    if (isl.danger > 0) dangerList.push(isl);
   }
 
   const pirates = world.ships.filter((s) => s.pirate && !s._sunk);
   const havenList = world.islands.filter((i) => i.haven);
-  const threatened = (isl) => pirates.some((p) => dist(p, isl) < t.PRIVATEER_THREAT_RANGE)
+  // Pirates are fixed for this whole pass (only `piracy`, already run, moves them), so one O(P) grid
+  // replaces the per-island pirate scan in `threatened` (the O(N·P) wall) and the per-privateer
+  // `nearestPirate` scan. Havens are few → the haven proximity test stays a small list scan.
+  const pirateGrid = buildShipGrid(world, pirates);
+  const threatened = (isl) => anyShipInRange(pirateGrid, isl.x, isl.y, t.PRIVATEER_THREAT_RANGE)
     || havenList.some((hv) => hv !== isl && dist(hv, isl) < t.PRIVATEER_THREAT_RANGE); // a nearby haven is a standing threat
 
   // Commission new privateers (throttled globally so it doesn't churn the fleet in one tick).
@@ -64,7 +75,7 @@ export function antipiracy(world, h) {
       // armoury it had to trade for — so only a solvent, armed port can field a hunter.
       if ((isl.gold || 0) < t.PRIVATEER_TREASURY_MIN + t.PRIVATEER_COMMISSION_COST) continue;
       if ((isl.stock.Weapons || 0) < t.PRIVATEER_WEAPONS_MIN) continue;
-      const owned = world.ships.filter((s) => s.privateer && s.homeId === isl.id).length;
+      const owned = fleetAt(world, isl.id).privateer;
       if (owned >= t.PRIVATEER_MAX_PER_ISLAND) continue;
       const hull = world.ships.find((s) => s.homeId === isl.id && !s.pirate && !s.privateer
         && s.state === 'idle' && !s.voyage && (world.agents[s.ownerId] || {}).kind === 'npc');
@@ -96,7 +107,7 @@ export function antipiracy(world, h) {
     for (const hv of havenList) { const d = dist(priv, hv); if (d < hd) { hd = d; haven = hv; } }
     let prey = priv._prey ? pirates.find((p) => p.id === priv._prey) : null;
     if (!prey || dist(priv, prey) > t.PRIVATEER_HUNT_RANGE) {
-      prey = nearestPirate(world, priv, pirates); priv._prey = prey ? prey.id : null;
+      prey = nearestPirate(world, priv, pirateGrid); priv._prey = prey ? prey.id : null;
     }
     if (haven && hd <= t.HAVEN_SUPPRESS_RANGE) {
       if (assaultHaven(world, priv, haven) && priv._sunk) sunk = true;
@@ -106,7 +117,7 @@ export function antipiracy(world, h) {
     } else if (haven) {
       if (sailHunter(world, priv, haven.x, haven.y, speed, h)) sunk = true; // close on the den
     } else {
-      const patrol = mostDangerous(world, priv) || home;
+      const patrol = mostDangerous(dangerList, priv) || home;
       if (patrol) sailHunter(world, priv, patrol.x, patrol.y, speed, h);
     }
   }
@@ -182,20 +193,18 @@ function resolveHunt(world, priv, pirate) {
   return false;
 }
 
-function nearestPirate(world, ship, pirates) {
-  let best = null, bestD = Infinity;
-  for (const p of pirates) {
-    const d = dist(ship, p);
-    if (d > world.rules.PIRATE_HUNT_RANGE) continue;
-    if (d < bestD) { bestD = d; best = p; }
-  }
-  return best;
+/** Nearest pirate within hunt range — expanding-ring nearest over the pirate grid, same lowest-index
+ *  tie-break as the old first-min scan (and, like it, no re-check of pirates sunk earlier this pass). */
+function nearestPirate(world, ship, pirateGrid) {
+  return nearestShip(pirateGrid, ship.x, ship.y, null, world.rules.PIRATE_HUNT_RANGE);
 }
 
-function mostDangerous(world, ship) {
+/** Best patrol port: highest danger, lightly biased toward the near ones. Scans the pre-filtered
+ *  dangerList (built in antipiracy's decay pass), which preserves world.islands order → same
+ *  first-max tie-break as the old all-islands scan. */
+function mostDangerous(dangerList, ship) {
   let best = null, bestScore = -Infinity;
-  for (const isl of world.islands) {
-    if (!isl.danger) continue;
+  for (const isl of dangerList) {
     const score = isl.danger - dist(ship, isl) * 3e-4;
     if (score > bestScore) { bestScore = score; best = isl; }
   }

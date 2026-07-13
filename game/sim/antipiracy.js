@@ -26,11 +26,13 @@ import { orbitPoint, orbitStep, orbitDir } from './steering.js';
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
-/** Local straight-line move (can't import ship.js — that would cycle). Returns arrival. */
+/** Local straight-line move (can't import ship.js — that would cycle). Returns arrival. Faces the travel
+ *  direction even on the arrival snap, so an orbiting patroller (whose next point sits ~one step ahead
+ *  every tick) points along its circle instead of freezing on a stale heading. */
 function moveToward(ship, tx, ty, speed, h) {
   const dx = tx - ship.x, dy = ty - ship.y, d = Math.hypot(dx, dy), step = speed * h;
+  if (d > 1e-6) ship.heading = Math.atan2(dy, dx);
   if (d <= Math.max(step, 1e-6)) { ship.x = tx; ship.y = ty; return true; }
-  ship.heading = Math.atan2(dy, dx);
   ship.x += (dx / d) * step; ship.y += (dy / d) * step;
   return false;
 }

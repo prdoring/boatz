@@ -28,11 +28,13 @@ export function setAct(s, k, id) {
   else { s._act.k = k; s._act.id = id || null; }
 }
 
-/** Local straight-line move (piracy can't import ship.js — that would cycle). Returns arrival. */
+/** Local straight-line move (piracy can't import ship.js — that would cycle). Returns arrival. Faces the
+ *  travel direction even on the arrival snap, so an orbiting blockader (whose next point sits ~one step
+ *  ahead every tick) points along its circle instead of freezing on a stale heading. */
 function moveToward(ship, tx, ty, speed, h) {
   const dx = tx - ship.x, dy = ty - ship.y, d = Math.hypot(dx, dy), step = speed * h;
+  if (d > 1e-6) ship.heading = Math.atan2(dy, dx);
   if (d <= Math.max(step, 1e-6)) { ship.x = tx; ship.y = ty; return true; }
-  ship.heading = Math.atan2(dy, dx);
   ship.x += (dx / d) * step; ship.y += (dy / d) * step;
   return false;
 }

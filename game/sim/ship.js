@@ -75,13 +75,16 @@ export function spawnShip(world, home, type = chooseShipType(world, home)) {
   return s;
 }
 
-/** Move toward (tx,ty). Returns true on arrival (snaps, guaranteed). */
+/** Move toward (tx,ty). Returns true on arrival (snaps, guaranteed). Faces the travel direction even
+ *  on the arrival snap — otherwise a hull that reaches its mark in one step (notably an ORBITING
+ *  blockader/patroller, whose next point sits ~one step ahead every tick) keeps a stale heading and
+ *  visibly points the wrong way while it slides around the circle. */
 export function moveToward(ship, tx, ty, speed, h) {
   const dx = tx - ship.x, dy = ty - ship.y;
   const d = Math.hypot(dx, dy);
   const step = speed * h;
+  if (d > 1e-6) ship.heading = Math.atan2(dy, dx);
   if (d <= Math.max(step, 1e-6)) { ship.x = tx; ship.y = ty; return true; }
-  ship.heading = Math.atan2(dy, dx);
   ship.x += (dx / d) * step;
   ship.y += (dy / d) * step;
   return false;

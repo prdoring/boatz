@@ -150,6 +150,34 @@ test('a ship’s specific ACTIVITY rides the wire to the client (a blockader rea
   assert.ok(cold[pirate.id].actId, 'with the blockaded port’s id, so the panel can name it');
 });
 
+test('a circling blockader POINTS ALONG its travel — heading tracks movement, not a stale mark', () => {
+  const w = makeWorld();
+  const pirate = w.ships.find((s) => s.pirate) || w.ships[0];
+  turnPirate(w, pirate);
+  pirate.cargo = { Gold: 0, People: 0, Food: 999, Weapons: 10 }; // fed + not laden → it blockades (orbits)
+  pirate._huntCd = 0; pirate._prey = null;
+  const isle = w.islands[0];
+  pirate.x = isle.x + w.rules.PIRATE_BLOCKADE_RANGE; pirate.y = isle.y; // roughly on the ring
+  for (const s of w.ships) if (!s.pirate) s.state = 'idle'; // no prey at sea → it blockades
+  w.rules = { ...w.rules, SINK_PER_1000: 0 };
+
+  let prev = { x: pirate.x, y: pirate.y };
+  let checks = 0, aligned = 0;
+  for (let i = 0; i < 80; i++) {
+    piracy(w, w.rules.SIM_STEP);
+    const mvx = pirate.x - prev.x, mvy = pirate.y - prev.y;
+    if (Math.hypot(mvx, mvy) > 0.5) { // it actually travelled this step
+      let dd = Math.abs(pirate.heading - Math.atan2(mvy, mvx)) % (Math.PI * 2);
+      if (dd > Math.PI) dd = Math.PI * 2 - dd;
+      checks++;
+      if (dd < 0.35) aligned++; // heading within ~20° of the true direction of travel
+    }
+    prev = { x: pirate.x, y: pirate.y };
+  }
+  assert.ok(checks > 20, 'the blockader kept circling (moving each tick)');
+  assert.ok(aligned / checks > 0.9, `its bow follows its course (${aligned}/${checks} ticks aligned — the stale-heading bug was near 0)`);
+});
+
 test('a pirate that catches a merchant plunders its coin and cargo (weapons burn as a sink)', () => {
   const w = makeWorld();
   const pirate = w.ships[0], victim = w.ships[1];

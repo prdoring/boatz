@@ -4,6 +4,7 @@ import { makeWorld } from './helpers/simWorld.js';
 import { ship as shipSystem, moveToward } from '/game/sim/ship.js';
 import { dispatch } from '/game/sim/trade.js';
 import { applyIntents } from '/game/sim/intents.js';
+import { turnPirate } from '/game/sim/piracy.js';
 
 test('moveToward reaches and snaps to the target', () => {
   const s = { x: 0, y: 0, heading: 0 };
@@ -42,6 +43,35 @@ test('a ship completes a full multi-hop voyage back to idle', () => {
   assert.ok(idleAgain, 'ship never returned to idle');
   assert.equal(s.voyage, null);
   assert.ok(Math.abs(s.x - home.x) < 1 && Math.abs(s.y - home.y) < 1, 'not home');
+});
+
+test('a merchant fleeing a pirate commits to ONE refuge and does not spin in place', () => {
+  const w = makeWorld();
+  const merch = w.ships.find((s) => !s.pirate && !s.privateer);
+  const pirate = w.ships.find((s) => s !== merch);
+  turnPirate(w, pirate);
+  // Isolate the pair so the merchant's flight is the only dynamic (the ship system skips the pirate,
+  // so it sits put as a stable evade trigger).
+  w.ships = w.ships.filter((s) => s === merch || s === pirate);
+  w.rules.SINK_PER_1000 = 0;
+  merch.x = 5000; merch.y = 5000;
+  merch.cargo = { Gold: 0, People: 0, Food: 200, Weapons: 0 }; // unarmed → it flees, never runs the blockade
+  merch.captain.traits = { boldness: 0.2, wanderlust: 0.5, greed: 0.5 };
+  merch.state = 'inbound';
+  merch.voyage = { reason: 'trade', index: 0, stops: [{ islandId: w.islands[0].id, sell: {}, buy: {}, people: 0 }] };
+  merch.targetX = w.islands[0].x; merch.targetY = w.islands[0].y;
+  pirate.x = 5000 + 0.5 * w.rules.PIRATE_EVADE_RANGE; pirate.y = 5000; // inside evade range → merchant flees
+
+  const headings = [];
+  for (let i = 0; i < 60; i++) { shipSystem(w, 0.05); if (!merch._sunk) headings.push(merch.heading); }
+  assert.ok(merch._fleeing && merch._fleeTo, 'it committed to a single named refuge');
+  let flips = 0;
+  for (let i = 1; i < headings.length; i++) {
+    let d = Math.abs(headings[i] - headings[i - 1]) % (Math.PI * 2);
+    if (d > Math.PI) d = Math.PI * 2 - d;
+    if (d > 2.4) flips++; // a ~140°+ reversal in one substep = spinning, not sailing
+  }
+  assert.ok(flips <= 2, `heading stays stable while fleeing (had ${flips} sharp reversals — the spin bug is >30)`);
 });
 
 test('a player intent sets a ship voyage that NPC dispatch does not stomp', () => {

@@ -271,20 +271,39 @@ function unloadHome(world, home, ship) {
 /** A pirate within evasion range → the merchant runs for the nearest SAFE port. Returns the sanctuary
  *  island (or null). Character: a BOLD, armed captain RUNS the blockade — holds course and trusts her
  *  speed and guns — unless a pirate is right on top of her; the cautious duck into harbour. Pirates
- *  disrupt trade this way even when they never catch anyone. */
+ *  disrupt trade this way even when they never catch anyone.
+ *
+ *  HYSTERESIS is essential here: the trigger is a hard distance boundary, and a pirate ORBITING a
+ *  blockaded port (or one the ship is trying to reach) sits right around it — so a knife-edge test would
+ *  flip the ship between fleeing and pressing on every substep, spinning it back and forth (headwind ↔
+ *  tailwind) and making no progress. So once fleeing, a ship keeps running until the raider is WELL clear
+ *  (FLEE_DISENGAGE × the range) and commits to ONE refuge (`_fleeTo`) until it arrives or that port
+ *  itself falls under blockade — never re-picking a nearer bolt-hole each tick (which also swings the heading). */
 function fleeTarget(world, ship) {
   const t = world.rules;
-  // Any pirate within evasion range? One pirate-grid query, not a full-fleet scan per sailing ship.
-  if (!anyShipInRange(world._pirateGrid, ship.x, ship.y, t.PIRATE_EVADE_RANGE)) return null;
+  const engaged = !!ship._fleeing;
+  // Start fleeing at the evade range; once fleeing, only disengage when the raider is well beyond it.
+  const detect = t.PIRATE_EVADE_RANGE * (engaged ? t.FLEE_DISENGAGE : 1);
+  if (!anyShipInRange(world._pirateGrid, ship.x, ship.y, detect)) { ship._fleeing = false; ship._fleeTo = null; return null; }
   const boldness = (ship.captain && ship.captain.traits && ship.captain.traits.boldness);
   const bold = (boldness != null ? boldness : 0.5) >= t.MERCHANT_RUN_BLOCKADE_TRAIT;
   const armed = (ship.cargo.Weapons || 0) >= t.ARM_WEAPONS_BASE;
-  // The daring make the run — hold course — as long as no raider is nearly aboard.
-  if (bold && armed && !anyShipInRange(world._pirateGrid, ship.x, ship.y, t.PIRATE_COMBAT_RANGE * 2.5)) return null;
-  // Duck into the nearest SAFE port — one with no pirate blockading it — not blindly the nearest,
-  // which may be the very port under blockade. Fall back to the nearest if every port near by is beset.
-  const safe = gridNearestIsland(world, ship.x, ship.y, (isl) => !anyShipInRange(world._pirateGrid, isl.x, isl.y, t.PIRATE_BLOCKADE_SNAP));
-  return safe || gridNearestIsland(world, ship.x, ship.y);
+  // The daring make the run — hold course — until a raider is nearly aboard (also hysteretic, so a bold
+  // captain doesn't flicker between running the blockade and bolting).
+  const runClear = t.PIRATE_COMBAT_RANGE * (engaged ? 3.5 : 2.5);
+  if (bold && armed && !anyShipInRange(world._pirateGrid, ship.x, ship.y, runClear)) { ship._fleeing = false; ship._fleeTo = null; return null; }
+  ship._fleeing = true;
+  // Sticky refuge: choose ONE safe bolt-hole when the flight BEGINS and hold it until the raider is
+  // clear (which resets _fleeTo). Re-choosing the "nearest safe port" every tick was the bug behind the
+  // spin: as the chasing pirate moved, WHICH port counted as "safe" flipped between two, so the target
+  // (and heading) alternated every substep and the ship thrashed in place instead of running. Picked
+  // once, the heading is stable all the way in. Fall back to the nearest port if none is clear.
+  if (ship._fleeTo == null || !world.islandsById.get(ship._fleeTo)) {
+    const refuge = gridNearestIsland(world, ship.x, ship.y, (isl) => !anyShipInRange(world._pirateGrid, isl.x, isl.y, t.PIRATE_BLOCKADE_SNAP))
+      || gridNearestIsland(world, ship.x, ship.y);
+    ship._fleeTo = refuge ? refuge.id : null;
+  }
+  return world.islandsById.get(ship._fleeTo) || gridNearestIsland(world, ship.x, ship.y);
 }
 
 /** Divert a sailing ship to `island` to reprovision — abandons the old plan; docks there

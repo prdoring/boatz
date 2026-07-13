@@ -23,6 +23,7 @@ import { assaultHaven } from './havens.js';
 import { computeFleetByHome, fleetAt } from './fleet.js';
 import { buildShipGrid, anyShipInRange, nearestShip } from './grid.js';
 import { orbitPoint, orbitStep, orbitDir } from './steering.js';
+import { steerAroundIslands } from './navigation.js';
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
@@ -250,10 +251,11 @@ function standDown(world, priv, home) {
 }
 
 function sailHunter(world, ship, tx, ty, speed, h) {
-  const heading = Math.atan2(ty - ship.y, tx - ship.x);
+  const aim = steerAroundIslands(world, ship, tx, ty); // round any landmass between the hunter and its mark
+  const heading = Math.atan2(aim.y - ship.y, aim.x - ship.x);
   const eff = speed * windMult(world, heading, skill01(ship.captain, world.rules));
   if (maybeSink(world, ship, eff * h)) return true; // lost to weather like any ship
-  moveToward(ship, tx, ty, eff, h);
+  moveToward(ship, aim.x, aim.y, eff, h);
   return false;
 }
 

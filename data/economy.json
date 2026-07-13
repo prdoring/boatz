@@ -58,6 +58,12 @@
     "SHIP_AVOID_RANGE": 120,
     "SHIP_AVOID_VEER": 1.0,
     "SHIP_AVOID_FWD_COS": 0.3,
+    "_doc_island_nav": "ISLAND AVOIDANCE (navigation.js) — hulls steer AROUND landmasses in their path instead of sailing through them. ISLAND_RADIUS/_K/_POW mirror the client's WorldRenderer.islandRadius (land radius = ISLAND_RADIUS·clamp((k/ISLAND_RADIUS_K)^ISLAND_RADIUS_POW, 0.4, 1.85)) so a hull rounds the DRAWN island — keep them in step with game/config.js. SHIP_ISLAND_CLEARANCE — how far outside the shore a hull skims; SHIP_ISLAND_LOOKAHEAD — how far ahead it looks for a blocker (kept modest: local greedy avoidance for a sparse ocean of convex islands, not global pathfinding). The destination island is exempt (a ship must enter it to dock). Set SHIP_ISLAND_CLEARANCE to null to disable.",
+    "ISLAND_RADIUS": 58,
+    "ISLAND_RADIUS_K": 130,
+    "ISLAND_RADIUS_POW": 0.62,
+    "SHIP_ISLAND_CLEARANCE": 8,
+    "SHIP_ISLAND_LOOKAHEAD": 450,
     "SHIP_TYPES": {
       "sloop":   { "capacity": 64,  "speed": 150, "weaponCap": 10, "upkeep": 0.65, "combat": 0.82, "minTreasury": 0 },
       "brig":    { "capacity": 100, "speed": 120, "weaponCap": 22, "upkeep": 1.0,  "combat": 1.15, "minTreasury": 1000 },

@@ -18,7 +18,7 @@ import { logEvent } from './events.js';
 import { streamFloat } from './rng.js';
 import { turnPirate, canTurnPirate } from './piracy.js';
 import { nearestIsland } from './grid.js';
-import { fleetAt } from './fleet.js';
+import { fleetAt, computeFleetByHome } from './fleet.js';
 
 const perDay = (world, ratePerDay, h) => ratePerDay * (h / world.rules.SIM_DAY_SECONDS);
 const days = (world, h) => h / world.rules.SIM_DAY_SECONDS;
@@ -185,6 +185,9 @@ function resolveUprising(world, ship) {
     if (target) {
       logEvent(world, 'defect', `The crew of ${vessel}, ${grievance}, threw over Capt. ${name} and defected to ${target.name}.`, at);
       ship.homeId = target.id;
+      computeFleetByHome(world); // re-home changes the per-port census — rebuild it (fleetAt self-heals only
+      // on a spawn/removal, NOT a homeId change), so a later defection or development build this same tick
+      // reads a fresh count and can't overshoot MAX_SHIPS_PER_ISLAND.
     } else {
       logEvent(world, 'mutiny', `Mutiny aboard ${vessel}! The crew, ${grievance}, cast out Capt. ${name} — a green hand now commands.`, at);
       ship.captain = makeCaptain(world); // a fresh novice takes command

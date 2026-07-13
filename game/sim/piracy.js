@@ -18,6 +18,7 @@ import { markDanger, postBounty, payBounty } from './bounty.js';
 import { computeFleetByHome } from './fleet.js';
 import { nearestIsland as gridNearestIsland, buildShipGrid, eachShipInRange, nearestShip } from './grid.js';
 import { orbitPoint, orbitStep, orbitDir, awayPoint } from './steering.js';
+import { steerAroundIslands } from './navigation.js';
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
@@ -237,10 +238,11 @@ export function piracy(world, h) {
 }
 
 function sail(world, ship, tx, ty, speed, h) {
-  const heading = Math.atan2(ty - ship.y, tx - ship.x);
+  const aim = steerAroundIslands(world, ship, tx, ty); // round any landmass between the raider and its mark
+  const heading = Math.atan2(aim.y - ship.y, aim.x - ship.x);
   const eff = speed * windMult(world, heading, skill01(ship.captain, world.rules));
   if (maybeSink(world, ship, eff * h)) return 'sunk';
-  moveToward(ship, tx, ty, eff, h);
+  moveToward(ship, aim.x, aim.y, eff, h);
   return 'sailing';
 }
 

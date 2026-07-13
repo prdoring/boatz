@@ -46,9 +46,11 @@ test('ship count stays within MAX_SHIPS_TOTAL over a long run (purchases + upkee
   const w = makeWorld();
   for (let i = 0; i < 60 * 60; i++) stepWorld(w, 1.0);
   assert.ok(w.ships.length <= w.rules.MAX_SHIPS_TOTAL, `ships=${w.ships.length}`);
-  // Per-island fleet cap holds (no same-tick overshoot).
+  // Per-island TRADING fleet cap holds (no same-tick overshoot). The cap governs a
+  // port's merchant hulls; rogue pirates raised at sea keep a nominal homeId for
+  // identity but are raiders at large, not berths, so they don't count against it.
   for (const isl of w.islands) {
-    const owned = w.ships.filter((s) => s.homeId === isl.id).length;
+    const owned = w.ships.filter((s) => s.homeId === isl.id && !s.pirate).length;
     assert.ok(owned <= w.rules.MAX_SHIPS_PER_ISLAND, `${isl.name} owns ${owned}`);
   }
 });

@@ -16,6 +16,7 @@ import { provisionCrew, deviationTarget } from './crew.js';
 import { shipName } from './naming.js';
 import { computeFleetByHome, fleetAt } from './fleet.js';
 import { setAct } from './piracy.js';
+import { steerAroundIslands } from './navigation.js';
 import { buildShipGrid, anyShipInRange, countShipsInRange, nearestIsland as gridNearestIsland } from './grid.js';
 
 /** The build a port chooses for a new hull, by its situation: a threatened port arms with a
@@ -131,10 +132,12 @@ function sail(world, ship, h) {
   const t = world.rules;
   sightAtSea(world, ship); // the captain sees the ports it passes firsthand — fresher than home's orders
   const skill = skill01(ship.captain, t);
-  const heading = Math.atan2(ship.targetY - ship.y, ship.targetX - ship.x);
+  const aim = steerAroundIslands(world, ship, ship.targetX, ship.targetY); // steer clear of land in the way
+  const heading = Math.atan2(aim.y - ship.y, aim.x - ship.x);
   const eff = (ship.speed || t.SHIP_SPEED) * windMult(world, heading, skill); // per-hull speed (sloop fast, galleon slow)
   if (maybeSink(world, ship, eff * h)) return 'sunk';
-  if (moveToward(ship, ship.targetX, ship.targetY, eff, h)) {
+  if (moveToward(ship, aim.x, aim.y, eff, h)) {
+    if (aim.deflected) return 'sailing'; // reached only a way-round point, not the real target — press on
     if (ship.leg && ship.legIdx < ship.leg.length - 1) { // reached a tack corner — turn onto the next leg
       const p = ship.leg[++ship.legIdx];
       ship.targetX = p.x; ship.targetY = p.y;
@@ -148,10 +151,11 @@ function sail(world, ship, h) {
 /** Crowd on sail and run for `island` (evading a pirate) — a panicked dash, no leg tracking. */
 function panicRun(world, ship, island, h) {
   const t = world.rules;
-  const heading = Math.atan2(island.y - ship.y, island.x - ship.x);
+  const aim = steerAroundIslands(world, ship, island.x, island.y); // even a panicked dash rounds land in the way
+  const heading = Math.atan2(aim.y - ship.y, aim.x - ship.x);
   const eff = (ship.speed || t.SHIP_SPEED) * t.PIRATE_PANIC_MULT * windMult(world, heading, skill01(ship.captain, t)); // crew rows for their lives (outrun the pirate)
   if (maybeSink(world, ship, eff * h)) return 'sunk';
-  if (moveToward(ship, island.x, island.y, eff, h)) provisionCrew(world, island, ship); // reached safe harbour — victual up
+  if (moveToward(ship, aim.x, aim.y, eff, h) && !aim.deflected) provisionCrew(world, island, ship); // reached safe harbour — victual up
   return 'fleeing';
 }
 

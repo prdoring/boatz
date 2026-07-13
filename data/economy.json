@@ -52,6 +52,12 @@
 
     "SHIP_SPEED": 120,
     "SHIP_CAPACITY": 100,
+    "_doc_separation": "Light ship-to-ship collision avoidance (separation.js), a nod to the rules of the road. SHIP_SEPARATION_RANGE — hulls closer than this get a gentle radial shove apart (SHIP_SEPARATION_PUSH units/substep) so they never stack; kept small (a hull's click radius is ~22) so it is a nudge, not a big buffer. SHIP_AVOID_RANGE — the wider look-ahead within which a hull CLOSING on another ahead eases to STARBOARD (SHIP_AVOID_VEER units/substep): head-on both veer right (pass port-to-port), crossing the give-way vessel (other on its starboard) yields while the stand-on holds, an overtaker keeps clear. SHIP_AVOID_FWD_COS — how far off dead-ahead still counts as a meeting. Only ships under way are touched; a hull and its chase target (`_prey`) are exempt (a boarding action grapples, it doesn't give way).",
+    "SHIP_SEPARATION_RANGE": 44,
+    "SHIP_SEPARATION_PUSH": 1.5,
+    "SHIP_AVOID_RANGE": 120,
+    "SHIP_AVOID_VEER": 1.0,
+    "SHIP_AVOID_FWD_COS": 0.3,
     "SHIP_TYPES": {
       "sloop":   { "capacity": 64,  "speed": 150, "weaponCap": 10, "upkeep": 0.65, "combat": 0.82, "minTreasury": 0 },
       "brig":    { "capacity": 100, "speed": 120, "weaponCap": 22, "upkeep": 1.0,  "combat": 1.15, "minTreasury": 1000 },

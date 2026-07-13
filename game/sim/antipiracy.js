@@ -21,6 +21,7 @@ import { payBounty } from './bounty.js';
 import { assaultHaven } from './havens.js';
 import { computeFleetByHome, fleetAt } from './fleet.js';
 import { buildShipGrid, anyShipInRange, nearestShip } from './grid.js';
+import { orbitPoint, orbitStep, orbitDir } from './steering.js';
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
@@ -44,13 +45,9 @@ export function antipiracy(world, h) {
   computeFleetByHome(world); // per-home privateer counts + fresh census for maybeSink (O(S))
   let sunk = false;
 
-  // Peace lets fear fade from the waters. Collect the (sparse) still-dangerous ports in the same
-  // O(N) pass so `mostDangerous` scans only them, not all N islands per privateer. Preserves
-  // world.islands order → unchanged first-max tie-break.
-  const dangerList = [];
+  // Peace lets fear fade from the waters (danger decays as attacks stop).
   for (const isl of world.islands) {
     if (isl.danger > 0) isl.danger = Math.max(0, isl.danger - t.DANGER_DECAY * dDay);
-    if (isl.danger > 0) dangerList.push(isl);
   }
 
   const pirates = world.ships.filter((s) => s.pirate && !s._sunk);
@@ -62,8 +59,17 @@ export function antipiracy(world, h) {
   const threatened = (isl) => anyShipInRange(pirateGrid, isl.x, isl.y, t.PRIVATEER_THREAT_RANGE)
     || havenList.some((hv) => hv !== isl && dist(hv, isl) < t.PRIVATEER_THREAT_RANGE); // a nearby haven is a standing threat
 
+  // The navy the economy will bear: PROPORTIONAL to the live threat (so many hunters per pirate at
+  // large + per haven under siege), under a hard fleet-fraction ceiling. Beyond this budget no port
+  // commissions another and the surplus stands down — so the navy doesn't balloon to the cap and idle
+  // there once piracy is crushed (which over-crushed piracy AND drained the trading fleet).
+  const threatBudget = Math.ceil(pirates.length * t.PRIVATEER_PER_PIRATE + havenList.length * t.PRIVATEER_PER_HAVEN);
+  let activePriv = privateerCount(world);
+
   // Commission new privateers (throttled globally so it doesn't churn the fleet in one tick).
-  if ((pirates.length > 0 || havenList.length > 0) && privateerCount(world) < Math.max(1, world.ships.length * t.PRIVATEER_MAX_FRAC)) {
+  if ((pirates.length > 0 || havenList.length > 0)
+      && activePriv < threatBudget
+      && activePriv < Math.max(1, world.ships.length * t.PRIVATEER_MAX_FRAC)) {
     for (const isl of world.islands) {
       if (isl.haven) continue; // a haven fields cutthroats, not privateers
       if (world.simTime < (isl._privCd || 0)) continue;
@@ -82,33 +88,52 @@ export function antipiracy(world, h) {
       if (!hull) continue;
       commissionPrivateer(world, isl, hull);
       isl._privCd = world.simTime + t.PRIVATEER_COOLDOWN;
+      activePriv++;
       break; // at most one commission per tick — keeps the response measured
     }
   }
 
-  // Drive every privateer: hunt, fight, or stand down.
+  // Drive every privateer: hunt, fight, patrol, or stand down.
   for (const priv of world.ships) {
     if (!priv.privateer || priv._sunk) continue;
     const speed = (priv.speed || t.SHIP_SPEED) * t.PRIVATEER_SPEED_MULT; // per-hull (a sloop privateer is fleet)
     const home = world.islandsById.get(priv.homeId);
+    // The port this privateer guards (the one that commissioned it) — the waters it watches and, with
+    // no pirate to chase, patrols. Falls back to home for a hand-commissioned hull with no _guard.
+    const guard = world.islandsById.get(priv._guard) || home;
 
-    // Commission lapsed, or the seas are truly clear (no pirates AND no havens): pay off the crew.
-    if (world.simTime >= (priv.privateerUntil || 0) || (pirates.length === 0 && havenList.length === 0)) {
+    // Acquire targets FIRST, so stand-down can tell a needed hull from a surplus one. Nearest haven,
+    // then a pirate — one bearing down on the privateer OR one menacing the guarded port (a wider WATCH
+    // than its raw hunt range: it actively watches its charge, not just reacting at gun-range).
+    let haven = null, hd = Infinity;
+    for (const hv of havenList) { const d = dist(priv, hv); if (d < hd) { hd = d; haven = hv; } }
+    let prey = priv._prey ? pirates.find((p) => p.id === priv._prey && !p._sunk) : null;
+    if (!prey || dist(priv, prey) > t.PRIVATEER_HUNT_RANGE) {
+      prey = nearestShip(pirateGrid, priv.x, priv.y, null, t.PRIVATEER_HUNT_RANGE)
+          || (guard && nearestShip(pirateGrid, guard.x, guard.y, null, t.PRIVATEER_WATCH_RANGE));
+      priv._prey = prey ? prey.id : null;
+    }
+    // Captain character: a cautious privateer won't charge a raider it can't beat — it holds its patrol
+    // and SHADOWS, waiting for the odds to shift (the pirate weakened in a fight, or a consort arriving);
+    // the bold press any fight. (Privateers are usually the stronger, so this only bites against a
+    // heavily-gunned pirate — exactly when discretion is the better part of valour.)
+    const bold = ((priv.captain && priv.captain.traits && priv.captain.traits.boldness) != null
+      ? priv.captain.traits.boldness : 0.5) >= t.PRIVATEER_BOLD_TRAIT;
+    if (prey && !bold && combatStrength(world, priv) < combatStrength(world, prey) * t.PRIVATEER_TIMID_ODDS) prey = null;
+
+    // Stand down (pay off the crew, back to honest trade) when the commission lapses, the seas are truly
+    // clear (no pirates AND no havens), or this hull is SURPLUS — the navy already over-covers the threat
+    // and it has nothing in reach. Surplus demobilisation shrinks a bloated navy back to the threat budget
+    // instead of leaving dozens of hunters idling on the treasury after piracy is broken.
+    const havenInReach = haven && hd <= t.PRIVATEER_WATCH_RANGE;
+    const surplus = activePriv > threatBudget && !prey && !havenInReach;
+    if (world.simTime >= (priv.privateerUntil || 0) || (pirates.length === 0 && havenList.length === 0) || surplus) {
+      activePriv--; // one fewer effective hunter this tick — keep the budget/surplus test consistent
       if (home && moveToward(priv, home.x, home.y, speed, h)) standDown(world, priv, home);
       else if (!home) standDown(world, priv, null);
       continue;
     }
 
-    // Target priority. A HAVEN already in bombardment range is the priority: breaking the den is the
-    // only way the law wins for good, and if privateers always chased the pirates a haven spawns they
-    // could never get around to the haven itself (it would entrench unchecked). Otherwise hunt the
-    // nearest pirate; otherwise make for the nearest haven; otherwise patrol the troubled waters.
-    let haven = null, hd = Infinity;
-    for (const hv of havenList) { const d = dist(priv, hv); if (d < hd) { hd = d; haven = hv; } }
-    let prey = priv._prey ? pirates.find((p) => p.id === priv._prey) : null;
-    if (!prey || dist(priv, prey) > t.PRIVATEER_HUNT_RANGE) {
-      prey = nearestPirate(world, priv, pirateGrid); priv._prey = prey ? prey.id : null;
-    }
     if (haven && hd <= t.HAVEN_SUPPRESS_RANGE) {
       if (assaultHaven(world, priv, haven) && priv._sunk) sunk = true;
     } else if (prey && (!haven || dist(priv, prey) <= hd)) {
@@ -116,9 +141,11 @@ export function antipiracy(world, h) {
       else if (sailHunter(world, priv, prey.x, prey.y, speed, h)) sunk = true;
     } else if (haven) {
       if (sailHunter(world, priv, haven.x, haven.y, speed, h)) sunk = true; // close on the den
-    } else {
-      const patrol = mostDangerous(dangerList, priv) || home;
-      if (patrol) sailHunter(world, priv, patrol.x, patrol.y, speed, h);
+    } else if (guard) {
+      // Patrol: circle the guarded port's approaches rather than mooring at the wharf, so it is
+      // positioned to intercept the moment a raider ventures near — not reacting from a standstill.
+      const p = orbitPoint(guard.x, guard.y, priv.x, priv.y, t.PRIVATEER_PATROL_RANGE, orbitDir(priv.id), orbitStep(speed, t.PRIVATEER_PATROL_RANGE, h));
+      sailHunter(world, priv, p.x, p.y, speed, h);
     }
   }
 
@@ -137,6 +164,7 @@ function commissionPrivateer(world, isl, ship) {
   ship.unrest = 0; ship.uprising = null; ship.hunger = 0;
   ship.privateerUntil = world.simTime + t.PRIVATEER_COMMISSION_DAYS * t.SIM_DAY_SECONDS;
   ship._prey = null;
+  ship._guard = isl.id; // the port it was commissioned to protect — the waters it patrols
   ship.state = 'outbound';
   // Arm from the armoury (up to the target, bounded by stock + hold space).
   const need = Math.max(0, t.PRIVATEER_WEAPONS - (ship.cargo.Weapons || 0));
@@ -193,20 +221,3 @@ function resolveHunt(world, priv, pirate) {
   return false;
 }
 
-/** Nearest pirate within hunt range — expanding-ring nearest over the pirate grid, same lowest-index
- *  tie-break as the old first-min scan (and, like it, no re-check of pirates sunk earlier this pass). */
-function nearestPirate(world, ship, pirateGrid) {
-  return nearestShip(pirateGrid, ship.x, ship.y, null, world.rules.PIRATE_HUNT_RANGE);
-}
-
-/** Best patrol port: highest danger, lightly biased toward the near ones. Scans the pre-filtered
- *  dangerList (built in antipiracy's decay pass), which preserves world.islands order → same
- *  first-max tie-break as the old all-islands scan. */
-function mostDangerous(dangerList, ship) {
-  let best = null, bestScore = -Infinity;
-  for (const isl of dangerList) {
-    const score = isl.danger - dist(ship, isl) * 3e-4;
-    if (score > bestScore) { bestScore = score; best = isl; }
-  }
-  return best;
-}

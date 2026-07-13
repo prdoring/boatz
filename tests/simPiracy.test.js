@@ -86,6 +86,27 @@ test('a fed pirate with no prey does NOT camp an island wharf — it stands off 
   assert.ok(d > w.rules.PIRATE_RAID_RANGE, `the pirate stood off the wharf (dist ${Math.round(d)}u) instead of camping it`);
 });
 
+test('a blockading pirate circles a port (never camps it) and stokes the fear of its waters', () => {
+  const w = makeWorld();
+  const pirate = w.ships.find((s) => s.pirate) || w.ships[0];
+  turnPirate(w, pirate);
+  pirate.cargo = { Gold: 0, People: 0, Food: 999, Weapons: 10 }; // fed (won't raid) + not laden (won't fence)
+  pirate._huntCd = 0; pirate._prey = null;
+  const isle = w.islands[0];
+  pirate.x = isle.x + 120; pirate.y = isle.y;           // right off the wharf
+  for (const s of w.ships) if (!s.pirate) s.state = 'idle'; // no prey at sea → it blockades
+  for (const i of w.islands) i.danger = 0;
+  const track = [];
+  for (let i = 0; i < 80; i++) { piracy(w, w.rules.SIM_STEP); track.push({ x: pirate.x, y: pirate.y }); }
+  // It KEEPS MOVING (circling), not sitting dead on a fixed mark.
+  const moved = track.some((p) => Math.hypot(p.x - track[0].x, p.y - track[0].y) > 30);
+  assert.ok(moved, 'the blockader circles rather than parking on one spot');
+  // It stays out in the approaches, off the wharf (not camping the port).
+  assert.ok(Math.hypot(pirate.x - isle.x, pirate.y - isle.y) > w.rules.PIRATE_RAID_RANGE, 'held off the wharf');
+  // And a blockade makes these waters feared (which is what draws the privateers).
+  assert.ok(w.islands.some((i) => (i.danger || 0) > 0), 'the blockade stoked danger, summoning the law');
+});
+
 test('a pirate that catches a merchant plunders its coin and cargo (weapons burn as a sink)', () => {
   const w = makeWorld();
   const pirate = w.ships[0], victim = w.ships[1];

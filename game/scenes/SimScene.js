@@ -303,11 +303,26 @@ export class SimScene extends Scene {
 
   onKeyup(e) { this.keys.delete(e.key); }
 
-  /** Hit-test the world at a screen point → { kind:'island'|'ship', id } or null. Islands
-   *  win over ships (bigger, foreground intent); the island hit radius scales with the drawn
-   *  size so the giant metropolises are as clickable at their edges as the tiny outposts. */
+  /** Hit-test the world at a screen point → { kind:'island'|'ship', id } or null. SHIPS are tested
+   *  first within a tight radius — a moored ship sits in a berth just off its island, so testing it
+   *  before the (much larger) island is what makes a docked hull clickable at all; a click anywhere
+   *  else on the island body still selects the port. Ship positions come from the renderer's berth
+   *  map (shipDisplayPos) so the hit-test matches where each hull is actually drawn. The island hit
+   *  radius scales with the drawn size so giant metropolises are as clickable as tiny outposts. */
   _pickTarget(sx, sy) {
     const { x, y } = this.shared.camera.screenToWorld(sx, sy);
+    const wr = this.shared.worldRenderer;
+    const ents = this._world && this._world.entities;
+    if (ents) {
+      let bs = null, bd = SHIP_HIT;
+      for (const id in ents) {
+        const p = wr.shipDisplayPos(id, ents[id]); // berth slot if docked, else live position
+        const d = Math.hypot(x - p.x, y - p.y);
+        if (d <= bd) { bd = d; bs = id; }
+      }
+      if (bs) return { kind: 'ship', id: bs };
+    }
+
     const econIslands = this.sim.getEcon().islands;
     const islands = (econIslands && econIslands.length) ? econIslands : this.sim.islands;
     let bestIsl = null, bestD = Infinity;
@@ -317,16 +332,6 @@ export class SimScene extends Scene {
       if (d <= hit && d < bestD) { bestD = d; bestIsl = isl; }
     }
     if (bestIsl) return { kind: 'island', id: bestIsl.id };
-
-    const ents = this._world && this._world.entities;
-    if (ents) {
-      let bs = null, bd = SHIP_HIT;
-      for (const id in ents) {
-        const d = Math.hypot(x - ents[id].x, y - ents[id].y);
-        if (d <= bd) { bd = d; bs = id; }
-      }
-      if (bs) return { kind: 'ship', id: bs };
-    }
     return null;
   }
 

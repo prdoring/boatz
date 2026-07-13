@@ -37,8 +37,11 @@ export function scaleTuningForCount(tuning, n) {
   // adds crew-food demand + upkeep drain — measured, it makes the starving-island tail slightly WORSE.
   tuning.MAX_SHIPS_TOTAL = Math.max(tuning.MAX_SHIPS_TOTAL, Math.round(n * tuning.START_SHIPS_PER_ISLAND * 2.2));
   // Pirate presence keeps pace with the sea so the seeded rogues + at-large floor aren't lost in it.
+  // The opening burst scales with the sea (∝N — dramatic, and it decays into the economy); the
+  // SUSTAINED floor scales only ∝√N, so a big sea holds a visible-but-modest standing pirate threat
+  // rather than a linear swarm that would grind trade down (piracy friction rises with pirate-count).
   tuning.START_PIRATES = Math.round((tuning.START_PIRATES || 0) * f);
-  tuning.MIN_PIRATES_AT_LARGE = Math.round((tuning.MIN_PIRATES_AT_LARGE || 0) * f);
+  tuning.MIN_PIRATES_AT_LARGE = Math.round((tuning.MIN_PIRATES_AT_LARGE || 0) * Math.sqrt(f));
 }
 
 /** A starting hull for a port's fleet, reflecting its size: big ports launch brigs and the odd

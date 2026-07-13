@@ -268,13 +268,23 @@ function unloadHome(world, home, ship) {
   }
 }
 
-/** A pirate within evasion range → the merchant runs for the nearest port. Returns the sanctuary
- *  island (or null). Pirates disrupt trade this way even when they never catch anyone. */
+/** A pirate within evasion range → the merchant runs for the nearest SAFE port. Returns the sanctuary
+ *  island (or null). Character: a BOLD, armed captain RUNS the blockade — holds course and trusts her
+ *  speed and guns — unless a pirate is right on top of her; the cautious duck into harbour. Pirates
+ *  disrupt trade this way even when they never catch anyone. */
 function fleeTarget(world, ship) {
   const t = world.rules;
   // Any pirate within evasion range? One pirate-grid query, not a full-fleet scan per sailing ship.
   if (!anyShipInRange(world._pirateGrid, ship.x, ship.y, t.PIRATE_EVADE_RANGE)) return null;
-  return gridNearestIsland(world, ship.x, ship.y); // sprint for the nearest port (island grid)
+  const boldness = (ship.captain && ship.captain.traits && ship.captain.traits.boldness);
+  const bold = (boldness != null ? boldness : 0.5) >= t.MERCHANT_RUN_BLOCKADE_TRAIT;
+  const armed = (ship.cargo.Weapons || 0) >= t.ARM_WEAPONS_BASE;
+  // The daring make the run — hold course — as long as no raider is nearly aboard.
+  if (bold && armed && !anyShipInRange(world._pirateGrid, ship.x, ship.y, t.PIRATE_COMBAT_RANGE * 2.5)) return null;
+  // Duck into the nearest SAFE port — one with no pirate blockading it — not blindly the nearest,
+  // which may be the very port under blockade. Fall back to the nearest if every port near by is beset.
+  const safe = gridNearestIsland(world, ship.x, ship.y, (isl) => !anyShipInRange(world._pirateGrid, isl.x, isl.y, t.PIRATE_BLOCKADE_SNAP));
+  return safe || gridNearestIsland(world, ship.x, ship.y);
 }
 
 /** Divert a sailing ship to `island` to reprovision — abandons the old plan; docks there
@@ -315,6 +325,14 @@ function updateShip(world, ship, h) {
   switch (ship.state) {
     case 'idle':
       if (v && v.stops.length) {
+        // SHELTER: don't sail into a blockade. A pirate lurking off the home port holds the fleet in
+        // harbour until the coast clears — so a blockaded port doesn't feed its ships to the raider one
+        // by one. A bold captain runs for it anyway, and a survival FOOD run always sails (the crew must
+        // eat, blockade or no). This resolves on its own once the pirate is driven off or moves on.
+        const boldness = (ship.captain && ship.captain.traits && ship.captain.traits.boldness);
+        const boldCap = (boldness != null ? boldness : 0.5) >= t.MERCHANT_RUN_BLOCKADE_TRAIT;
+        if (!boldCap && v.reason !== 'food' && home
+            && anyShipInRange(world._pirateGrid, home.x, home.y, t.PIRATE_EVADE_RANGE)) break;
         if (shouldWaitForWind(world, ship, home, v)) { ship._waited += h; break; } // hold for a shift
         ship._waited = 0;
         loadForVoyage(world, home, ship);

@@ -84,6 +84,7 @@ export class WorldRenderer {
     this.effectsRenderer = effectsRenderer; // wraps the engine VFX interpreter
     this._transitions = new Map();   // ship id -> per-entity transition (keyframe clock + blend)
     this._islands = new Map();       // island id -> cached procedural layout (seeded)
+    this._berths = new Map();        // ship id -> { x, y } berth slot for a docked ship (recomputed each frame)
     this._seen = new Set();
     this._warned = new Set();
   }
@@ -449,34 +450,105 @@ export class WorldRenderer {
   drawShips(shipsById, islandsById, bounds, now, highlightHomeId = null) {
     if (!shipsById) return;
     const zoom = this.camera.getZoom?.() ?? 1;
+    this._computeBerths(shipsById, islandsById); // fan docked ships into berths (used for draw + picking)
     for (const id in shipsById) {
       const s = shipsById[id];
-      if (!inBounds(s.x, s.y, SHIP_RADIUS * 1.6, bounds)) continue;
+      const berth = this._berths.get(id);           // a docked ship draws in its berth, not stacked on the wharf
+      const px = berth ? berth.x : s.x, py = berth ? berth.y : s.y;
+      if (!inBounds(px, py, SHIP_RADIUS * 1.6, bounds)) continue;
       this._seen.add('s:' + id);
       const def = this.art.ships[s.type] || this.art.ships.ship;
       if (!def) { this._warn('ship:' + s.type, `[WorldRenderer] no ship art for type "${s.type}"`); continue; }
       const home = islandsById && islandsById.get(s.homeId);
       const color = (home && home.color) || PALETTE.accent;
+      // A moored ship gets a short mooring line to its island + rides at anchor (heading toward the
+      // port, sails furled) — the "docked" cue, and what lets the fleet be picked apart individually.
+      if (berth && zoom > 0.4) this._mooringLine(px, py, berth.ix, berth.iy);
       // A selected island's own ships get a bright halo — clamped to a minimum screen size
       // so its whole fleet is trackable across the map even at overview zoom (where a ship
       // is only ~1px). Drawn as a filled disc glow + ring so it pops against the water.
-      if (highlightHomeId && s.homeId === highlightHomeId) this._homeRing(s.x, s.y, Math.max(SHIP_RADIUS * 1.7 * zoom, 11), now);
+      if (highlightHomeId && s.homeId === highlightHomeId) this._homeRing(px, py, Math.max(SHIP_RADIUS * 1.7 * zoom, 11), now);
       // Hull tint tells faction at a glance: pirate crimson-black, privateer naval blue, else home.
       const hull = s.pirate ? PIRATE_HULL : s.privateer ? PRIVATEER_HULL : color;
       const r = SHIP_RADIUS * (SHIP_TYPE_SCALE[s.type] || 1); // size reads the hull class
+      const heading = berth ? Math.atan2(berth.iy - py, berth.ix - px) : (s.heading || 0); // moored: bow to the wharf
+      const state = berth ? 'docked' : (s.state || 'sailing');
       // Overview LOD: a ship shrunk to a speck draws as a flat hull-colour dot instead of full
       // declarative art. The clamped faction markers below still draw, so pirates/privateers/
       // revolts stay spottable at any zoom — only the mass of merchants become cheap dots.
-      if (r * zoom < SHIP_LOD_MIN) this._shipDot(s.x, s.y, hull);
-      else this._drawArtAt(def, s.x, s.y, r, hull, s.state || 'sailing', now, this._trans('s:' + id), s.heading || 0);
+      if (r * zoom < SHIP_LOD_MIN) this._shipDot(px, py, hull);
+      else this._drawArtAt(def, px, py, r, hull, state, now, this._trans('s:' + id), heading);
       // A crew in open revolt (mutiny/defection standoff) — a stark pulsing marker, clamped so
       // it's spotted anywhere on the map even at overview zoom.
-      if (s.revolt) this._revoltRing(s.x, s.y, Math.max(SHIP_RADIUS * 1.9 * zoom, 13), now);
+      if (s.revolt) this._revoltRing(px, py, Math.max(SHIP_RADIUS * 1.9 * zoom, 13), now);
       // A pirate raised the black flag — a skull marker so predators are spotted anywhere.
-      else if (s.pirate) this._pirateMark(s.x, s.y, Math.max(SHIP_RADIUS * 1.9 * zoom, 12), now);
+      else if (s.pirate) this._pirateMark(px, py, Math.max(SHIP_RADIUS * 1.9 * zoom, 12), now);
       // A commissioned privateer — a naval marker (the hunter) so the law is visible too.
-      else if (s.privateer) this._privateerMark(s.x, s.y, Math.max(SHIP_RADIUS * 1.9 * zoom, 12), now);
+      else if (s.privateer) this._privateerMark(px, py, Math.max(SHIP_RADIUS * 1.9 * zoom, 12), now);
     }
+  }
+
+  /** Fan every DOCKED ship (idle at its home, or trading at a stop) into a ring of berths around its
+   *  island so a busy port's fleet doesn't stack into one unclickable pile on the wharf. Recomputed
+   *  each frame into this._berths (ship id → {x,y,ix,iy}); stable berth order (sorted by id) so a ship
+   *  keeps its slot while the dock roster holds. Faction hulls (pirates/privateers) are never berthed —
+   *  they're driven by their own AI, not moored as traders. */
+  _computeBerths(shipsById, islandsById) {
+    this._berths.clear();
+    if (!islandsById) return;
+    const byIsland = new Map(); // island id → [ship id …]
+    for (const id in shipsById) {
+      const s = shipsById[id];
+      if (s.pirate || s.privateer) continue;
+      if (s.state !== 'idle' && s.state !== 'trading') continue;
+      let isl = islandsById.get(s.homeId); // fast path: an idle ship rests at home
+      if (!isl || Math.hypot(isl.x - s.x, isl.y - s.y) > islandRadius(isl) * 1.6) isl = this._islandAt(s.x, s.y, islandsById);
+      if (!isl) continue;
+      let arr = byIsland.get(isl.id); if (!arr) byIsland.set(isl.id, arr = []); arr.push(id);
+    }
+    for (const [islId, ids] of byIsland) {
+      const isl = islandsById.get(islId); if (!isl) continue;
+      ids.sort();
+      const n = ids.length, R = islandRadius(isl), rr = R * 1.2;
+      const phase = (isl.x * 0.013 + isl.y * 0.017); // per-island start angle so berths don't all align
+      for (let i = 0; i < n; i++) {
+        const a = phase + (i / n) * Math.PI * 2;
+        this._berths.set(ids[i], { x: isl.x + Math.cos(a) * rr, y: isl.y + Math.sin(a) * rr, ix: isl.x, iy: isl.y });
+      }
+    }
+  }
+
+  /** Nearest island to (x,y) that the point is genuinely AT (docked ships snap to island centre) —
+   *  the fallback for a ship docked away from its home port (trading at a stop). O(N) but only hit for
+   *  the few ships not resolved by homeId. */
+  _islandAt(x, y, islandsById) {
+    let best = null, bd = Infinity;
+    for (const isl of islandsById.values()) {
+      const d = Math.hypot(isl.x - x, isl.y - y);
+      if (d < bd) { bd = d; best = isl; }
+    }
+    return best && bd <= islandRadius(best) * 1.6 ? best : null;
+  }
+
+  /** The display position of a ship — its berth slot if docked, else its live position. Used by the
+   *  scene's hit-test so a moored ship is clickable where it's actually drawn (in its berth), not
+   *  buried under the island. */
+  shipDisplayPos(id, ship) {
+    const b = this._berths.get(id);
+    return b ? { x: b.x, y: b.y } : { x: ship.x, y: ship.y };
+  }
+
+  /** A thin mooring line from a berthed ship to its island — the "made fast to the wharf" cue. */
+  _mooringLine(px, py, ix, iy) {
+    const a = this.camera.worldToScreen(px, py);
+    const b = this.camera.worldToScreen(ix, iy);
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(230, 214, 170, 0.5)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.moveTo(a.sx, a.sy); ctx.lineTo(b.sx, b.sy); ctx.stroke();
+    ctx.restore();
   }
 
   /** A privateer's mark: a steel-blue disc + crossed-sabres, the sanctioned pirate-hunter. */

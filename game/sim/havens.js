@@ -50,13 +50,26 @@ export function havens(world, h) {
 function maybeRaiseRogue(world) {
   const t = world.rules;
   const min = t.MIN_PIRATES_AT_LARGE || 0;
-  if (min <= 0 || pirateCount(world) >= min) return;
-  if (world.simTime < (world._rogueCd || 0) || !canTurnPirate(world)) return;
+  const have = pirateCount(world);
+  if (min <= 0 || have >= min) return;
+  if (world.simTime < (world._rogueCd || 0)) return;
+  // Refill toward the floor in a small BATCH, not one hull at a time — otherwise a lone rogue every
+  // few days can't keep pace with an active navy, the floor is never actually held, and the seas empty
+  // of any black flag mid-game (piracy invisible). Still bounded by the floor and the hard fleet cap.
+  const batch = Math.min(min - have, t.ROGUE_SPAWN_BATCH || 1);
+  let raised = 0;
+  for (let i = 0; i < batch && canTurnPirate(world); i++) { raiseOneRogue(world); raised++; }
+  if (raised > 0) world._rogueCd = world.simTime + (t.ROGUE_SPAWN_COOLDOWN_DAYS || 2) * t.SIM_DAY_SECONDS;
+}
+
+/** Sail one fresh rogue in off the open ocean: an armed, victualled BRIG under a fearsome captain,
+ *  dropped at a random map edge with NO coin (it must plunder — no gold minted mid-sim). */
+function raiseOneRogue(world) {
+  const t = world.rules;
   const anchor = world.islands[Math.floor(streamFloat(world, 'rogue') * world.islands.length)] || world.islands[0];
   if (!anchor) return;
   const ship = createShip(world.nextEntityId++, anchor, t, 'brig');
-  ship.cargo.Gold = 0; // an outsider sails in with no coin (it must plunder) — no gold minted mid-sim (conservation)
-  // Sail in from a random edge of the map (the open sea beyond the isles).
+  ship.cargo.Gold = 0;
   const edge = streamFloat(world, 'rogue');
   if (edge < 0.25) { ship.x = 0; ship.y = streamFloat(world, 'rogue') * world.mapH; }
   else if (edge < 0.5) { ship.x = world.mapW; ship.y = streamFloat(world, 'rogue') * world.mapH; }
@@ -68,7 +81,6 @@ function maybeRaiseRogue(world) {
   ship.name = shipName(world);
   world.ships.push(ship);
   turnPirate(world, ship);
-  world._rogueCd = world.simTime + (t.ROGUE_SPAWN_COOLDOWN_DAYS || 2) * t.SIM_DAY_SECONDS;
 }
 
 /** A wholly lawless, uncivilised port teeters for HAVEN_FALL_DAYS, then falls. Capped fleet-wide.

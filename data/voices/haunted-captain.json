@@ -1,0 +1,61 @@
+{
+  "id": "haunted-captain",
+  "name": "The Haunted Captain",
+  "persona": "A grief-worn master who has given too many souls to the sea. The log is a keeping of the dead as much as the living; he counts ghosts, addresses the drowned, and writes in a quiet, unhealing sorrow. Always 'we'.",
+
+  "pronoun": {
+    "ship":   { "subject": "we", "first": "We" },
+    "island": { "subject": "we", "first": "We" }
+  },
+
+  "handover": {
+    "ship": {
+      "founder":   "Here I begin the count. I am {name}{rankc}, and this {home} {type} is mine to keep — her, and every soul aboard her, for as long as the sea will let me keep them.",
+      "successor": "The book passes to me, and with it the names. I am {name}{rankc}; I will carry them as the last hand carried them, and add my own before the end.",
+      "mutiny":    "They put the old master over the side — one more the water takes — and left the book in my shaking hands. I am {name}, new to this grief, and already I am counting.",
+      "pirate":    "We have raised the black flag, God forgive us, and I — {name}{rankc} — will keep the tally of what it costs. There are always names. There are only ever more names.",
+      "prize":     "She struck to us, and men died on both her decks for it. I am {name}{rankc}; her log is mine now, and I open it with the drowned we made today.",
+      "recovered": "A hunter's guns freed this hull and left the water full again. I am {name}{rankc}, come to bring her home — and to write down the ones who did not come with her."
+    },
+    "island": {
+      "founder":   "I take up {place}, and the keeping of its dead as much as its living. I am {name}{rankc}; the sea gives this port few and takes many.",
+      "overthrow": "The people pulled the old ruler down, and the seal came to me across their fallen. I am {name}{rankc}; {place} is mine to grieve and to govern.",
+      "successor": "The rule of {place} passes to me — {name}{rankc}. I take up its ledger of harvests, and its longer ledger of the lost."
+    }
+  },
+
+  "connectives": {
+    "same":   ["That same grey day, ", "Before the sea had stilled, ", "While the water was still counting, "],
+    "days":   ["A few dawns after, ", "When the mourning had scarcely settled, ", "Soon after, "],
+    "week":   ["A week of empty berths later, ", "When the week had gone under, "],
+    "season": ["A season on, the names no fewer, ", "As the year turned toward its dark, "],
+    "year":   ["A year later, and still we counted, ", "A year down, the sea no gentler, "],
+    "long":   ["After a long silence, the kind the drowned keep, ", "Years on, when the grief had worn smooth, "]
+  },
+
+  "join": ["and ", "and then, God keep them, ", "; and after, ", "and "],
+
+  "coda": {
+    "ship": {
+      "pirate":  "We haunt the lanes yet{bounty}, and the water follows us, patient, waiting to be paid.",
+      "default": "She sails on out of {home}, and I keep counting the souls she brings home — and the ones she does not.",
+      "bounty":  ", {bounty}g offered for the ghost I have become"
+    },
+    "island": {
+      "haven":   "The black flag flies over {place} now; the ledger holds only the drowned, and no hand left to mourn them.",
+      "default": "{place} endures — {population} souls — and I keep the longer list beside the shorter one."
+    }
+  },
+
+  "quiet": {
+    "ship":   "Little to set down, and I am grateful for it — a quiet passage, and every soul answering the roll come morning.",
+    "island": "A gentle season, no new names for the stone — and I have learned to thank the sea for the days it takes nothing."
+  },
+
+  "kinds": {
+    "sunk":    { "recur": { "class": "prize", "phrases": [", and the water took them all", " — we send them down and count them still", ", more souls for the green dark"] } },
+    "plunder": { "recur": { "class": "prize", "phrases": [", though men drowned to make it ours", " — no prize is bought cheaply"] } },
+    "fended":  { "recur": { "class": "stand", "phrases": [" — we held, and buried our own after", ", and the sea let us keep our names this once"] } },
+    "hunted":  { "recur": { "class": "hunt",  "phrases": [", another crew given to the deep", " — I take no joy in the counting of them"] } }
+  }
+}

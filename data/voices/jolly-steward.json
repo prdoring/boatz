@@ -1,0 +1,60 @@
+{
+  "id": "jolly-steward",
+  "name": "The Jolly Steward",
+  "persona": "A warm, homely ship's cook and steward keeping the book with good cheer. Everything measured in full bellies, warm bunks, and a kind word; fond of the crew, given to hospitality. Uses 'we'.",
+
+  "pronoun": {
+    "ship":   { "subject": "we", "first": "We" },
+    "island": { "subject": "we", "first": "We" }
+  },
+
+  "handover": {
+    "ship": {
+      "founder":   "Well now, this fine book is ours to fill, and I mean to fill it warm. I am {name}{rankc}, cook and keeper both, and this {home} {type} shall want for neither a full pot nor a kind word while I hold the ladle and the pen.",
+      "successor": "The book is passed to me over a shared cup, as good things ought to be. I am {name}{rankc}; I'll keep her tale simmering along as the old hand did, with a little seasoning of my own.",
+      "mutiny":    "A bad business, and I'll not dress it as anything sweeter — the lads turned the old master out, and pressed this book on me with hands that had not been fed proper in weeks. I am {name}. I'll see them warm and full from here, and trust a good galley to mend what a hard master broke.",
+      "pirate":    "So the black flag flies over my galley now, and I like it no better than a burnt loaf — but the crew must eat, flag or no flag. I am {name}{rankc}. I'll keep the pot on and the book honest, and pray it feeds us kinder than trade ever did.",
+      "prize":     "She struck to us, and the first thing I did upon her deck was seek out her galley — cold, poor souls, and near bare. I am {name}{rankc}. She sails under us now, and by week's end her people will know what a warm mess deck feels like again.",
+      "recovered": "A hunter cut this hull free of the black flag, and set me aboard to bring her home gentle. I am {name}{rankc}. First a good hot meal for every hand of her, and then honest work — that is how you mend a ship, and a crew both."
+    },
+    "island": {
+      "founder":   "I take up {place} as I'd take up a cold kitchen — sleeves rolled and a mind to warm it through. I am {name}{rankc}. No soul beneath my roof shall go to bed hungry while I can help it.",
+      "overthrow": "The people had had their fill of the old ruler — and not the good kind of fill — and down he came. The seal is mine now. I am {name}{rankc}. Let us get {place} fed and settled, and fret over the rest come morning.",
+      "successor": "The keeping of {place} passes to me, kindly and calm, like a house handed on with the hearth still warm. I am {name}{rankc}. I'll tend it well, and its {population} souls better."
+    }
+  },
+
+  "connectives": {
+    "same":   ["That same evening, over supper, ", "Before the pot was scraped, ", "Later, by the lamplight, "],
+    "days":   ["A few days and a few good meals on, ", "Soon after, ", "When the bread had risen twice more, "],
+    "week":   ["A week on, ", "The week after, warm and fed, "],
+    "season": ["A season on, ", "When the stores had turned over once, "],
+    "year":   ["A year of full pots later, ", "Long after, "],
+    "long":   ["After a good long spell of quiet and plenty, ", "Years and many suppers passed, and "]
+  },
+
+  "join": ["and ", "; then ", "and, bless them all, "],
+
+  "coda": {
+    "ship": {
+      "pirate":  "We're on the account still, flag up{bounty} — but the mess deck stays warm and the pot never empties, and that much is my part kept.",
+      "default": "We sail on out of {home}, bellies full and bunks dry, and I ask no more of a life than that.",
+      "bounty":  ", {bounty}g on my head, if any can catch a cook"
+    },
+    "island": {
+      "haven":   "The black flag flies over {place} now, and a colder wind with it — but I'll keep a light in the window and a pot on the fire as long as I am able.",
+      "default": "{place} bides warm and well fed under us — {population} souls, and a good loaf for every one of them."
+    }
+  },
+
+  "quiet": {
+    "ship":   "Little to write but fair winds and full holds — and to my mind a quiet galley and a happy crew are the finest lines any book can carry.",
+    "island": "A calm and cozy season — trade coming and going, the market stalls heaped, and not a hungry face in the whole square. Lovely."
+  },
+
+  "kinds": {
+    "plunder": { "recur": { "class": "prize", "phrases": [", another good haul for the larder", " — the more to share round the mess", ", and a fine supper we made of it"] } },
+    "fended":  { "recur": { "class": "stand", "phrases": [" — we have weathered rougher and still sat down to supper", ", and lived to break bread another day"] } },
+    "raid":    { "recur": { "class": "sack",  "phrases": [", another town left the leaner, and I am sorry for their empty pots", ", the {ord} port we've cleaned of its bread"] } }
+  }
+}

@@ -17,6 +17,7 @@
 import { streamFloat } from './rng.js';
 import { foodDays } from './island.js';
 import { logEvent, logEventThrottled } from './events.js';
+import { voiceSeedFrom, regimeData } from './captains.js';
 import { clamp, safeDiv, tradeables, targetFor } from './resources.js';
 
 const SUR = [
@@ -89,7 +90,7 @@ export function makeMagistrate(world, island = null) {
   const traits = { firmness: trait(world), generosity: trait(world), integrity: trait(world) };
   const portrait = Math.floor(streamFloat(world, 'mag') * 0x7fffffff) >>> 0;
   const ambition = { kind: chooseAmbition(world, island), progress: 0.35, milestone: false };
-  return { name, xp: 0, traits, personality: magPersonality(traits), portrait, ambition };
+  return { name, xp: 0, traits, personality: magPersonality(traits), portrait, voiceSeed: voiceSeedFrom(portrait), ambition };
 }
 
 /** The raw resources that feed the goods this island manufactures (industry's import focus). */
@@ -126,6 +127,7 @@ export function retarget(island, economy, tuning) {
 /** Seat a fresh magistrate on an island and re-target its economy to the new agenda. */
 export function installMagistrate(world, island) {
   island.magistrate = makeMagistrate(world, island);
+  island.magistrate._installedDay = Math.floor(world.simTime / world.rules.SIM_DAY_SECONDS); // for the first-year beat
   retarget(island, world.economy, world.rules);
   return island.magistrate;
 }
@@ -274,6 +276,14 @@ export function governance(world, h) {
       logEvent(world, 'rebellion', `Rebellion erupts on ${isl.name} — ${rebelCause(isl, t)} drove the people to the streets; the port is aflame.`, { islandId: isl.id });
     }
 
+    // A magistrate who has held the port in good order through a first full year — a governance beat
+    // (tier:'log'). A rebelling island has already `continue`d above, so this only fires on a calm port.
+    if (daily && !mag._firstYear && mag._installedDay != null && (isl.loyalty || 0) > 0.5
+        && day - mag._installedDay >= t.FIRST_YEAR_DAYS) {
+      mag._firstYear = true;
+      logEvent(world, 'neworder', `${mag.name} has held ${isl.name} in good order through a first full year.`, { islandId: isl.id, tier: 'log' });
+    }
+
     if (daily) mag.xp = (mag.xp || 0) + t.MAG_XP_PER_DAY; // experience for a day of order kept
   }
 }
@@ -292,8 +302,10 @@ function resolveRebellion(world, isl) {
     isl.grievance = clamp((isl.grievance || 0) + t.GRIEVANCE_PER_QUELL, 0, 1); // put down by force → resentment festers
     logEvent(world, 'quellReb', `${mag.name} crushed the rebellion on ${isl.name} and clung to power — but the grievances deepen.`, { islandId: isl.id });
   } else {
+    const from = { name: mag.name, voiceSeed: mag.voiceSeed, rank: magRank(mag) }; // capture the cast-out ruler before installMagistrate overwrites isl.magistrate
     const newMag = installMagistrate(world, isl);     // a fresh regime takes over, with a fresh agenda + re-targeted economy
-    logEvent(world, 'overthrow', `${isl.name} rose up and cast out ${mag.name}; ${newMag.name} seizes the ruined port with a mind to ${((AMBITION_META[newMag.ambition.kind] || {}).verb) || 'rebuild'} it.`, { islandId: isl.id });
+    logEvent(world, 'overthrow', `${isl.name} rose up and cast out ${mag.name}; ${newMag.name} seizes the ruined port with a mind to ${((AMBITION_META[newMag.ambition.kind] || {}).verb) || 'rebuild'} it.`,
+      { islandId: isl.id, data: regimeData(from, { name: newMag.name, voiceSeed: newMag.voiceSeed, rank: magRank(newMag) }, 'overthrow') });
     isl.civ *= (1 - t.OVERTHROW_CIV_HIT);            // the old order's works scattered
     isl.gold = Math.floor(isl.gold * (1 - t.OVERTHROW_GOLD_HIT)); // treasury looted
     isl.lawlessness = clamp((isl.lawlessness || 0) + t.LAWLESS_OVERTHROW_BUMP, 0, 1); // turmoil leaves the streets unruly

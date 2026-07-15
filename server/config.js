@@ -21,6 +21,14 @@ export const EDITOR_PASSWORD = process.env.EDITOR_PASSWORD || null;
 // density (and travel times) stay constant as N grows — safe to raise. Override with ISLANDS=<n>.
 export const ISLANDS = Number(process.env.ISLANDS) || 250;
 
+// Durable world chronicle DB (server/chronicle.js). Off-mount hidden dir so it is never served
+// as a static file (`.chronicle` is not a MOUNTS key). Set CHRONICLE_DB=off to disable persistence,
+// or CHRONICLE_DB=/some/path.db to relocate it. Requires Node ≥ 22.5 (node:sqlite); degrades to a
+// no-op store otherwise. Tests / the smoke run pass no path, so they never touch it.
+export const CHRONICLE_DB = process.env.CHRONICLE_DB === 'off'
+  ? null
+  : (process.env.CHRONICLE_DB || path.join(ROOT, '.chronicle', 'chronicle.db'));
+
 export const DIRS = {
   root: ROOT,
   engine: path.join(ROOT, 'engine'),

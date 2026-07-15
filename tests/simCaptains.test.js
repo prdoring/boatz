@@ -13,7 +13,7 @@ test('makeCaptain is deterministic for a given seed and gives a name, traits, pe
   assert.equal(ca.name, cb.name);
   assert.deepEqual(ca.traits, cb.traits);
   assert.equal(ca.personality, cb.personality);
-  assert.ok(ca.name.length > 0 && ca.xp === 0);
+  assert.ok(ca.name.length > 0 && ca.xp.sea === 0 && ca.xp.gun === 0 && ca.xp.cmd === 0);
   for (const k of ['boldness', 'wanderlust', 'greed']) assert.ok(ca.traits[k] >= 0 && ca.traits[k] <= 1);
 });
 
@@ -33,7 +33,7 @@ test('rank climbs with xp; awardVoyageXp adds a per-hop bonus', () => {
   const one = { xp: 0 }, three = { xp: 0 };
   awardVoyageXp(one, w.rules, 1);
   awardVoyageXp(three, w.rules, 3);
-  assert.ok(three.xp > one.xp, 'a 3-stop run earns more than a 1-stop run');
+  assert.ok(three.xp.sea > one.xp.sea, 'a 3-stop run earns more than a 1-stop run');
 });
 
 test('personalityOf names the most pronounced trait, else Steady', () => {

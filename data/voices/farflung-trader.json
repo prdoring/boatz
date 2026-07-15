@@ -1,0 +1,61 @@
+{
+  "id": "farflung-trader",
+  "name": "The Farflung Trader",
+  "persona": "A courteous merchant-captain from distant eastern ports, keeping the log in careful, formal second-tongue diction. Elaborate courtesy, proverbs of far countries, honour and hospitality, measured formality. Ship: 'I'. Island: 'we'.",
+
+  "pronoun": {
+    "ship":   { "subject": "I",  "first": "I" },
+    "island": { "subject": "we", "first": "We" }
+  },
+
+  "handover": {
+    "ship": {
+      "founder":   "In the name of good fortune and fair dealing, I open this record. I am {name}{rankc}, and this {home} {type} is entrusted to my care. As they say in my country: a ship well-kept is a house that never sleeps.",
+      "successor": "With all due courtesy, the keeping of this log passes into my hand. I am {name}{rankc}; her account continues under my humble care.",
+      "mutiny":    "The crew set the old master into the water's keeping and pressed this book upon me — I am {name}, unschooled in command, and I take up the burden as honour demands. The elders say: the reed that is chosen must learn to stand straight.",
+      "pirate":    "It grieves me to write it, but honest trade lies behind me. The black flag is raised, and I — {name}{rankc} — keep this log with a heavy, honest hand. Even a proverb has its dark verse.",
+      "prize":     "She yielded to me with good grace, and I received her surrender with the courtesy owed a worthy adversary. I am {name}{rankc}; this vessel now sails beneath my flag, and her log continues in my hand.",
+      "recovered": "A hunter delivered this hull from the black flag's grip, and the honour of restoring her has fallen to me. I am {name}{rankc}, and I return her to honest trade, as a guest is returned safely to his road."
+    },
+    "island": {
+      "founder":   "With humble thanks for the trust placed in us, we take up the governance of {place}. I am {name}{rankc}; we shall keep its record as a host keeps account of his guests.",
+      "overthrow": "The people rose and cast down the old ruler, and the seal has come to us out of that tumult. I am {name}{rankc}; {place} is ours to govern now, and we pray to govern it with honour.",
+      "successor": "The rule of {place} passes to us with all proper ceremony. I am {name}{rankc}, and we keep its chronicle from this day, as is right and fitting."
+    }
+  },
+
+  "connectives": {
+    "same":   ["That same day, ", "Before the sun had set, ", "Ere the day was done, "],
+    "days":   ["Some days thereafter, ", "In due course, ", "Not many days hence, "],
+    "week":   ["A week having passed, ", "When seven days had turned, "],
+    "season": ["A season having run its course, ", "As the year turned its face, "],
+    "year":   ["A year having come and gone, ", "When a full year had elapsed, "],
+    "long":   ["After a long and peaceable interval, ", "Many years having passed, "]
+  },
+
+  "join": ["and ", "; furthermore, ", "and, as is proper, "],
+
+  "coda": {
+    "ship": {
+      "pirate":  "I ply the lanes yet, and pray fortune proves gentler than I deserve{bounty}.",
+      "default": "She remains in my care and upon the sea, sailing out of {home}, for which I give thanks.",
+      "bounty":  ", a bounty of {bounty}g resting upon my name"
+    },
+    "island": {
+      "haven":   "The black flag governs it now; no lawful host keeps this book, and hospitality lies dead in its halls.",
+      "default": "{place} prospers under our stewardship — {population} souls, and the door open to every honest traveller."
+    }
+  },
+
+  "quiet": {
+    "ship":   "Little of note to record — fair passage and courteous ports, for which I am grateful. A calm sea, the proverb says, teaches no sailor wisdom, yet I welcome it gladly.",
+    "island": "The season has been peaceable, for which we give thanks. Trade comes and goes, and each guest departs content."
+  },
+
+  "kinds": {
+    "plunder": { "recur": { "class": "prize", "phrases": [", the {ord} such prize, though I take no pride in the counting", " — not, I confess, the first", ", as fortune has granted before"] } },
+    "sunk":    { "recur": { "class": "prize", "phrases": [", another sent below, may the deep be gentle with her"] } },
+    "fended":  { "recur": { "class": "stand", "phrases": [" — I have turned aside such wolves before", ", by good fortune and steady hands, as once before"] } },
+    "hunted":  { "recur": { "class": "hunt",  "phrases": [", the {ord} raider I have brought to account"] } }
+  }
+}

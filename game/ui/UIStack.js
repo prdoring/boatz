@@ -9,6 +9,7 @@
 // never in here or the engine.
 
 import { PALETTE } from '../config.js';
+import { drawIcon } from './icons.js';
 
 export function roundRect(ctx, x, y, w, h, r) {
   const rr = Math.min(r, w / 2, h / 2);
@@ -31,14 +32,18 @@ export class Widget {
   onDown(px, py) { return this.contains(px, py); }
   onMove(_px, _py) {}
   onUp(_px, _py) {}
+  /** @returns {boolean} true if this widget consumed the wheel (so the scene doesn't also zoom). */
+  onWheel(_px, _py, _dy) { return false; }
   draw(_ctx) {}
   layout(_view) {}
 }
 
 export class Button extends Widget {
-  constructor({ label = '', onClick = null, isActive = null, font = '15px system-ui, sans-serif' } = {}) {
+  constructor({ label = '', icon = null, iconSize = 15, onClick = null, isActive = null, font = '15px system-ui, sans-serif' } = {}) {
     super();
     this.label = label;
+    this.icon = icon;         // optional vector-icon name (drawn instead of the label text)
+    this.iconSize = iconSize;
     this.onClick = onClick || (() => {});
     this.isActive = isActive || (() => false);
     this.font = font;
@@ -51,18 +56,34 @@ export class Button extends Widget {
   draw(ctx) {
     if (!this.visible) return;
     const active = !!this.isActive();
+    const { x, y, w, h } = this;
     ctx.save();
-    roundRect(ctx, this.x, this.y, this.w, this.h, 7);
-    ctx.fillStyle = active ? PALETTE.accent : PALETTE.panelBg;
-    ctx.fill();
-    ctx.lineWidth = 1.5;
-    ctx.strokeStyle = active ? PALETTE.accent : PALETTE.panelEdge;
-    ctx.stroke();
-    ctx.fillStyle = active ? '#06323b' : PALETTE.panelText;
-    ctx.font = this.font;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(this.label, this.x + this.w / 2, this.y + this.h / 2 + 0.5);
+    // Body — a top-lit gradient: warm brass when active, cool lacquered teal at rest.
+    roundRect(ctx, x, y, w, h, 7);
+    const g = ctx.createLinearGradient(0, y, 0, y + h);
+    if (active) { g.addColorStop(0, '#ffe08a'); g.addColorStop(1, PALETTE.accentDim); }
+    else { g.addColorStop(0, 'rgba(15, 58, 69, 0.96)'); g.addColorStop(1, 'rgba(6, 30, 38, 0.96)'); }
+    ctx.fillStyle = g; ctx.fill();
+    // A thin inner top-sheen line (the raised-key highlight).
+    ctx.beginPath();
+    ctx.moveTo(x + 6, y + 2.5); ctx.lineTo(x + w - 6, y + 2.5);
+    ctx.strokeStyle = active ? 'rgba(255,255,255,0.5)' : 'rgba(180,240,255,0.16)'; ctx.lineWidth = 1; ctx.stroke();
+    // Border.
+    roundRect(ctx, x, y, w, h, 7);
+    ctx.lineWidth = 1.5; ctx.strokeStyle = active ? '#ffe9a8' : PALETTE.panelEdge; ctx.stroke();
+    const fg = active ? '#06323b' : PALETTE.panelText;
+    const cx = x + w / 2, cy = y + h / 2;
+    if (this.icon) {
+      drawIcon(ctx, this.icon, cx, cy, this.iconSize, fg);
+    } else {
+      ctx.fillStyle = fg;
+      ctx.font = this.font;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      if ('letterSpacing' in ctx) ctx.letterSpacing = '0.4px';
+      ctx.fillText(this.label, cx, cy + 0.5);
+      if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+    }
     ctx.restore();
   }
 }
@@ -98,5 +119,14 @@ export class UIStack {
   }
   onMove(px, py) { for (const w of this.widgets) if (w.visible) w.onMove(px, py); }
   onUp(px, py) { for (const w of this.widgets) if (w.visible) w.onUp(px, py); }
+  /** Route a wheel top-of-stack first; stop at the first widget that consumes it (so a panel under
+   *  the cursor scrolls instead of the map zooming). */
+  onWheel(px, py, dy) {
+    for (let i = this.widgets.length - 1; i >= 0; i--) {
+      const w = this.widgets[i];
+      if (w.visible && w.onWheel(px, py, dy)) return true;
+    }
+    return false;
+  }
   draw(ctx) { for (const w of this.widgets) if (w.visible) w.draw(ctx); }
 }

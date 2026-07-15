@@ -9,6 +9,7 @@ import { M, SPEEDS, PROTOCOL_VERSION } from '../game/protocol.js';
 import { buildWorld, stepWorld, worldTotals } from '../game/sim/world.js';
 import { snapshotShips, snapshotShipsCold, snapshotEconomy, snapshotLayout, windSnapshot, stormsSnapshot } from '../game/sim/snapshot.js';
 import { generateRoster } from '../game/sim/roster.js';
+import { createChronicle } from './chronicle.js';
 import economyRaw from '../data/economy.json' with { type: 'json' };
 
 const TICK_MS = 50;             // 20 Hz real tick
@@ -20,7 +21,7 @@ const HEARTBEAT_MS = 15000;
 // frames scale with the world, so this is generous enough for ~1000s of islands/ships.
 const MAX_BUFFERED = 8 * 1024 * 1024;
 
-export function attachSimServer(server, { tickMs = TICK_MS, seed = 0xB0A7, rosterSeed, islandCount } = {}) {
+export function attachSimServer(server, { tickMs = TICK_MS, seed = 0xB0A7, rosterSeed, islandCount, chroniclePath = null } = {}) {
   // A fresh sea of islands every boot (unless a rosterSeed is pinned, e.g. in tests).
   const rSeed = (rosterSeed != null ? rosterSeed : (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0);
   const roster = generateRoster(rSeed, islandCount); // islandCount undefined → roster default (fast for tests)
@@ -29,14 +30,22 @@ export function attachSimServer(server, { tickMs = TICK_MS, seed = 0xB0A7, roste
   const wss = new WebSocketServer({ server, maxPayload: 64 * 1024 });
   let nextClientId = 1;
 
+  // Durable per-sea chronicle. A no-op unless a path is given (tests / smoke pass none), so it adds
+  // zero cost/side-effects there. It only OBSERVES world.events (write-only from the sim's side —
+  // never read back), so it cannot affect determinism.
+  const chronicle = createChronicle({ path: chroniclePath });
+
   // Clock system (first): real-dt * speed -> world.dtSim (0 when paused). Sim system:
-  // advance in fixed substeps (stepWorld) — identical dynamics at every speed.
+  // advance in fixed substeps (stepWorld) — identical dynamics at every speed. Chronicle system
+  // (last): drain any new events to the DB — runs every tick, so history is recorded even headless.
   const clock = { update(w, dt) { w.dtSim = w.paused ? 0 : dt * w.speed; } };
   const sim = { update(w, dt, tick) { stepWorld(w, w.dtSim, tick); w.totals = worldTotals(w); } };
+  const chron = { update(w) { chronicle.ingest(w); } };
 
   const loop = new ServerLoop({ state: world, tickMs, broadcast });
   loop.addSystem(clock);
   loop.addSystem(sim);
+  loop.addSystem(chron);
 
   function shipsMessage(tick) {
     // AOI seam: to cull per client later, build entities from a client's viewport
@@ -86,8 +95,12 @@ export function attachSimServer(server, { tickMs = TICK_MS, seed = 0xB0A7, roste
     sendNow(ws, {
       type: M.WELCOME, protocolVersion: PROTOCOL_VERSION, clientId: ws.clientId, tickMs,
       mapW: world.mapW, mapH: world.mapH,
+      worldId: world.rosterSeed, // scopes /api/history queries to THIS sea (per-sea chronicle)
       raw: world.economy.raw, goods: world.economy.goods,
       dayLength: world.rules.SIM_DAY_SECONDS,
+      // Static season config → lets the client's chronicler label past datelines ("Autumn, Day 68").
+      seasons: Array.isArray(world.rules.SEASONS) ? world.rules.SEASONS.map((s) => s.name) : null,
+      seasonDays: world.rules.SEASON_DAYS || null,
       layout: snapshotLayout(world), shipInterval: tickMs * SHIP_EVERY,
     });
     sendNow(ws, { type: M.STATE_ECON, tick: loop.tick, ...snapshotEconomy(world) });
@@ -118,12 +131,13 @@ export function attachSimServer(server, { tickMs = TICK_MS, seed = 0xB0A7, roste
   loop.start();
 
   return {
-    world, wss, loop,
+    world, wss, loop, chronicle,
     stop() {
       loop.stop();
       clearInterval(heartbeat);
       for (const ws of wss.clients) ws.terminate();
       wss.close();
+      chronicle.close();
     },
   };
 }

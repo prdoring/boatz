@@ -64,6 +64,7 @@ test('a threatened, solvent, armed port commissions a privateer — paying gold 
 
 test('a privateer runs down a pirate, sinks it, and claims the bounty for home', () => {
   const w = makeWorld();
+  w.rules = { ...w.rules, PRIZE_RECOVER_CHANCE: 0 }; // isolate the SINK outcome (no recovery this test)
   const port = w.islands[0];
   const priv = w.ships[0], pirate = w.ships[1];
   turnPirate(w, pirate);
@@ -78,11 +79,39 @@ test('a privateer runs down a pirate, sinks it, and claims the bounty for home',
 
   const before = port.gold;
   const xpBefore = priv.captain.xp;
-  antipiracy(w, w.rules.SIM_STEP);
+  // Combat is now ATTRITION over rounds (paced by _fightCd = COMBAT_ROUND_SEC), not a single roll — so
+  // run the hunt round by round (advancing sim time a round each pass) until the outmatched raider founders.
+  for (let i = 0; i < 80 && !pirate._sunk; i++) {
+    antipiracy(w, w.rules.SIM_STEP);
+    w.simTime += w.rules.COMBAT_ROUND_SEC;
+  }
 
   assert.ok(!w.ships.includes(pirate) || pirate._sunk, 'the pirate was sunk');
   assert.equal(port.gold, before + 300, 'the privateer’s home collected the 300g bounty');
-  assert.ok(priv.captain.xp > xpBefore, 'the hunter’s captain earned experience for the kill (grows more skilled)');
+  assert.ok(priv.captain.xp.gun > xpBefore, 'the hunter’s captain earned experience for the kill (grows more skilled)');
+});
+
+test('a privateer may RECOVER a beaten pirate — the hull is restored to honest trade at its home port', () => {
+  const w = makeWorld();
+  w.rules = { ...w.rules, PRIZE_RECOVER_CHANCE: 1, MAX_SHIPS_PER_ISLAND: 999 }; // certain recovery; always a berth
+  const port = w.islands[0];
+  const priv = w.ships[0], pirate = w.ships[1];
+  turnPirate(w, pirate);
+  pirate.morale = 0.3; pirate.cargo.Weapons = 2; pirate.captain.xp = 0; pirate.hull = 1; pirate.rig = 1;
+  priv.privateer = true; priv.homeId = port.id; priv._guard = port.id;
+  priv.privateerUntil = w.simTime + 10 * w.rules.SIM_DAY_SECONDS;
+  priv.morale = 1; priv.cargo = { Gold: 0, People: 0, Weapons: 30, Food: 200 };
+  priv.captain.xp = 5000;
+  priv.x = pirate.x = 2000; priv.y = pirate.y = 2000;
+
+  for (let i = 0; i < 80 && pirate.pirate && !pirate._sunk; i++) {
+    antipiracy(w, w.rules.SIM_STEP);
+    w.simTime += w.rules.COMBAT_ROUND_SEC;
+  }
+
+  assert.ok(!pirate._sunk, 'the raider was taken as a prize, not sent under');
+  assert.equal(pirate.pirate, false, 'she no longer flies the black flag');
+  assert.equal(pirate.homeId, port.id, 'and was returned to the commissioning port as a lawful vessel');
 });
 
 test('a besieging privateer CLEARS the haven’s screen before battering the walls', () => {

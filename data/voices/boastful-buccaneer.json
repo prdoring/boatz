@@ -1,0 +1,61 @@
+{
+  "id": "boastful-buccaneer",
+  "name": "The Boastful Buccaneer",
+  "persona": "A swaggering, self-aggrandizing rover who believes the whole sea should learn his name and tremble at it. Grand gestures, theatrical contempt for the timid, a legend he is forever polishing. Chiefly 'I', sometimes 'we' for the crew.",
+
+  "pronoun": {
+    "ship":   { "subject": "I", "first": "I" },
+    "island": { "subject": "I", "first": "I" }
+  },
+
+  "handover": {
+    "ship": {
+      "founder":   "Let the sea take note: I am {name}{rankc}, master of this {home} {type}, and before I am done every port to the horizon will speak my name in a whisper.",
+      "successor": "The book comes at last to a hand worthy of it — mine. I am {name}{rankc}, and this {type} will do grander things under me than her timid past ever dreamed.",
+      "mutiny":    "The crew flung the old fool to the fishes and crowned me with his book. I am {name}, untested yet — but mark me, they chose well, and the sea will soon agree.",
+      "pirate":    "We have run the black flag to the masthead, and I — {name}{rankc} — mean to make it the most dreaded rag on the water. Let the fat merchants tremble; I am coming for the lot of them!",
+      "prize":     "Sword in hand and boot on her deck, I took her — she is mine! I am {name}{rankc}, and this hull carries my glory now in place of her cargo.",
+      "recovered": "I ran the black-flag vermin to ground and prised this hull from their fingers myself. I am {name}{rankc} — remember it — and I hand her back to honest trade with a conqueror's grace."
+    },
+    "island": {
+      "founder":   "I take {place} in hand, and none too soon. I am {name}{rankc}; under me this port will be toasted in every tavern the sea can boast.",
+      "overthrow": "The mob tore the old ruler down and pressed the seal into my palm — where it always belonged. I am {name}{rankc}, and {place} bends to me now.",
+      "successor": "The rule of {place} falls to me, {name}{rankc}, as all fine things eventually must. Now watch what I make of it."
+    }
+  },
+
+  "connectives": {
+    "same":   ["That very day, ", "Before the sun could set, ", "The same triumphant tide, "],
+    "days":   ["Days after, and what days they were, ", "Not long after, ", "Scarce a week gone, "],
+    "week":   ["A week on, my legend the fatter for it, ", "When the week had turned, "],
+    "season": ["A whole season of glory later, ", "As the season turned in my favour, "],
+    "year":   ["A year on, my name only grown, ", "A full year later, "],
+    "long":   ["After a long and famous silence, ", "Years on, and still they told my tale, "]
+  },
+
+  "join": ["and ", "and — grander still — ", "; then ", "and, naturally, "],
+
+  "coda": {
+    "ship": {
+      "pirate":  "I rove where I please and take what I like{bounty}. Let them tremble.",
+      "default": "I sail on out of {home}, and the sea knows my name whether it cares to or no.",
+      "bounty":  ", a fat {bounty}g dangled before any fool brave enough to try me"
+    },
+    "island": {
+      "haven":   "The black flag flies over {place} now, and I would not have it any other way — let the lawful lands quake.",
+      "default": "{place} thrives under me — {population} souls, and every last one of them knows whose hand feeds them."
+    }
+  },
+
+  "quiet": {
+    "ship":   "Little worth the ink this stretch — fair winds, full holds — though my dullest day would be another man's finest hour.",
+    "island": "A quiet spell for {place}, trade running fat and easy — the very calm that only a firm and famous hand can buy."
+  },
+
+  "kinds": {
+    "plunder": { "recur": { "class": "prize", "phrases": [", the {ord} prize to bow to my name", " — as if there were ever any doubt", ", another jewel for my legend"] } },
+    "raid":    { "recur": { "class": "sack",  "phrases": [", the {ord} town to learn my name in fire", " — they will frighten their children with me"] } },
+    "fended":  { "recur": { "class": "stand", "phrases": [" — as though wolves could lay a tooth on me", ", and I scarce troubled to reload"] } },
+    "hunted":  { "recur": { "class": "hunt",  "phrases": [", the {ord} would-be hero I have humbled", " — one more name for my long and famous tally"] } }
+  }
+}

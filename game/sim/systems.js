@@ -10,6 +10,7 @@ import { dispatch } from './trade.js';
 import { ship } from './ship.js';
 import { piracy } from './piracy.js';
 import { antipiracy } from './antipiracy.js';
+import { shoreBatteries } from './shore.js';
 import { separation } from './separation.js';
 import { crew } from './crew.js';
 import { wind } from './wind.js';
@@ -35,6 +36,7 @@ export const SIM_SYSTEMS = [
   ship,
   piracy,     // pirate vessels hunt/fight/raid (the ship system skips them)
   antipiracy, // danger decay + bounties + privateers hunting pirates (after piracy, before crew)
+  shoreBatteries, // islands fire back: armed ports shell loitering pirates, havens shell besiegers — after both fleets move
   separation, // light ship-to-ship collision avoidance (COLREGS starboard give-way) — after all movement
   crew,       // provisioning/morale/mutiny for at-sea ships, after movement (reads arrivals/docks)
   upkeep,     // gold flow (income/upkeep sinks) + spoilage, after production/trade/movement

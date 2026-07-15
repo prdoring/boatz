@@ -81,7 +81,7 @@ test('privateers break a haven and it is redeemed under a fresh lawful magistrat
   assert.ok(isl.lawlessness < 1, 'order is (partly) restored');
 });
 
-test('a haven can be battered only ONCE PER DAY — no instant redemption from tick-spam', () => {
+test('a haven can be battered only ONCE PER DAY BY EACH STRIKER — no instant redemption from tick-spam', () => {
   const w = makeWorld();
   w.rules = { ...w.rules, HAVEN_ASSAULT_RISK: 0 };
   const isl = w.islands[0];
@@ -90,8 +90,28 @@ test('a haven can be battered only ONCE PER DAY — no instant redemption from t
   assert.ok(isl.haven, 'a haven to besiege');
   const striker = { id: 'p2', name: 'HMS Vigil', privateer: true, x: isl.x, y: isl.y, cargo: {}, captain: { name: 'Y', xp: 0 }, morale: 0.9 };
   const before = isl.havenStrength;
-  // Fifty assaults in the SAME day (as the per-substep loop would): only the first lands.
+  // Fifty assaults from ONE hunter in the SAME day (as the per-substep loop would): only the first lands.
   for (let i = 0; i < 50; i++) assaultHaven(w, striker, isl);
   assert.ok(isl.haven, 'the haven is NOT redeemed by same-day tick-spam');
-  assert.ok(Math.abs(isl.havenStrength - (before - w.rules.HAVEN_SUPPRESS_PER_HIT)) < 1e-9, 'exactly one blow landed all day');
+  assert.ok(Math.abs(isl.havenStrength - (before - w.rules.HAVEN_SUPPRESS_PER_HIT)) < 1e-9, 'exactly one blow landed from that ship all day');
+});
+
+test('a COMBINED siege bites harder — each besieger lands its OWN blow per day (not one for the whole den)', () => {
+  const w = makeWorld();
+  w.rules = { ...w.rules, HAVEN_ASSAULT_RISK: 0 }; // deterministic (no striker sinks)
+  const isl = w.islands[0];
+  makeFailing(w, isl);
+  runHavens(w, w.rules.HAVEN_FALL_DAYS + 2);
+  assert.ok(isl.haven, 'a haven to besiege');
+  const before = isl.havenStrength;
+  const mk = (id) => ({ id, name: id, privateer: true, x: isl.x, y: isl.y, cargo: {}, captain: { name: id, xp: 0 }, morale: 0.9 });
+  const a = mk('privA'), b = mk('privB'), c = mk('privC');
+  // Three hunters on station, same day → three blows land (the old per-HAVEN cap let a whole squadron do
+  // no more than a single ship). 3·0.11 = 0.33 < START 0.85, so the den survives — we measure the damage.
+  assaultHaven(w, a, isl); assaultHaven(w, b, isl); assaultHaven(w, c, isl);
+  assert.ok(isl.haven, 'three blows dented but did not yet break the den');
+  assert.ok(Math.abs((before - isl.havenStrength) - 3 * w.rules.HAVEN_SUPPRESS_PER_HIT) < 1e-9, 'three besiegers → three hits in a day');
+  // A second salvo the SAME day from the same ships adds nothing (the per-striker daily throttle still holds).
+  assaultHaven(w, a, isl); assaultHaven(w, b, isl);
+  assert.ok(Math.abs((before - isl.havenStrength) - 3 * w.rules.HAVEN_SUPPRESS_PER_HIT) < 1e-9, 'no extra blows from the same ships the same day');
 });

@@ -11,16 +11,26 @@
 
 import { streamFloat } from './rng.js';
 import { transfer, cargoUnits, GOLD, PEOPLE } from './resources.js';
-import { logEvent, maybeSink } from './events.js';
-import { makePirateCaptain, skill01, awardCombatXp } from './captains.js';
+import { logEvent, logEventThrottled, maybeSink } from './events.js';
+import { makePirateCaptain, skill01, awardCombatXp, rankOf, regimeData } from './captains.js';
 import { windMult } from './wind.js';
+import { rigMult, damageHull, damageRig } from './repair.js';
 import { markDanger, postBounty, payBounty } from './bounty.js';
 import { computeFleetByHome } from './fleet.js';
 import { nearestIsland as gridNearestIsland, buildShipGrid, eachShipInRange, nearestShip } from './grid.js';
 import { orbitPoint, orbitStep, orbitDir, awayPoint } from './steering.js';
-import { steerAroundIslands } from './navigation.js';
+import { steerAroundIslands, islandLandRadius } from './navigation.js';
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+
+/** A small structured record of the OTHER ship in a fight, ridden on the event's `data` payload so the
+ *  chronicler can reference a recurring foe ("the second Coralbay hull to strike to her"). Presentation
+ *  only — the sim never reads it back. */
+export function foeData(world, foe) {
+  if (!foe) return undefined;
+  const home = world.islandsById.get(foe.homeId);
+  return { foeId: foe.id, foeName: foe.name || null, foeHome: home ? home.name : null };
+}
 
 /** Record what a ship is doing right now, for the info panel's activity line. k is a short activity key,
  *  id the island/ship it concerns (or null). Mutates a reused object so it makes no per-tick garbage. */
@@ -40,27 +50,49 @@ function moveToward(ship, tx, ty, speed, h) {
   return false;
 }
 
+/** A holding station a broadside `gap` off `foe`, on the side the ship is already on — so two hulls
+ *  trading fire keep sea-room between them (you can see the shots cross) instead of drifting hull-to-hull,
+ *  while a chaser still shadows a prize clawing for the horizon. If the ship has crept inside the gap the
+ *  station sits BEHIND it, so easing to it opens the range back out. When the pair is COINCIDENT (the old
+ *  stacking bug fed the chaser the foe's own coordinates, welding them), pick a deterministic per-hull
+ *  bearing off the foe so the station is a real point `gap` away — pushing them apart, not together. */
+export function standoffPoint(foe, ship, gap) {
+  let dx = ship.x - foe.x, dy = ship.y - foe.y, d = Math.hypot(dx, dy);
+  if (d < 1e-3) { // stacked — id-derived golden-angle bearing (pure, replay-safe; mirrors separation.js)
+    const a = (parseInt(String(ship.id).replace(/\D/g, ''), 10) || 0) * 2.399963229728653;
+    dx = Math.cos(a); dy = Math.sin(a); d = 1;
+  }
+  return { x: foe.x + (dx / d) * gap, y: foe.y + (dy / d) * gap };
+}
+
 export function pirateCount(world) { let n = 0; for (const s of world.ships) if (s.pirate) n++; return n; }
 
 /** Weapons a ship has to fight with (offense + defense). */
 export function weaponsAboard(ship) { return ship.cargo.Weapons || 0; }
 
-/** A ship's fighting strength: base + captaincy + crew spirit + guns (+ a pirate's ferocity),
- *  scaled by the HULL's fighting character (a brig fights above its weight, a sloop below it, and
- *  it can mount only as many guns as its class allows — a galleon out-guns a sloop). */
+/** A ship's fighting strength: base + a trained gun-crew (the GUNNERY facet) + crew spirit + guns
+ *  aboard + a bold captain's ferocity (+ a pirate's/hunter's edge), scaled by the HULL's fighting
+ *  character (a brig fights above its weight, a sloop below it, and it can mount only as many guns as
+ *  its class allows — a galleon out-guns a sloop). A battered hull FIGHTS WORSE: guns dismount, the
+ *  crew fights the water instead of the foe — so a wallowing wreck is easy meat (the core domino). */
 export function combatStrength(world, ship) {
   const t = world.rules;
   const spec = (t.SHIP_TYPES && t.SHIP_TYPES[ship.type]) || null;
   const wcap = spec ? spec.weaponCap : t.COMBAT_WEAPON_CAP;
   const cmult = spec ? spec.combat : 1;
   const guns = Math.min(weaponsAboard(ship), wcap) * t.COMBAT_WEAPON_W;
+  const tr = (ship.captain && ship.captain.traits) || {};
+  const bold = tr.boldness != null ? tr.boldness : 0.5;
+  const hull = ship.hull != null ? ship.hull : 1;
   const s = t.COMBAT_BASE
-    + skill01(ship.captain, t) * t.COMBAT_SKILL_W
+    + skill01(ship.captain, t, 'gun') * t.COMBAT_SKILL_W          // GUNNERY — a drilled gun crew
     + (ship.morale != null ? ship.morale : 0.6) * t.COMBAT_MORALE_W
     + guns
+    + (bold - 0.5) * (t.COMBAT_BOLD_AGGRO || 0)                   // bold crews fight ferociously (traits → combat)
     + (ship.pirate ? t.COMBAT_PIRATE_BONUS : 0)
     + (ship.privateer ? t.COMBAT_PRIVATEER_BONUS : 0); // a professional hunter's edge
-  return s * cmult;
+  const hullFactor = 1 - (t.COMBAT_HULL_STRENGTH_W || 0) * (1 - hull); // a staved-in hull fights feebly
+  return Math.max(0.05, s * cmult * hullFactor);
 }
 
 /** Whether the seas can bear another pirate (fleet-fraction cap → self-limiting). */
@@ -70,6 +102,7 @@ export function canTurnPirate(world) {
 
 /** Raise the black flag: this ship becomes a pirate under a fresh, fearsome captain. */
 export function turnPirate(world, ship) {
+  const prev = ship.captain ? { name: ship.captain.name, voiceSeed: ship.captain.voiceSeed, rank: rankOf(ship.captain) } : null;
   ship.pirate = true;
   ship.captain = makePirateCaptain(world);
   ship.morale = 0.85; ship.unrest = 0; ship.uprising = null; ship.hunger = 0;
@@ -77,7 +110,8 @@ export function turnPirate(world, ship) {
   ship._prey = null; ship._plunder = 0; ship._raidCd = 0;
   ship.state = 'outbound'; // displays as 'sailing'; the piracy system drives it
   const home = world.islandsById.get(ship.homeId);
-  logEvent(world, 'pirate', `Black flag! The crew of ${ship.name || 'a ship'} turned pirate under Capt. ${ship.captain.name}${home ? ` — a ${home.name} vessel gone rogue` : ''}.`, { x: ship.x, y: ship.y, shipId: ship.id });
+  logEvent(world, 'pirate', `Black flag! The crew of ${ship.name || 'a ship'} turned pirate under Capt. ${ship.captain.name}${home ? ` — a ${home.name} vessel gone rogue` : ''}.`,
+    { x: ship.x, y: ship.y, shipId: ship.id, data: regimeData(prev, { name: ship.captain.name, voiceSeed: ship.captain.voiceSeed, rank: rankOf(ship.captain) }, 'pirate') });
 }
 
 /** SIM system: drive every pirate — hunt and fight prey, run from a hunter, blockade a port, or make
@@ -143,7 +177,9 @@ export function piracy(world, h) {
         if (bold && matched) {
           ship._prey = besieger.id;
           if (dist(ship, besieger) <= t.PIRATE_COMBAT_RANGE) {
-            if (world.simTime >= (ship._fightCd || 0) && skirmish(world, ship, besieger)) sunk = true;
+            if (world.simTime >= (ship._fightCd || 0)) { if (skirmish(world, ship, besieger)) sunk = true; }
+            // Reloading: hold a broadside gap off the hunter instead of grinding hull-to-hull off the den.
+            else { const st = standoffPoint(besieger, ship, t.COMBAT_STANDOFF || 80); if (sail(world, ship, st.x, st.y, speed, h) === 'sunk') sunk = true; }
           } else if (sail(world, ship, besieger.x, besieger.y, speed, h) === 'sunk') sunk = true;
         } else { // outmatched or cautious: shadow the hunter, keeping the haven's waters contested
           ship._prey = null;
@@ -155,30 +191,45 @@ export function piracy(world, h) {
       }
     }
 
-    // Between raids a pirate lies low with its loot (a cooldown) — no fresh fights, just roams. While
-    // HOLDING a blockade its prey range shrinks to the snap (it stays on station and pounces on ships
-    // that come close, rather than chasing distant traffic and abandoning the port); a rover ranges wide.
-    const resting = world.simTime < (ship._huntCd || 0);
+    // HUNGER makes a keener hunter — for a starving crew the prize IS food, so it can't afford to be picky.
+    // A fed pirate between raids lies low with its loot (rests) and, while HOLDING a blockade, shrinks its
+    // prey range to the snap to stay on station rather than chase distant traffic. A HUNGRY pirate does
+    // NEITHER: it never rests, ranges to its full reach even off a blockaded port, and scorns no prize,
+    // however lean (dropping the greedy captain's minimum). That's what sends a starving raider after ships.
+    const hungry = (ship.cargo.Food || 0) < t.CREW_FOOD_PER_DAY;
+    const resting = !hungry && world.simTime < (ship._huntCd || 0);
     const holding = !wander && ship._blockadeId && world.simTime < (ship._blockadeUntil || 0);
-    const preyRange = (holding ? t.PIRATE_BLOCKADE_SNAP : t.PIRATE_HUNT_RANGE) * reach;
+    const preyRange = (holding && !hungry ? t.PIRATE_BLOCKADE_SNAP : t.PIRATE_HUNT_RANGE) * reach;
     let prey = null;
-    if (!resting && ship._prey) { const p = world._shipsById.get(ship._prey); if (p && !p.pirate && !p._sunk && dist(ship, p) <= preyRange) prey = p; }
-    if (!resting && !prey) { prey = nearestPrey(world, ship, preyRange, minPrize); ship._prey = prey ? prey.id : null; }
+    if (!resting && ship._prey) { const p = world._shipsById.get(ship._prey); if (p && !p.pirate && !p._sunk && dist(ship, p) <= preyRange && !(dist(ship, p) > t.PIRATE_COMBAT_RANGE && shelteredAtPort(world, p))) prey = p; }
+    if (!resting && !prey) { prey = nearestPrey(world, ship, preyRange, hungry ? 0 : minPrize); ship._prey = prey ? prey.id : null; }
 
     if (prey) {
       setAct(ship, 'hunt', prey.id);
-      if (dist(ship, prey) <= t.PIRATE_COMBAT_RANGE) { resolveCombat(world, ship, prey); ship._prey = null; }
-      else if (sail(world, ship, prey.x, prey.y, speed, h) === 'sunk') sunk = true; // ran down at sea
+      // A running battle of broadsides paced by _fightCd — no longer one dice roll. FIRE a round when in
+      // gun-range and reloaded; resolveCombat decides when the fight ENDS (a prize struck & plundered, the
+      // raider sheering off, or a hull foundering) and clears ship._prey / sets the hunt cooldown itself.
+      // Otherwise CLOSE IN — running the merchant down at sea, and staying glued alongside between broadsides
+      // so a merchant clawing for the horizon while the guns reload doesn't simply slip away.
+      if (dist(ship, prey) <= t.PIRATE_COMBAT_RANGE && world.simTime >= (ship._fightCd || 0)) {
+        ship._fightCd = world.simTime + (t.COMBAT_ROUND_SEC || 1.2);
+        if (resolveCombat(world, ship, prey)) sunk = true;
+      } else if (dist(ship, prey) <= t.PIRATE_COMBAT_RANGE) {
+        // Reloading, already at gun-range: hold a broadside gap off the prize rather than piling onto her
+        // hull — leaves sea-room to see the shots cross — while still shadowing her so she can't slip away.
+        const st = standoffPoint(prey, ship, t.COMBAT_STANDOFF || 80);
+        if (sail(world, ship, st.x, st.y, speed, h) === 'sunk') sunk = true;
+      } else if (sail(world, ship, prey.x, prey.y, speed, h) === 'sunk') sunk = true;
       continue;
     }
 
     // No prey in sight. A hungry or plunder-laden pirate makes for its nearest HAVEN to victual and
     // fence its loot (havens.js does the transfer once it's in range) — a base is what lets a pirate
     // survive and a haven grow rich.
-    const hungry = (ship.cargo.Food || 0) < t.CREW_FOOD_PER_DAY;
     const laden = cargoUnits(ship) > ship.capacity * 0.5 || (ship.cargo[GOLD] || 0) > 150;
+    const battered = (ship.hull != null ? ship.hull : 1) < t.REPAIR_HAVEN_HULL; // a mauled raider runs for the den to mend
     const haven = nearestHaven(havenList, ship);
-    if (haven && (hungry || laden)) {
+    if (haven && (hungry || laden || battered)) {
       ship._blockadeId = null;
       setAct(ship, 'resupply', haven.id);
       if (dist(ship, haven) > t.HAVEN_RESUPPLY_RANGE * 0.5 && sail(world, ship, haven.x, haven.y, speed, h) === 'sunk') sunk = true;
@@ -190,25 +241,31 @@ export function piracy(world, h) {
     // A BOLD raider raids a port when merely peckish; a cautious one only when truly starving (raiding
     // is dangerous, so the timid would sooner hunt or slink to a haven).
     const willRaid = hungry && (bold || (ship.cargo.Food || 0) <= 0);
-    if (willRaid && isle && dist(ship, isle) <= t.PIRATE_RAID_RANGE
-        && world.simTime >= (ship._raidCd || 0) && world.simTime >= (isle._raidCd || 0)) {
+    // Can it actually strike NOW, or is it (or the port) on a post-raid cooldown? A port just hit — or one
+    // already stripped of food — must NOT become a trap the raider steers onto and parks dead-centre inside
+    // while it waits out the cooldown (that was the "pirate stuck in the middle of an island" bug). When it
+    // can't raid, it falls through to blockade the port's approaches instead — orbiting, never on the wharf.
+    const canRaid = world.simTime >= (ship._raidCd || 0) && world.simTime >= (isle._raidCd || 0);
+    if (willRaid && isle && canRaid && dist(ship, isle) <= t.PIRATE_RAID_RANGE) {
       ship._blockadeId = null;
       setAct(ship, 'raid', isle.id);
       raidIsland(world, ship, isle);
       continue;
     }
-    if (willRaid && isle) { // starving with no haven to run to: close on a port to raid it (the crew must eat)
-      ship._blockadeId = null;
+    if (willRaid && isle && canRaid) { // starving with no haven to run to: close on the port to raid it (the
+      ship._blockadeId = null;         // crew must eat) — but only to raid range, never onto the wharf itself.
       setAct(ship, 'raid', isle.id);
-      if (sail(world, ship, isle.x, isle.y, speed, h) === 'sunk') sunk = true;
+      if (dist(ship, isle) > t.PIRATE_RAID_RANGE * 0.6 && sail(world, ship, isle.x, isle.y, speed, h) === 'sunk') sunk = true;
       continue;
     }
 
-    // Fed, no prey: a WANDERER roves the lanes for wherever trade is moving; everyone else BLOCKADES a
-    // port — orbiting its approaches (never camping the wharf, which would pin the whole fleet in
-    // harbour and gridlock trade), chasing anything that ventures close, and stoking the fear of these
-    // waters so the law takes notice. A wanderer with no trade in sight falls through to blockade too.
-    const seaPrey = wander ? nearestSeaMerchant(world, ship) : null;
+    // No prey in snap range: a WANDERER — or any HUNGRY pirate — roves the lanes for wherever trade is
+    // actually moving, instead of camping a port whose whole fleet shelters in harbour the moment a raider
+    // arrives (an idle hull is safe from nearestPrey, so a blockade scares off the very prey the crew needs
+    // to eat). Everyone else BLOCKADES — orbiting the approaches (never the wharf, which would pin the fleet
+    // and gridlock trade), chasing what ventures close, and stoking the fear of these waters. A rover with
+    // no trade in sight falls through to blockade too.
+    const seaPrey = (wander || hungry) ? nearestSeaMerchant(world, ship) : null;
     if (seaPrey) {
       ship._blockadeId = null;
       setAct(ship, 'hunt', seaPrey.id);
@@ -240,21 +297,35 @@ export function piracy(world, h) {
 function sail(world, ship, tx, ty, speed, h) {
   const aim = steerAroundIslands(world, ship, tx, ty); // round any landmass between the raider and its mark
   const heading = Math.atan2(aim.y - ship.y, aim.x - ship.x);
-  const eff = speed * windMult(world, heading, skill01(ship.captain, world.rules));
+  const eff = speed * rigMult(ship, world.rules) * windMult(world, heading, skill01(ship.captain, world.rules, 'sea'));
   if (maybeSink(world, ship, eff * h)) return 'sunk';
   moveToward(ship, aim.x, aim.y, eff, h);
   return 'sailing';
+}
+
+/** Has this merchant reached the SHELTER of a lawful port — tucked in its roads, under its guns? Then a
+ *  raider can't run her down: chasing prey that hugs a defended shore just leaves the pirate circling the
+ *  island forever, unable to close (the "bouncing back and forth on the port" bug — steerAroundIslands keeps
+ *  deflecting it around the landmass). Such prey is dropped BEYOND gun-range (a raider already alongside
+ *  still boards her); the pirate falls through to BLOCKADE and waits for her to stand back into open water. */
+function shelteredAtPort(world, s) {
+  const t = world.rules;
+  const isl = gridNearestIsland(world, s.x, s.y);
+  if (!isl || isl.haven) return false; // a den is no shelter for a merchant
+  return dist(s, isl) <= islandLandRadius(isl, t) + (t.SHIP_ISLAND_CLEARANCE || 0) + (t.PORT_SHELTER_MARGIN || 70);
 }
 
 /** Nearest merchant (non-pirate, at sea) within `range` — the fatter the prize the better. Visits
  *  only the ships the merchant grid holds within range (grid excludes pirates); keeps the exact
  *  in-port skip and prize scoring. `minPrize` lets a greedy captain scorn a near-empty hull. */
 function nearestPrey(world, ship, range, minPrize = 0) {
+  const t = world.rules;
   let best = null, bestScore = -Infinity;
   eachShipInRange(world._merchGrid, ship.x, ship.y, range, (s) => {
     if (s._sunk || s.state === 'idle' || s.state === 'trading') return; // ships in port are safe
     const prize = (s.cargo[GOLD] || 0) + cargoUnits(s) * 10; // rough worth of the haul
     if (prize < minPrize) return; // not worth a greedy captain's powder
+    if (dist(ship, s) > t.PIRATE_COMBAT_RANGE && shelteredAtPort(world, s)) return; // reached a port's guns — can't be chased onto the wharf
     const score = prize - dist(ship, s) * 2; // near + rich preferred
     if (score > bestScore) { bestScore = score; best = s; }
   });
@@ -267,7 +338,7 @@ function nearestPrey(world, ship, range, minPrize = 0) {
  *  the merchant grid (excludes pirates); same lowest-index tie-break as the old first-min scan. */
 function nearestSeaMerchant(world, ship) {
   return nearestShip(world._merchGrid, ship.x, ship.y,
-    (s) => !s.privateer && !s._sunk && (s.state === 'outbound' || s.state === 'inbound'));
+    (s) => !s.privateer && !s._sunk && (s.state === 'outbound' || s.state === 'inbound') && !shelteredAtPort(world, s));
 }
 
 /** Nearest pirate HAVEN — a stronghold a raider can run to for food and to fence loot (havens.js).
@@ -280,81 +351,176 @@ function nearestHaven(havens, ship) {
 }
 
 const burn = (ship, amt) => { ship.cargo.Weapons = Math.max(0, (ship.cargo.Weapons || 0) - amt); };
+const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
 
-/** A boarding action. Strength (skill + morale + guns) sets the odds; both sides expend weapons
- *  (the loser more), the victor plunders, and the beaten merchant is sunk or flees stripped. */
+/** ONE ROUND of a gunnery duel (the shared heart of every ship-to-ship fight). Both ships fire: each
+ *  removes HULL & RIG from the other in proportion to its OWN combatStrength share (armour-divided in
+ *  damageHull/Rig), so the stronger ship both deals more and takes less — a lopsided fight ends fast, an
+ *  even one grinds. Chain-shot doctrine differs by flag: a PIRATE aims at the RIG (COMBAT_CHAIN_FRAC) to
+ *  cripple-and-board; a MERCHANT aims even HIGHER at the rig (COMBAT_CHAIN_MERCHANT) — defensive fire to
+ *  shoot away the pursuer's sails and FLEE, only occasionally holing the hull; a PRIVATEER/navy pounds the
+ *  HULL (COMBAT_CHAIN_NAVY), out to sink. Both burn powder — a long fight leaves guns dry and offense
+ *  fading — and morale drifts toward whoever's winning the exchange. Returns the two strengths (pre-round). */
+export function exchangeFire(world, A, B) {
+  const t = world.rules;
+  const sA = combatStrength(world, A), sB = combatStrength(world, B);
+  const tot = sA + sB || 1;
+  const base = t.COMBAT_DMG_BASE || 0.16;
+  const toB = base * (sA / tot) * 2; // ×2: an even duel (share ½) strips ~base from each per round
+  const toA = base * (sB / tot) * 2;
+  const chain = (s) => (s.pirate ? (t.COMBAT_CHAIN_FRAC != null ? t.COMBAT_CHAIN_FRAC : 0.6)          // rig — cripple & board
+                     : s.privateer ? (t.COMBAT_CHAIN_NAVY != null ? t.COMBAT_CHAIN_NAVY : 0.25)       // hull — kill
+                                   : (t.COMBAT_CHAIN_MERCHANT != null ? t.COMBAT_CHAIN_MERCHANT : 0.75)); // rig — cripple & FLEE
+  const chA = chain(A), chB = chain(B);
+  damageRig(B, toB * chA, t); damageHull(B, toB * (1 - chA), t);
+  damageRig(A, toA * chB, t); damageHull(A, toA * (1 - chB), t);
+  burn(A, t.COMBAT_WEAPON_BURN); burn(B, t.COMBAT_WEAPON_BURN);
+  const swing = 0.04 * ((sA - sB) / tot);
+  A.morale = clamp01((A.morale != null ? A.morale : 0.6) + swing);
+  B.morale = clamp01((B.morale != null ? B.morale : 0.6) - swing);
+  return { sA, sB };
+}
+
+/** Will this ship STRIKE HER COLOURS this round? A merchant/privateer surrenders when her hull or morale
+ *  breaks and her captain lacks the boldness+gunnery to fight on (bold, drilled captains hold out to a lower
+ *  hull). A PIRATE never strikes — the noose awaits a captured rogue, so she fights or runs. */
+function strikes(world, ship) {
+  const t = world.rules;
+  if (ship.pirate) return false;
+  const tr = (ship.captain && ship.captain.traits) || {};
+  const bold = tr.boldness != null ? tr.boldness : 0.5;
+  const grit = bold * 0.6 + skill01(ship.captain, t, 'gun') * 0.4; // resolve to fight on
+  const hull = ship.hull != null ? ship.hull : 1;
+  const mor = ship.morale != null ? ship.morale : 0.6;
+  return hull <= (t.STRIKE_HULL || 0.3) * (1 - 0.5 * grit)
+      || mor <= (t.STRIKE_MORALE || 0.2) * (1 - 0.5 * grit);
+}
+
+/** Will this ship BREAK OFF (flee) this round? Only when badly outmatched (own strength < foe·BREAKOFF_ODDS)
+ *  AND her hull is thinning AND her rig can still run — a rig shot away means she CAN'T flee, and must fight
+ *  or strike (the core domino). The fearless (boldness ≥ 0.8) press on regardless. */
+function breaksOff(world, ship, foeStrength) {
+  const t = world.rules;
+  const tr = (ship.captain && ship.captain.traits) || {};
+  const bold = tr.boldness != null ? tr.boldness : 0.5;
+  if (bold >= 0.8) return false;
+  const hull = ship.hull != null ? ship.hull : 1;
+  if (hull > (t.STRIKE_HULL || 0.3) + 0.2) return false; // still stout enough to trade blows
+  const rig = ship.rig != null ? ship.rig : 1;
+  if (rig <= (t.RIG_DISTRESS || 0.12)) return false;     // dismasted — can't run, must fight/strike
+  return combatStrength(world, ship) < foeStrength * (t.BREAKOFF_ODDS || 0.65);
+}
+
+/** A pirate takes a struck merchant as a PRIZE — the hull itself, not just her cargo — manned by a green
+ *  skeleton crew and sailed under the black flag (she'll soon make for a haven, growing the pirate fleet).
+ *  Gated by the raider's GUNNERY & BOLDNESS (a skilled, bold crew can man a prize), the hull being worth
+ *  taking (> PRIZE_MIN_HULL), and the fleet-fraction cap (canTurnPirate — capture stays self-limiting).
+ *  Returns true if she was taken. */
+function tryTakePrize(world, pirate, victim) {
+  const t = world.rules;
+  if ((victim.hull != null ? victim.hull : 1) < (t.PRIZE_MIN_HULL || 0.15)) return false; // too shot-up to sail
+  if (!canTurnPirate(world)) return false; // the seas won't bear another rogue
+  const gun = skill01(pirate.captain, t, 'gun');
+  const tr = (pirate.captain && pirate.captain.traits) || {};
+  const bold = tr.boldness != null ? tr.boldness : 0.5;
+  const p = (t.PRIZE_CHANCE || 0) * (0.4 + 0.6 * gun) * (0.6 + 0.8 * bold);
+  if (streamFloat(world, 'combat') >= p) return false;
+  const prevCap = victim.captain ? { name: victim.captain.name, voiceSeed: victim.captain.voiceSeed, rank: rankOf(victim.captain) } : null;
+  victim.pirate = true;
+  victim.captain = makePirateCaptain(world);
+  victim.morale = t.PRIZE_CREW_MORALE != null ? t.PRIZE_CREW_MORALE : 0.4; // a green prize crew, low spirits
+  victim.unrest = 0; victim.uprising = null; victim.hunger = 0;
+  victim.voyage = null; victim.leg = null; victim.legIdx = 0;
+  victim._prey = null; victim._plunder = 0; victim._raidCd = 0; victim._blockadeId = null;
+  victim.adrift = null; victim._aidDeeds = null;
+  victim.state = 'outbound'; // displays as sailing; the piracy system drives it from here
+  markDanger(world, victim.x, victim.y, 'plunder');
+  logEvent(world, 'prize', `${pirate.name} took ${victim.name || 'a merchant'} as a PRIZE — Capt. ${victim.captain.name} sails her under the black flag now.`,
+    { x: victim.x, y: victim.y, shipId: victim.id, data: regimeData(prevCap, { name: victim.captain.name, voiceSeed: victim.captain.voiceSeed, rank: rankOf(victim.captain) }, 'prize') });
+  return true;
+}
+
+/** A merchant has struck to a pirate: she's BOARDED and plundered. Loot goes to the raider, who then
+ *  rests with the spoils. Then, if the raider can man her, he takes the HULL as a PRIZE (tryTakePrize);
+ *  otherwise she's occasionally scuttled (a coup de grâce), or freed to limp home stripped. */
+function boardPrize(world, pirate, victim) {
+  const t = world.rules;
+  const loot = plunder(world, pirate, victim);
+  awardCombatXp(pirate.captain, t.XP_PER_PRIZE); // a prize taken — the captain's legend (and gunnery) grows
+  pirate.morale = Math.min(1, (pirate.morale || 0.6) + t.PIRATE_MORALE_PLUNDER);
+  pirate._huntCd = world.simTime + t.PIRATE_HUNT_COOLDOWN; // lie low with the spoils
+  pirate._prey = null;
+  markDanger(world, victim.x, victim.y, 'plunder');   // these waters are now feared
+  postBounty(world, pirate, victim.homeId, 'plunder'); // the robbed ship's home wants blood
+  if (tryTakePrize(world, pirate, victim)) return;     // she changes flag — a consort, not a wreck
+  const scuttle = streamFloat(world, 'combat') < (t.PIRATE_SINK_ON_LOSS || 0.06);
+  logEvent(world, 'plunder', `${pirate.name} battered ${victim.name || 'a merchant'} into striking her colours — Capt. ${pirate.captain.name} took ${loot.goods} cargo and ${loot.gold}g${scuttle ? ', then scuttled her.' : '; she limped away stripped.'}`, { x: victim.x, y: victim.y, shipId: pirate.id, data: foeData(world, victim) });
+  if (scuttle) { victim._sunk = true; return; }
+  victim.morale = Math.max(0, (victim.morale != null ? victim.morale : 0.5) - 0.2);
+  const home = world.islandsById.get(victim.homeId);
+  victim.voyage = { reason: 'flee', stops: [], index: 0 };
+  victim.leg = null; victim.legIdx = 0;
+  victim.targetX = home ? home.x : victim.x; victim.targetY = home ? home.y : victim.y;
+  victim.state = 'inbound';
+}
+
+/** A running battle between a pirate and a merchant, resolved ONE ROUND per call (paced by the caller's
+ *  _fightCd). Both trade fire; then: a hull driven to 0 FOUNDERS (overkill — the loot goes down with her, so
+ *  a canny raider batters a prize into STRIKING, not sinking); the merchant may STRIKE (→ boarded & plundered)
+ *  or the raider, hull thinning, may BREAK OFF to run for a haven and repair. Returns true if a hull sank. */
 function resolveCombat(world, pirate, victim) {
   const t = world.rules;
-  pirate._huntCd = world.simTime + t.PIRATE_HUNT_COOLDOWN; // lie low with the spoils before the next raid
-  const sP = combatStrength(world, pirate), sV = combatStrength(world, victim);
-  const pirateWins = streamFloat(world, 'combat') < sP / (sP + sV);
-  burn(pirate, t.COMBAT_WEAPON_BURN * (pirateWins ? 0.6 : 1.2)); // guns spent in the fight — a sink
-  burn(victim, t.COMBAT_WEAPON_BURN * (pirateWins ? 1.2 : 0.6));
-
-  if (pirateWins) {
-    const loot = plunder(world, pirate, victim);
-    awardCombatXp(pirate.captain, t.XP_PER_PRIZE); // a prize taken — the captain's legend (and skill) grows
-    pirate.morale = Math.min(1, (pirate.morale || 0.6) + t.PIRATE_MORALE_PLUNDER);
-    markDanger(world, victim.x, victim.y, 'plunder');           // these waters are now feared
-    postBounty(world, pirate, victim.homeId, 'plunder');        // the robbed ship's home wants blood
-    const sinks = streamFloat(world, 'combat') < t.PIRATE_SINK_ON_LOSS;
-    logEvent(world, 'plunder', `${pirate.name} ran down ${victim.name || 'a merchant'} — Capt. ${pirate.captain.name} took ${loot.goods} cargo and ${loot.gold}g${sinks ? ', then put her under.' : '; she fled home stripped.'}`, { x: victim.x, y: victim.y, shipId: pirate.id });
-    if (sinks) { victim._sunk = true; }
-    else { // limp home empty, the crew shaken
-      victim.morale = Math.max(0, (victim.morale != null ? victim.morale : 0.5) - 0.2);
-      const home = world.islandsById.get(victim.homeId);
-      victim.voyage = { reason: 'flee', stops: [], index: 0 };
-      victim.leg = null; victim.legIdx = 0;
-      victim.targetX = home ? home.x : victim.x; victim.targetY = home ? home.y : victim.y;
-      victim.state = 'inbound';
-    }
-  } else {
-    victim.morale = Math.min(1, (victim.morale != null ? victim.morale : 0.5) + 0.05);
-    pirate.morale = Math.max(0, (pirate.morale || 0.6) - 0.15);
-    // A well-armed merchant can cripple its attacker — pirates that pick the wrong fight die.
-    if (streamFloat(world, 'combat') < t.PIRATE_SINK_ON_FEND) {
-      pirate._sunk = true;
-      const paid = payBounty(world, pirate, victim.homeId); // the merchant's home claims the reward
-      logEvent(world, 'fended', `${victim.name || 'A merchant'} fought off ${pirate.name} and sent her to the bottom — Capt. ${victim.captain ? victim.captain.name : 'the master'}'s guns won the day${paid ? ` (${paid}g bounty claimed)` : ''}.`, { x: victim.x, y: victim.y, shipId: victim.id });
-    } else {
-      logEvent(world, 'fended', `${victim.name || 'A merchant'} fought off ${pirate.name} — Capt. ${victim.captain ? victim.captain.name : 'the master'}'s guns drove the pirates back.`, { x: victim.x, y: victim.y, shipId: victim.id });
-    }
+  const { sB: sV } = exchangeFire(world, pirate, victim); // sV = victim's strength this round (for the break-off test)
+  if (victim.hull <= 0) { // overkill — the merchant founders, her cargo lost
+    victim._sunk = true;
+    pirate._huntCd = world.simTime + t.PIRATE_HUNT_COOLDOWN; pirate._prey = null;
+    markDanger(world, victim.x, victim.y, 'plunder');
+    postBounty(world, pirate, victim.homeId, 'plunder');
+    logEvent(world, 'sunk', `${pirate.name} pounded ${victim.name || 'a merchant'} beneath the waves — her cargo lost with her.`, { x: victim.x, y: victim.y, shipId: pirate.id, data: foeData(world, victim) });
+    return true;
   }
+  if (pirate.hull <= 0) { // a well-armed merchant shot the raider to pieces
+    pirate._sunk = true;
+    awardCombatXp(victim.captain, t.XP_PER_DEFENSE); // the crew learned to fight
+    victim.morale = Math.min(1, (victim.morale != null ? victim.morale : 0.5) + 0.1);
+    const paid = payBounty(world, pirate, victim.homeId);
+    logEvent(world, 'fended', `${victim.name || 'A merchant'} shot ${pirate.name} to pieces and sent her under — Capt. ${victim.captain ? victim.captain.name : 'the master'}'s guns won the day${paid ? ` (${paid}g bounty claimed)` : ''}.`, { x: victim.x, y: victim.y, shipId: victim.id });
+    return true;
+  }
+  if (strikes(world, victim)) { boardPrize(world, pirate, victim); return false; }
+  if (breaksOff(world, pirate, sV)) { // the raider sheers off to lick its wounds at a haven
+    pirate._prey = null;
+    pirate._huntCd = world.simTime + t.PIRATE_HUNT_COOLDOWN * 0.5;
+    victim.morale = Math.min(1, (victim.morale != null ? victim.morale : 0.5) + 0.05);
+    logEventThrottled(world, 'brokeoff', t.SIM_DAY_SECONDS, `${pirate.name} broke off the chase of ${victim.name || 'a merchant'}, her hull too battered to press.`, { x: pirate.x, y: pirate.y, shipId: pirate.id });
+    return false;
+  }
+  return false; // trade another broadside next round
 }
 
 /** A HAVEN-DEFENCE skirmish: a pirate trades broadsides with a besieging privateer — a fight for the den,
- *  not a robbery (no plunder). Symmetric weapon burn; the loser may go down. Paced by _fightCd on BOTH ships
- *  (COMBAT_ROUND_SEC) so a duel plays out over several seconds instead of resolving in a single substep —
- *  which is what makes a siege read as a running battle — and so antipiracy's hunt doesn't double-resolve
- *  the same pair this same tick. Returns true if a hull was sunk. */
+ *  not a robbery (no plunder). One ROUND per call, paced by _fightCd on BOTH ships (COMBAT_ROUND_SEC) so a
+ *  duel plays out over several seconds and antipiracy's hunt doesn't double-resolve the same pair this tick.
+ *  Attrition decides it — whoever's hull founders first goes down. Returns true if a hull was sunk. */
 function skirmish(world, pirate, priv) {
   const t = world.rules;
   const round = t.COMBAT_ROUND_SEC || 1.2;
   pirate._fightCd = world.simTime + round;
   priv._fightCd = world.simTime + round;
-  const sP = combatStrength(world, pirate), sV = combatStrength(world, priv);
-  const pirateWins = streamFloat(world, 'combat') < sP / (sP + sV);
-  burn(pirate, t.COMBAT_WEAPON_BURN * (pirateWins ? 0.6 : 1.2));
-  burn(priv, t.COMBAT_WEAPON_BURN * (pirateWins ? 1.2 : 0.6));
-  if (pirateWins) {
+  exchangeFire(world, pirate, priv);
+  if (priv.hull <= 0) {
+    priv._sunk = true;
+    awardCombatXp(pirate.captain, t.XP_PER_DEFENSE); // drove off the hunter — a defender's renown
     pirate.morale = Math.min(1, (pirate.morale || 0.6) + 0.08);
-    priv.morale = Math.max(0, (priv.morale || 0.7) - 0.12);
-    if (streamFloat(world, 'combat') < t.PRIVATEER_LOSS_SINK) {
-      priv._sunk = true;
-      awardCombatXp(pirate.captain, t.XP_PER_DEFENSE); // drove off the hunter — a defender's renown
-      logEvent(world, 'hunterlost', `${priv.name || 'A privateer'} was beaten off a pirate haven and sunk by ${pirate.name || 'a raider'}.`, { x: priv.x, y: priv.y, shipId: pirate.id });
-      return true;
-    }
-  } else {
-    priv.morale = Math.min(1, (priv.morale || 0.7) + 0.06);
-    pirate.morale = Math.max(0, (pirate.morale || 0.6) - 0.12);
-    if (streamFloat(world, 'combat') < t.PIRATE_SINK_ON_FEND) {
-      pirate._sunk = true;
-      awardCombatXp(priv.captain, t.XP_PER_KILL); // cut down a raider defending its den
-      const paid = payBounty(world, pirate, priv.homeId);
-      logEvent(world, 'hunted', `${priv.name || 'A privateer'} cut down ${pirate.name || 'a raider'} defending its haven${paid ? ` — ${paid}g bounty claimed` : ''}.`, { x: pirate.x, y: pirate.y, shipId: priv.id });
-      return true;
-    }
+    logEvent(world, 'hunterlost', `${priv.name || 'A privateer'} was beaten off a pirate haven and sunk by ${pirate.name || 'a raider'}.`, { x: priv.x, y: priv.y, shipId: pirate.id });
+    return true;
+  }
+  if (pirate.hull <= 0) {
+    pirate._sunk = true;
+    awardCombatXp(priv.captain, t.XP_PER_KILL); // cut down a raider defending its den
+    const paid = payBounty(world, pirate, priv.homeId);
+    logEvent(world, 'hunted', `${priv.name || 'A privateer'} cut down ${pirate.name || 'a raider'} defending its haven${paid ? ` — ${paid}g bounty claimed` : ''}.`, { x: pirate.x, y: pirate.y, shipId: priv.id, data: foeData(world, pirate) });
+    return true;
   }
   return false;
 }

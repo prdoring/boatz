@@ -15,8 +15,8 @@ import { findBestPartner, nearestWhere, dist } from './queries.js';
 import { tradeables } from './resources.js';
 import { bidAsk } from './pricing.js';
 import { intelAge, beliefMid, currentDay } from './beliefs.js';
-import { believedFoodDays, believedHaven, believedCiv } from './intel.js';
-import { navProfile } from './captains.js';
+import { believedFoodDays, believedHaven, believedCiv, routePeril } from './intel.js';
+import { navProfile, defensiveArmTarget } from './captains.js';
 import { fleetAt } from './fleet.js';
 
 function emptyStop(islandId) { return { islandId, sell: {}, buy: {}, people: 0 }; }
@@ -334,6 +334,28 @@ export function planVoyage(world, home, ship, ctx = null) {
   if (reason === 'trade' && profit < t.MIN_TRADE_PROFIT * nav.profitMult && !shopped) {
     if (needs.size > 0) { stops.length = 0; scouting = false; addScoutStops(); if (stops.length) return { reason: 'scout', stops: orderByPath(home, stops, world), index: 0 }; }
     return null;
+  }
+
+  // A prudent captain bound for KNOWN-dangerous waters tops up her defensive battery: if the home
+  // armoury can't fully arm her to the loadout her judgment calls for (armForDefence loads only what
+  // the town stocks) and the route is perilous, she BUYS the shortfall at a Weapons producer ALREADY
+  // on her route — no detour (inserted detours were a past starvation trap). loadForVoyage budgets the
+  // gold, executeStop makes the guarded purchase, and carried Weapons are never re-sold en route.
+  if (reason !== 'scout') {
+    const routeDanger = routePeril(world, home, stops, day);
+    if (routeDanger >= t.ARM_BUY_MIN_DANGER) {
+      const spec = t.SHIP_TYPES && t.SHIP_TYPES[ship.type];
+      const wcap = spec ? spec.weaponCap : t.COMBAT_WEAPON_CAP;
+      const target = defensiveArmTarget(ship.captain, t, wcap, routeDanger);
+      const need = target - (ship.cargo.Weapons || 0);
+      const shortfall = Math.floor(need - Math.min(need, home.stock.Weapons || 0)); // what the home can't supply
+      if (shortfall >= t.ARM_BUY_MIN_SHORTFALL) {
+        const gunStop = stops.find((s) => s.islandId !== home.id
+          && producersOf(world, 'Weapons').some((p) => p.id === s.islandId)
+          && (((world.islandsById.get(s.islandId) || {}).stock || {}).Weapons || 0) > 0);
+        if (gunStop) gunStop.buy.Weapons = (gunStop.buy.Weapons || 0) + shortfall;
+      }
+    }
   }
 
   return { reason, stops: orderByPath(home, stops, world), index: 0 };

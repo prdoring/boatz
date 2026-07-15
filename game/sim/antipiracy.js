@@ -14,9 +14,11 @@
 import { streamFloat } from './rng.js';
 import { transfer, cargoUnits, GOLD } from './resources.js';
 import { logEvent, maybeSink } from './events.js';
-import { makeCaptain, skill01, awardCombatXp } from './captains.js';
+import { makeCaptain, skill01, awardCombatXp, rankOf, regimeData } from './captains.js';
 import { windMult } from './wind.js';
-import { combatStrength, setAct } from './piracy.js';
+import { rigMult } from './repair.js';
+import { combatStrength, exchangeFire, setAct, standoffPoint, foeData } from './piracy.js';
+import { repairAtPort } from './repair.js';
 import { foodDaysAboard } from './crew.js';
 import { payBounty } from './bounty.js';
 import { assaultHaven } from './havens.js';
@@ -38,7 +40,6 @@ function moveToward(ship, tx, ty, speed, h) {
   return false;
 }
 
-const burn = (ship, amt) => { ship.cargo.Weapons = Math.max(0, (ship.cargo.Weapons || 0) - amt); };
 export function privateerCount(world) { let n = 0; for (const s of world.ships) if (s.privateer) n++; return n; }
 function pirateCount(world) { let n = 0; for (const s of world.ships) if (s.pirate && !s._sunk) n++; return n; }
 
@@ -151,7 +152,11 @@ export function antipiracy(world, h) {
     // port, the same drastic action a starving pirate takes to a haven. It won't quit a foe already at
     // gun-range, but anything short of that yields to the empty stores (so a long siege can be broken by
     // provisions running out — the haven feeds its own defenders, the besieger must supply from afar).
-    if (foodDaysAboard(world, priv) < t.PRIVATEER_RESUPPLY_DAYS && !(prey && preyDist <= t.PIRATE_COMBAT_RANGE)) {
+    // An empty larder OR a battered hull forces the hunter off station to its guard port — to victual and
+    // to REFIT (the state mends its own navy free, as a haven does its raiders). A hull ground down under
+    // fire limps home to be made whole, then sails out again — so hunters aren't a one-way attrition sink.
+    const battered = (priv.hull != null ? priv.hull : 1) < t.REPAIR_GUARD_HULL;
+    if ((foodDaysAboard(world, priv) < t.PRIVATEER_RESUPPLY_DAYS || battered) && !(prey && preyDist <= t.PIRATE_COMBAT_RANGE)) {
       const larder = guard || home;
       setAct(priv, 'resupply', larder ? larder.id : null);
       if (larder && moveToward(priv, larder.x, larder.y, speed, h)) victualPrivateer(world, larder, priv);
@@ -172,6 +177,11 @@ export function antipiracy(world, h) {
         priv._fightCd = world.simTime + (t.COMBAT_ROUND_SEC || 1.2);
         if (resolveHunt(world, priv, prey)) sunk = true;
         if (prey._sunk || priv._sunk) priv._prey = null;
+      } else {
+        // Reloading in gun-range: hold a broadside gap off the raider (sea-room to see the shots) rather
+        // than drifting hull-to-hull — but keep station so she can't sheer off while the guns are cold.
+        const st = standoffPoint(prey, priv, t.COMBAT_STANDOFF || 80);
+        if (sailHunter(world, priv, st.x, st.y, speed, h)) sunk = true;
       }
     } else if (defender) {
       // Run down the haven's screen before it can pound the siege line.
@@ -237,6 +247,8 @@ function victualPrivateer(world, port, priv) {
   const load = Math.min(Math.max(0, want), port.stock.Food || 0, space);
   if (load >= 1) transfer(port.stock, 'Food', priv.cargo, 'Food', load);
   priv.morale = Math.min(1, (priv.morale || 0.7) + 0.05);
+  // Refit the hull/rig from the guard port's timber & canvas (free — its own navy).
+  if ((priv.hull != null && priv.hull < 1) || (priv.rig != null && priv.rig < 1)) repairAtPort(world, port, priv);
 }
 
 /** Pay off the crew and return the ship to honest trade (its guns go back to the armoury). */
@@ -253,32 +265,57 @@ function standDown(world, priv, home) {
 function sailHunter(world, ship, tx, ty, speed, h) {
   const aim = steerAroundIslands(world, ship, tx, ty); // round any landmass between the hunter and its mark
   const heading = Math.atan2(aim.y - ship.y, aim.x - ship.x);
-  const eff = speed * windMult(world, heading, skill01(ship.captain, world.rules));
+  const eff = speed * rigMult(ship, world.rules) * windMult(world, heading, skill01(ship.captain, world.rules, 'sea'));
   if (maybeSink(world, ship, eff * h)) return true; // lost to weather like any ship
   moveToward(ship, aim.x, aim.y, eff, h);
   return false;
 }
 
-/** A privateer runs down a pirate. Well-armed and paid, it usually wins — but the sea is cruel. */
+/** A privateer that has beaten a pirate may BOARD and take the crippled hull as a prize rather than send
+ *  her under — returning her to its commissioning port as a lawful vessel restored to honest trade (a
+ *  battered prize, to be refitted at the yard). Gated by PRIZE_RECOVER_CHANCE and a free berth at the port.
+ *  Returns true if the hull was recovered (so the caller does NOT sink it). */
+function tryRecoverPrize(world, priv, pirate, paidBounty) {
+  const t = world.rules;
+  const home = world.islandsById.get(priv._guard) || world.islandsById.get(priv.homeId);
+  if (!home) return false;
+  if (fleetAt(world, home.id).total >= t.MAX_SHIPS_PER_ISLAND) return false; // no berth for a recovered hull
+  if (streamFloat(world, 'combat') >= (t.PRIZE_RECOVER_CHANCE || 0)) return false;
+  const prevCap = pirate.captain ? { name: pirate.captain.name, voiceSeed: pirate.captain.voiceSeed, rank: rankOf(pirate.captain) } : null;
+  pirate.pirate = false; pirate.privateer = false;
+  pirate.homeId = home.id;
+  pirate.captain = makeCaptain(world);
+  pirate.morale = 0.6; pirate.unrest = 0; pirate.uprising = null; pirate.hunger = 0;
+  pirate.bounty = 0;
+  pirate.hull = Math.max(pirate.hull || 0, 0.35); pirate.rig = Math.max(pirate.rig || 0, 0.35); // salvaged, needs a refit
+  pirate.voyage = null; pirate.leg = null; pirate.legIdx = 0;
+  pirate._prey = null; pirate._blockadeId = null; pirate.adrift = null; pirate._huntCd = 0;
+  pirate.state = 'idle';
+  logEvent(world, 'recovered', `The privateer ${priv.name} boarded and took ${pirate.name || 'a raider'} as a prize, returning her to ${home.name} — a vessel restored to honest trade${paidBounty ? ` (${paidBounty}g bounty claimed)` : ''}.`,
+    { islandId: home.id, shipId: pirate.id, data: regimeData(prevCap, { name: pirate.captain.name, voiceSeed: pirate.captain.voiceSeed, rank: rankOf(pirate.captain) }, 'recovered') });
+  return true;
+}
+
+/** A privateer runs down a pirate — ONE ROUND per call, paced by the caller's _fightCd. Both trade fire
+ *  (attrition); whoever's HULL founders first goes down. Well-armed and paid, the hunter usually prevails —
+ *  but a heavily-gunned raider can shoot it to pieces. A privateer losing the exchange breaks off via the
+ *  loop's odds check (its strength falls with its hull), so it isn't obliged to fight to the bottom. */
 function resolveHunt(world, priv, pirate) {
   const t = world.rules;
-  const sP = combatStrength(world, priv), sV = combatStrength(world, pirate);
-  const privWins = streamFloat(world, 'combat') < sP / (sP + sV);
-  burn(priv, t.COMBAT_WEAPON_BURN * (privWins ? 0.6 : 1.2));
-  burn(pirate, t.COMBAT_WEAPON_BURN * (privWins ? 1.2 : 0.6));
-  if (privWins) {
-    pirate._sunk = true;
-    awardCombatXp(priv.captain, t.XP_PER_KILL); // a pirate run down — the hunter's renown (and skill) grows
+  exchangeFire(world, priv, pirate);
+  if (pirate.hull <= 0) {
+    awardCombatXp(priv.captain, t.XP_PER_KILL); // a pirate run down — the hunter's renown (and gunnery) grows
     const paid = payBounty(world, pirate, priv.homeId);
     priv.morale = Math.min(1, (priv.morale || 0.7) + 0.1);
-    logEvent(world, 'hunted', `The privateer ${priv.name} ran down ${pirate.name} and sank her — Capt. ${priv.captain.name} claimed ${paid}g in bounty.`, { x: pirate.x, y: pirate.y, shipId: priv.id });
+    if (tryRecoverPrize(world, priv, pirate, paid)) return true; // the hull is taken and restored to trade
+    pirate._sunk = true;
+    logEvent(world, 'hunted', `The privateer ${priv.name} ran down ${pirate.name} and sank her — Capt. ${priv.captain.name} claimed ${paid}g in bounty.`, { x: pirate.x, y: pirate.y, shipId: priv.id, data: foeData(world, pirate) });
     return true;
   }
-  priv.morale = Math.max(0, (priv.morale || 0.7) - 0.15);
-  pirate.morale = Math.min(1, (pirate.morale || 0.6) + 0.1);
-  if (streamFloat(world, 'combat') < t.PRIVATEER_LOSS_SINK) {
+  if (priv.hull <= 0) {
     priv._sunk = true;
     logEvent(world, 'hunterlost', `The privateer ${priv.name} was lost to ${pirate.name} — Capt. ${pirate.captain.name} beat off the hunter.`, { x: priv.x, y: priv.y, shipId: pirate.id });
+    return true;
   }
   return false;
 }

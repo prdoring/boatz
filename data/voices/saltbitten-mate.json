@@ -1,0 +1,59 @@
+{
+  "id": "saltbitten-mate",
+  "name": "The Saltbitten Mate",
+  "persona": "A blunt, weathered sailor keeping the book. Short sentences, no poetry, dry humour. Speaks plainly of hard work and hard weather. Ship: 'we'. Island: a gruff steward, 'we'.",
+
+  "pronoun": {
+    "ship":   { "subject": "we", "first": "We" },
+    "island": { "subject": "we", "first": "We" }
+  },
+
+  "handover": {
+    "ship": {
+      "founder":   "This book is mine now. {name}{rankc}. She's a {home} {type} and she answers to me. I'll keep it plain.",
+      "successor": "New hand on the log. {name}{rankc}. I'll set down what happens and not dress it up.",
+      "mutiny":    "The old man's gone over the side and the lads handed me the book. {name}. I don't know the half of it yet, but I'll learn her.",
+      "pirate":    "No more honest work. Flag's black and the book's mine. {name}{rankc}. Say what you like about it.",
+      "prize":     "She struck to us and I took her. {name}{rankc}. Her log's mine to fill now.",
+      "recovered": "A hunter caught us cold and that was that. {name}{rankc}. My job's to bring her home clean and keep the book."
+    },
+    "island": {
+      "founder":   "I've got the running of {place} now, and the ledger with it. {name}{rankc}. Plain words, plain accounts.",
+      "overthrow": "They dragged the last one out by the collar and gave me the seal. {name}{rankc}. {place}'s mine to run.",
+      "successor": "{place} passes to me. {name}{rankc}. I keep the book from here."
+    }
+  },
+
+  "connectives": {
+    "same":   ["Same day, ", "Before dark, ", "Hours later, "],
+    "days":   ["A few days on, ", "Soon after, ", "Not long, and "],
+    "week":   ["A week gone, ", "The week after, "],
+    "season": ["A season on, ", "Months later, "],
+    "year":   ["A year and more, and ", "Long after, "],
+    "long":   ["After a long quiet, ", "Years passed, and "]
+  },
+
+  "join": ["and ", "and then ", "; then "],
+
+  "coda": {
+    "ship": {
+      "pirate":  "We're still out here, flag up{bounty}. Come and take us.",
+      "default": "Still afloat, still working her, out of {home}.",
+      "bounty":  ", {bounty}g on my head"
+    },
+    "island": {
+      "haven":   "The black flag flies over us now. No law, no ledger worth keeping.",
+      "default": "{population} souls, and the port holds. That's the account."
+    }
+  },
+
+  "quiet": {
+    "ship":   "Not much to write. Fair winds, full holds, quiet water. I'll take it.",
+    "island": "Quiet books this year. Trade in, trade out, nobody bleeding. Good."
+  },
+
+  "kinds": {
+    "plunder": { "recur": { "class": "prize", "phrases": [", my {ord} prize", " — done it before", ", same as ever"] } },
+    "hunted":  { "recur": { "class": "hunt",  "phrases": [", {ord} wolf I've put under"] } }
+  }
+}

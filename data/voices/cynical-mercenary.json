@@ -1,0 +1,61 @@
+{
+  "id": "cynical-mercenary",
+  "name": "The Cynical Mercenary",
+  "persona": "A weary, transactional sell-sword of the sea. Everything reduces to coin, odds, and staying alive; no illusions, and no loyalty that is not paid for. Flat, hard-bitten, sardonic. Ship: 'I'. Island: a hired administrator who would sell the seal at the right price, 'I'.",
+
+  "pronoun": {
+    "ship":   { "subject": "I", "first": "I" },
+    "island": { "subject": "I", "first": "I" }
+  },
+
+  "handover": {
+    "ship": {
+      "founder":   "New contract, new book. {name}{rankc}. This {home} {type} is mine to run so long as it pays. I will keep the log; paper is cheaper than trust.",
+      "successor": "The log is mine now, {name}{rankc}. Same as any job — I do the work, I take the coin, I do not ask what the last hand died of.",
+      "mutiny":    "The crew settled up with the old master over the side and put the book in my hands. {name}. I did not ask for it. But a berth is a berth, and I will draw the wage.",
+      "pirate":    "Honest trade stopped paying, so it is the black flag now. {name}{rankc}. Same work, better margins, nobody to answer to. It suits me.",
+      "prize":     "She struck. I took her. {name}{rankc}. She is worth more under me than she ever was under him — that is the whole of it.",
+      "recovered": "A hunter paid to clear these waters ran us down, and for once I was on the right side of the guns. {name}{rankc}. I will sail her home for the fee and not a mile further."
+    },
+    "island": {
+      "founder":   "I have taken the running of {place}. {name}{rankc}. It is a post like any other — I hold it while the pay holds, and I keep the books because someone must.",
+      "overthrow": "The mob cleared out the last one; I happened to be standing closest when the seal changed hands. {name}{rankc}. {place} is mine to run, for whatever that is worth.",
+      "successor": "{place} comes to me. {name}{rankc}. A job is a job. I will keep the ledger and collect while it lasts."
+    }
+  },
+
+  "connectives": {
+    "same":   ["Same day, ", "Before dark, ", "A few hours on, "],
+    "days":   ["Days later, ", "Soon enough, ", "Not long after, "],
+    "week":   ["A week on, ", "The week after, "],
+    "season": ["A season later, still breathing, ", "Months on, "],
+    "year":   ["A year gone, and I am still paid, ", "A year on, "],
+    "long":   ["After a long stretch of nothing, ", "Years later, still at it, "]
+  },
+
+  "join": ["and ", "; then ", "and after that "],
+
+  "coda": {
+    "ship": {
+      "pirate":  "Still out here, still taking what pays{bounty}. When it stops paying, I stop.",
+      "default": "Still afloat, still hired, working her out of {home}.",
+      "bounty":  ", {bounty}g on my head — flattering, but I have seen higher"
+    },
+    "island": {
+      "haven":   "Black flag over the place now. No law left to enforce, no wage left to collect. I have moved on.",
+      "default": "{place} still stands — {population} souls — and I am still paid to keep it standing."
+    }
+  },
+
+  "quiet": {
+    "ship":   "Nothing worth the ink. Quiet water, steady pay, no one shooting at me. I do not complain about quiet.",
+    "island": "A quiet stretch. Nobody rioted, nobody stopped paying. That is about as good as the work gets."
+  },
+
+  "kinds": {
+    "plunder": { "recur": { "class": "prize", "phrases": [", my {ord} prize and none of it sentimental", " — I have boarded enough of these", ", coin is coin"] } },
+    "sunk":    { "recur": { "class": "prize", "phrases": [", another one sent down, no bonus for it"] } },
+    "fended":  { "recur": { "class": "stand", "phrases": [" — I have been shot at by worse and cheaper", ", and still standing to collect"] } },
+    "hunted":  { "recur": { "class": "hunt",  "phrases": [", the {ord} raider run down on someone else's coin"] } }
+  }
+}

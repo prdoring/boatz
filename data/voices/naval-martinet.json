@@ -1,0 +1,61 @@
+{
+  "id": "naval-martinet",
+  "name": "The Naval Martinet",
+  "persona": "A stiff disciplinarian who ran merchant service by the book and never let it drop. Clipped, formal, forever citing regulation, the watch, the standard, the service. Cold precision, everything duly noted. Speaks in the first person of command: 'I'.",
+
+  "pronoun": {
+    "ship":   { "subject": "I", "first": "I" },
+    "island": { "subject": "I", "first": "I" }
+  },
+
+  "handover": {
+    "ship": {
+      "founder":   "I am {name}{rankc}, and I assume command of this {home} {type} this day. The log is opened. All entries shall be kept regular and by the book.",
+      "successor": "Command of this vessel passes to me, {name}{rankc}, in good order. The log is continued without lapse. Standards will be maintained.",
+      "mutiny":    "The former master was put out by the hands in gross breach of discipline, and this book forced upon me, an unproven man. I am {name}. I record the fact and reserve judgement.",
+      "pirate":    "The crew have hauled down the ensign and hoisted the black. I am {name}{rankc}. I note for the record that this is mutiny and piracy both, and outside every regulation.",
+      "prize":     "I carried her by boarding and received her surrender in proper form. I am {name}{rankc}. Her log passes to my command; the capture is duly noted.",
+      "recovered": "A King's hunter ran the pirates to ground, and I am appointed to restore this hull to lawful service. I am {name}{rankc}. She will be brought back to standard."
+    },
+    "island": {
+      "founder":   "I take up the governance of {place} this day. I am {name}{rankc}. The ledger is opened, the watch is set, and order shall be kept.",
+      "overthrow": "The populace cast out the sitting governor by force, contrary to all order, and the seal has come to me. I am {name}{rankc}. I shall restore discipline.",
+      "successor": "Governance of {place} passes to me in regular succession. I am {name}{rankc}. The office will be discharged by the book."
+    }
+  },
+
+  "connectives": {
+    "same":   ["The same watch, ", "Before eight bells, ", "That day, and duly logged, "],
+    "days":   ["Some days after, ", "In short order, ", "Presently, "],
+    "week":   ["A week on, ", "The following week, "],
+    "season": ["A quarter passed, ", "In the next season, "],
+    "year":   ["A full year on, ", "After twelve months of service, "],
+    "long":   ["After a long interval without incident, ", "Following an extended period of quiet, "]
+  },
+
+  "join": ["and ", "; then ", "; the log further records that ", "and, per regulation, "],
+
+  "coda": {
+    "ship": {
+      "pirate":  "I remain at large under the black, in defiance of every regulation{bounty}. The service will answer this in its own time.",
+      "default": "The vessel remains in commission out of {home}, all standards maintained. Log current.",
+      "bounty":  ", {bounty}g posted against me"
+    },
+    "island": {
+      "haven":   "The black flag now stands over {place}. All law and regulation are suspended. I note it, and nothing more.",
+      "default": "{population} souls on the rolls, the port secure, the watch kept. Accounts in order."
+    }
+  },
+
+  "quiet": {
+    "ship":   "Nothing to report. Watches kept, stores sound, discipline maintained. The log stands quiet, as it should.",
+    "island": "An uneventful year. Trade regular, order kept, no matter requiring entry. Duly noted."
+  },
+
+  "kinds": {
+    "plunder": { "recur": { "class": "prize", "phrases": [", the {ord} prize entered in the book", ", taken in due form", " — noted and stowed to account"] } },
+    "sunk":    { "recur": { "class": "prize", "phrases": [", sent under, the engagement logged in full"] } },
+    "fended":  { "recur": { "class": "stand", "phrases": [", the action repulsed by the book", ", beaten off, all hands at station"] } },
+    "hunted":  { "recur": { "class": "hunt",  "phrases": [", the {ord} pirate brought to account", " — engagement concluded, prisoners logged"] } }
+  }
+}

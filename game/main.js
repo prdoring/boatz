@@ -7,6 +7,7 @@ import { SoundManager } from '/engine/audio/SoundManager.js';
 import { BackgroundRenderer } from '/engine/render/BackgroundRenderer.js';
 import { EffectsManager } from '/engine/fx/EffectsManager.js';
 import { EffectsRenderer } from '/engine/render/EffectsRenderer.js';
+import { FXSequenceRunner } from '/engine/fx/FXSequenceRunner.js';
 import { buildArtRegistry } from '/engine/data/art.js';
 import { VFX_DEFS } from '/engine/data/vfx.js';
 import { setEffectResolver } from '/engine/render/ArtInterpreter.js';
@@ -19,9 +20,11 @@ import shipArt from '/data/ship-art.json' with { type: 'json' };
 import portraitArt from '/data/portrait-art.json' with { type: 'json' };
 
 import { WorldRenderer } from './WorldRenderer.js';
+import { SeaRenderer } from './SeaRenderer.js';
 import { PortraitRenderer } from './PortraitRenderer.js';
 import { SimClient } from './SimClient.js';
 import { SimScene } from './scenes/SimScene.js';
+import { loadVoices } from './voices.js';
 import { PALETTE, OCEAN_LAYERS, CAMERA } from './config.js';
 
 const canvas = document.getElementById('game');
@@ -32,19 +35,38 @@ const sound = new SoundManager();                 // for the volume overlay + fu
 const background = new BackgroundRenderer(camera, canvas, OCEAN_LAYERS); // turquoise sea sparkle
 const effects = new EffectsManager();
 const effectsRenderer = new EffectsRenderer(ctx, camera);
+// islandArt is registered for the art editor/preview only — the live map draws islands
+// PROCEDURALLY (WorldRenderer.drawIsleTerrain), so it reacts to sim state a static asset can't.
 const art = buildArtRegistry({ islands: islandArt, ships: shipArt });
 const worldRenderer = new WorldRenderer(ctx, camera, art, VFX_DEFS, effectsRenderer);
+const sea = new SeaRenderer(camera, ctx, background); // painterly water; owns the glitter now
 const portraits = new PortraitRenderer(portraitArt); // captain head-and-shoulders portraits
 
-const game = new Game({ canvas, sound, background, clearColor: PALETTE.deepWater });
+// The sea (SeaRenderer) paints an opaque gradient inside the scene, so the engine background
+// slot must NOT also draw the sparkle (it would be overpainted, and the glitter would vanish).
+const game = new Game({ canvas, sound, clearColor: PALETTE.deepWater });
 const sim = new SimClient();
+
+// Coordinated nautical FX (combat bursts, foundering ships, trade sparkles): the engine
+// FXSequenceRunner fires data-authored `vfx` + `signal` steps. `onSignal` is snapshot-SAFE —
+// it only writes to the scene's client presentation overlay (never mutates a snapshot / the sim).
+const sequences = new FXSequenceRunner(sound, effects, (name, data, opts) => simScene.onFxSignal(name, data, opts));
+
+// The per-keeper logbook writing styles for the Story tab (fail-soft; base-only if the folder is
+// absent → the chronicler narrates in its legacy third-person voice). Awaited before the scene builds
+// so the panel always has the catalogue in hand.
+const voices = await loadVoices();
 
 const shared = {
   canvas, ctx, camera, sound, effects, effectsRenderer,
-  worldRenderer, portraits, art, VFX_DEFS, game, sim,
+  worldRenderer, sea, portraits, art, VFX_DEFS, sequences, game, sim, voices,
 };
 
 const simScene = new SimScene(shared);
 shared.scenes = { sim: simScene };
 
 game.start(simScene);
+
+// Opt-in debug hook (append ?debug to the URL): exposes the live client for console inspection and
+// automated UI checks. Off by default, so nothing leaks into a normal session.
+if (new URLSearchParams(location.search).has('debug')) window.__boatz = { game, sim, scene: simScene, shared };

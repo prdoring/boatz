@@ -1,0 +1,61 @@
+{
+  "id": "weatherbeaten-fatalist",
+  "name": "The Weatherbeaten Fatalist",
+  "persona": "A stoic who holds that the sea takes all in the end, and writes it down without flinching. Spare, heavy sentences; dark calm, no self-pity. The sea keeps its own accounts. Ship: 'we'. Island: 'we'.",
+
+  "pronoun": {
+    "ship":   { "subject": "we", "first": "We" },
+    "island": { "subject": "we", "first": "We" }
+  },
+
+  "handover": {
+    "ship": {
+      "founder":   "Here begins a reckoning the sea will close in its own hour. I am {name}{rankc}; this {home} {type} is lent to me, as all hulls are lent, and I keep her book until the water asks it back.",
+      "successor": "The book comes to me, as books do, over the shoulders of the drowned. I am {name}{rankc}; I add my name to the account and set down what I can before my turn.",
+      "mutiny":    "The crew put the old master under and pressed the book on me — {name}, green and grim. The sea keeps its own accounts; I do no more than write them.",
+      "pirate":    "We have done with honest trade. The black flag is up, and I — {name}{rankc} — keep this log knowing well how such a tale ends.",
+      "prize":     "She struck to us; what floats today goes under some other day. I am {name}{rankc}; this hull is mine while the water allows it, and her book goes on in my hand.",
+      "recovered": "A hunter ran the wolf down, and I was set to bring this hull back from the black. I am {name}{rankc}. She is saved for now. Nothing is saved for long."
+    },
+    "island": {
+      "founder":   "I take up {place}, knowing every stone of it is on loan. I am {name}{rankc}; I will keep its record while there is a record to keep.",
+      "overthrow": "The mob dragged the last ruler down, and the seal fell to me out of the wreck of him. I am {name}{rankc}. {place} is mine to hold, for as long as anything is held.",
+      "successor": "The rule of {place} comes to me as the tide comes — without asking. I am {name}{rankc}, and I keep its chronicle until my turn is done."
+    }
+  },
+
+  "connectives": {
+    "same":   ["That same tide, ", "Before the light failed, ", "The day not yet spent, "],
+    "days":   ["A few days on, ", "As the water turned, ", "Soon enough, "],
+    "week":   ["A week of grey seas later, ", "When the moon had rolled once, "],
+    "season": ["A season down, ", "When the year had greyed, "],
+    "year":   ["A year, and the sea no kinder, ", "Long after, when it was all salt and silence, "],
+    "long":   ["After a long, cold quiet, ", "When years had gone under, "]
+  },
+
+  "join": ["and ", "; and ", "and, in the end, "],
+
+  "coda": {
+    "ship": {
+      "pirate":  "We rove yet, though the sea keeps its own accounts{bounty}.",
+      "default": "She floats still, out of {home} — for now, which is all any hull is granted.",
+      "bounty":  ", {bounty}g on my head against the day the water does not take me first"
+    },
+    "island": {
+      "haven":   "The black flag holds it now; no honest hand keeps this book, and the sea waits, patient as ever.",
+      "default": "{place} stands yet — {population} souls, and the water at the door as always."
+    }
+  },
+
+  "quiet": {
+    "ship":   "Little to set down. Fair water, and the sea biding its time, as it always bides.",
+    "island": "Quiet enough this while. The sea takes nothing today; it is only waiting, and I let it wait."
+  },
+
+  "kinds": {
+    "plunder": { "recur": { "class": "prize", "phrases": [", one more the water will want back", ", as it has gone before", " — nothing new under this grey sky"] } },
+    "sunk":    { "recur": { "class": "prize", "phrases": [", another given to the cold below"] } },
+    "fended":  { "recur": { "class": "stand", "phrases": [" — we have cheated the sea before", ", though the reckoning only waits"] } },
+    "hunted":  { "recur": { "class": "hunt",  "phrases": [", one more wolf gone under, as I will go under in my turn"] } }
+  }
+}

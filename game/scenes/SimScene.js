@@ -7,9 +7,18 @@
 import { Scene } from '/engine/core/Scene.js';
 import { UIStack } from '../ui/UIStack.js';
 import { InfoPanel } from '../ui/InfoPanel.js';
+import { NewsPanel } from '../ui/NewsPanel.js';
 import { SimControls } from '../ui/SimControls.js';
-import { islandRadius, OVERLAYS, heatColor } from '../WorldRenderer.js';
+import { OverviewDashboard } from '../ui/OverviewDashboard.js';
+import { OverviewControls } from '../ui/OverviewControls.js';
+import { islandRadius } from '../WorldRenderer.js';
+import { OVERLAYS, heatColor, overlayByKey, cycleOverlay, fmtValue } from '../overlays.js';
+import { OverlayModel } from '../overlayModel.js';
+import { HistoryStore, mergeChronicle } from '../history.js';
 import { SPEEDS } from '../protocol.js';
+import { plate, font as tfont } from '../ui/theme.js';
+import { drawIcon } from '../ui/icons.js';
+import { eventColor, seasonIcon } from '../ui/eventKinds.js';
 import {
   PALETTE, OCEAN, SHIP_HIT, ZOOM_STEP, PAN_SPEED, WAKE_EVERY, WAKE_MIN_ZOOM,
 } from '../config.js';
@@ -24,22 +33,19 @@ const PAN_KEYS = {
   a: [-1, 0], d: [1, 0], w: [0, -1], s: [0, 1],
 };
 
-const EVENT_COLOR = {
-  blight: '#ec8a3a', plague: '#c072e0', wreck: '#8fb6c6', recover: '#8ee6a0',
-  mutiny: '#ff5b4a', defect: '#e0863a', quell: '#8ee6a0', unrest: '#e0b24a', starve: '#c0503a',
-  launch: '#6fd0e0', migrate: '#f2b8d0', famine: '#d98a3a', boom: '#ffd166', ally: '#8ee6a0', rival: '#e0863a',
-  rebellion: '#ff5b30', overthrow: '#ff7b4a', quellReb: '#8ee6a0',
-  pirate: '#ff5b4a', plunder: '#e0503a', fended: '#8ee6a0', raid: '#ff7b4a', raidfail: '#8ee6a0',
-  bounty: '#ffd166', privateer: '#6fa8d8', hunted: '#8ee6a0', hunterlost: '#e0863a', standdown: '#8fb6c6',
-  aid: '#7fe0b0', betray: '#ff5b30', embargo: '#e0863a',
-  contract: '#e8c15a', contractdone: '#8ee6a0',
-  storm: '#9fb2cc', stormloss: '#8fb6c6', season: '#c8b3ff',
-  ambition: '#e8c15a', overreach: '#e0863a',
-  haven: '#b0242e', redeemed: '#8ee6a0', assault: '#e0a24a',
-  lost: '#8fb6c6', shun: '#e0863a', reroute: '#6fd0e0',
+// Event-kind display colours (blight/plague/…) come from the shared eventKinds.eventColor() — one
+// source for the crawl, the Story browser, and these HUD tooltips (the local copy was deleted).
+
+// Which nautical FX sequence a live event fires (SimScene._fireEventFx). Reads the SAME event
+// stream the ticker uses (sim.getEcon().events). SINK kinds (wreck/starve/stormloss/hunterlost/
+// lost) are deliberately ABSENT — the ship-disappearance detector owns the sink visual, so we
+// never double up a foundering with a second splash.
+const EVENT_FX = {
+  plunder: 'raidPlunder',
+  fended: 'shipHit', raidfail: 'shipHit',
+  raid: 'fireBroadside', assault: 'fireBroadside', pirate: 'fireBroadside', hunted: 'fireBroadside',
+  contractdone: 'tradeComplete', boom: 'tradeComplete', bounty: 'tradeComplete',
 };
-const SEASON_ICON = { Spring: '🌱', Summer: '☀', Autumn: '🍂', Winter: '❄' };
-const NEWS_ROWS = 9; // how many recent events the ticker shows
 
 // Short human labels for a ship's voyage purpose (the hover tooltip / quick glance).
 const REASON_LABEL = {
@@ -96,13 +102,21 @@ export class SimScene extends Scene {
     this.keys = new Set();
     this._lastNow = 0;
     this._wakeTick = 0;
-    this._overlayIdx = 0;     // index into OVERLAYS (0 = off) — the active map data overlay
+    this._overlayKey = 'off'; // active map data overlay key (OVERLAYS entry) — 'off' = none
+    this._overlayModel = new OverlayModel(); // throttled derived stats/leaderboard/edges for the active overlay
     this._press = null;       // drag-to-pan state
     this._world = null;       // latest interpolated snapshot (this frame)
     this._selection = null;
     this._followCancelled = false; // true once the user pans away from a followed ship
-    this._newsRows = [];      // clickable ticker row rects (rebuilt each render)
     this._view = { width: 0, height: 0 };
+    this.history = new HistoryStore(); // deep chronicle reader (/api/history), scoped per sea
+
+    // ── Client-only presentation FX state (never written onto snapshots) ──
+    this._fxSeen = null;          // high-water mark of event.id fired (primed on 1st live frame)
+    this._shipFx = new Map();     // ship id → expiry(now) for a transient 'damaged' overlay (from a sequence signal)
+    this._sinkActors = [];        // client-owned foundering ships (copies, drawn with the 'sinking' art)
+    this._lastState = null;       // ship id → last display state (for depart/arrive deltas)
+    this._lastShipPos = null;     // ship id → last {x,y,heading,type,pirate,privateer,homeId} (wreck detector)
 
     this.ui = new UIStack();
     this.infoPanel = new InfoPanel({
@@ -113,7 +127,12 @@ export class SimScene extends Scene {
         shipsById: this._world ? this._world.entities : null,
         wind: this.sim.wind,
         portraits: this.shared.portraits,
+        voices: this.shared.voices, // per-keeper writing-style catalogue → the Story tab's first-person logbook
+        seasons: this.sim.seasons, seasonDays: this.sim.seasonDays, // for the Story tab's dated datelines
         getHistory: (kind, id) => this.sim.getHistory(kind, id),
+        // The entity's full chronicle: deep DB pages merged with the live event tail, in narrative
+        // order (oldest→newest). Kicks off the fetch on first read; returns cached rows thereafter.
+        getChronicle: (kind, id) => this._chronicle(kind, id),
       }),
     });
     this.controls = new SimControls({
@@ -122,8 +141,53 @@ export class SimScene extends Scene {
       getClock: () => this.sim.getClock(),
       speeds: SPEEDS,
     });
+    // The news ticker (collapsed crawl) / world-history browser (expanded). Reads live events + the
+    // deep timeline; focuses events back through the scene's camera/selection.
+    this.newsPanel = new NewsPanel({
+      getEvents: () => this.sim.getEcon().events || [],
+      getTimeline: () => this._timeline(),
+      eventLoc: (e) => this._eventLoc(e),
+      focus: (e) => this._focusEvent(e),
+    });
+    // The world almanac (press `m`): aggregate stats + active-metric distribution + a clickable
+    // fly-to leaderboard. Reads the throttled overlay model + the sim's summary, never the socket.
+    this.dashboard = new OverviewDashboard({
+      getModel: () => this._overlayModel,
+      getSpec: () => overlayByKey(this._overlayKey),
+      getSummary: () => ({ economy: this.sim.economy, season: this.sim.season, clock: this.sim.getClock(), islandCount: this.sim.islands.length }),
+      getRegistry: () => OVERLAYS,
+      setMetric: (key) => { this._overlayKey = key; },
+      onPickIsland: (id) => this._focusIsland(id),
+      nameById: (id) => { const isl = this.sim.islandsById.get(id); return isl ? isl.name : id; },
+    });
+    // Top-left toolbar: mouse access to the overlays/links/almanac that were `o`/`l`/`m`-only.
+    // Cycle/toggle the same scene state the hotkeys drive; buttons light while their view is active.
+    this.overviewControls = new OverviewControls({
+      onOverlay: () => { this._overlayKey = cycleOverlay(this._overlayKey, 'scalar', 1); },
+      onLinks: () => { this._overlayKey = cycleOverlay(this._overlayKey, 'edges', 1); },
+      onAlmanac: () => this.dashboard.toggle(),
+      overlayActive: () => overlayByKey(this._overlayKey).kind === 'scalar',
+      linksActive: () => overlayByKey(this._overlayKey).kind === 'edges',
+      almanacActive: () => this.dashboard.visible,
+    });
+    this.ui.add(this.newsPanel);
     this.ui.add(this.infoPanel);
     this.ui.add(this.controls);
+    this.ui.add(this.dashboard);
+    this.ui.add(this.overviewControls); // last = top of the z-stack for clicks
+  }
+
+  /** The world timeline for the NewsPanel: deep DB history merged with the live event tail, newest
+   *  first, with a pager for older pages. */
+  _timeline() {
+    const page = this.history.ensure('timeline', '', { limit: 100 });
+    const live = this.sim.getEcon().events || [];
+    return {
+      entries: mergeChronicle(page.entries, live, { ascending: false }),
+      loading: page.loading,
+      done: page.done,
+      more: () => this.history.more('timeline', '', { limit: 100 }),
+    };
   }
 
   enter() {
@@ -152,6 +216,12 @@ export class SimScene extends Scene {
     // shared.sim is a cross-scene service — do NOT close the socket here. Just drop
     // this scene's transient visual state so wakes/effects don't leak on re-entry.
     this.shared.effects.stopAll();
+    if (this.shared.sequences) this.shared.sequences.stopAll();
+    this._shipFx.clear();
+    this._sinkActors.length = 0;
+    this._lastState = null;
+    this._lastShipPos = null;
+    this._fxSeen = null;
     this.keys.clear();
     this._press = null;
   }
@@ -165,34 +235,125 @@ export class SimScene extends Scene {
 
     const world = this.sim.getWorld(now);
     this._world = world;
+    this.history.setWorld(this.sim.worldId); // adopt the live sea's id (drops cache on a re-seed)
     if (!this._fitted && this.sim.mapW) { this._fitCamera(); this._fitted = true; } // one-time fit to the real ocean size
     this._selection = this.sim.getSelected(world);
     this.infoPanel.visible = !!(this._selection && this._selection.data);
     this.controls.visible = this.sim.status === 'live';
+    this.newsPanel.visible = this.sim.status === 'live';
+    this.overviewControls.visible = this.sim.status === 'live';
     this._updateFollow(dt); // ease the camera to a selected ship (deadzone; cancelled by user pan)
+    this._syncOverlay(now, world); // recompute the active overlay's stats/edges (throttled)
 
     this._emitWakes(now, world);
     this._detectWrecks(now, world);
+    this._fireEventFx(now);      // combat bursts at authoritative event spots (on-screen, capped)
+    this._stateFx(now, world);   // depart/arrive foam from observed sailing↔docked deltas
+    this._pruneShipFx(now);      // expire the transient 'damaged' overlay
     this.shared.effects.update(now);
   }
 
-  /** A ship that was present last frame but is gone now foundered — splash where it sank. */
+  /** A ship present last frame but gone now foundered. Spawn a CLIENT sinking actor (a copy of the
+   *  ship's primitive fields — never a snapshot reference) that renders the authored `sinking` art
+   *  as she rolls under, and fire the `shipSinks` sequence (explosion + splash + smoke) at the spot.
+   *  Falls back to the bare wreck splash when the sequence runner is absent (shots/headless). */
   _detectWrecks(now, world) {
     const cur = world && world.entities;
     const prev = this._lastShipPos;
+    const seq = this.shared.sequences;
     if (prev && cur) {
       let n = 0;
       for (const id in prev) {
         if (!cur[id] && n < 4) { // cap so a reconnect can't trigger a splash storm
           const p = prev[id];
-          this.shared.effects.addGenericEffect(this.shared.VFX_DEFS.shipWreck, p.x, p.y, { scale: 34, now });
+          const color = (this.sim.islandsById.get(p.homeId) || {}).color;
+          this._sinkActors.push({
+            x: p.x, y: p.y, heading: p.heading || 0, type: p.type,
+            pirate: p.pirate, privateer: p.privateer, color, born: now, ttl: 1500, trans: {},
+          });
+          if (seq) seq.play('shipSinks', { x: p.x, y: p.y, angle: p.heading || 0 });
+          else this.shared.effects.addGenericEffect(this.shared.VFX_DEFS.shipWreck, p.x, p.y, { scale: 34, now });
           n++;
         }
       }
     }
     const next = {};
-    if (cur) for (const id in cur) next[id] = { x: cur[id].x, y: cur[id].y };
+    if (cur) for (const id in cur) {
+      const s = cur[id];
+      next[id] = { x: s.x, y: s.y, heading: s.heading, type: s.type, pirate: s.pirate, privateer: s.privateer, homeId: s.homeId };
+    }
     this._lastShipPos = next;
+  }
+
+  /** Fire a combat/trade FX sequence at each NEW authoritative event (past the id high-water mark),
+   *  on-screen only, ≤4/frame. Primed on the first live frame so a reconnect backlog doesn't erupt. */
+  _fireEventFx(now) {
+    const seq = this.shared.sequences;
+    if (!seq) return;
+    const events = this.sim.getEcon().events;
+    if (!events || !events.length) return;
+    if (this._fxSeen == null) { this._fxSeen = events[events.length - 1].id ?? 0; return; }
+    const b = this.shared.camera.getVisibleBounds();
+    const ents = this._world && this._world.entities;
+    let maxId = this._fxSeen, fired = 0;
+    for (const e of events) {
+      const id = e.id ?? 0;
+      if (id <= this._fxSeen) continue;
+      if (id > maxId) maxId = id;
+      if (fired >= 4) continue;                 // drop excess this frame, but still advance the mark
+      const seqId = EVENT_FX[e.kind];
+      if (!seqId) continue;
+      const loc = this._eventLoc(e);
+      if (!loc) continue;
+      if (loc.x < b.left || loc.x > b.right || loc.y < b.top || loc.y > b.bottom) continue; // on-screen only
+      const s = loc.shipId != null && ents && ents[loc.shipId];
+      const angle = s ? (s.heading || 0) : 0;
+      seq.play(seqId, { x: loc.x, y: loc.y, angle, shipId: loc.shipId });
+      fired++;
+    }
+    this._fxSeen = maxId;
+  }
+
+  /** A snapshot-SAFE FX signal sink: a sequence's `signal` step lands here. It writes ONLY to the
+   *  scene's client overlay maps and NEVER mutates opts.entity / the snapshot / the sim. */
+  onFxSignal(name, data, opts) {
+    if (name === 'markDamaged') {
+      const id = opts && opts.shipId;
+      if (id == null) return;
+      const ttl = (data && data.ttl) || 1500;
+      this._shipFx.set(id, this._lastNow + ttl); // self-healing: expires by time, no fragile clear step
+    }
+  }
+
+  /** Depart/arrive foam from observed state deltas (sailing↔docked). Zoom-gated + on-screen + capped
+   *  so a busy port doesn't erupt; purely cosmetic, reads live snapshot states only. */
+  _stateFx(now, world) {
+    const seq = this.shared.sequences;
+    const cur = world && world.entities;
+    if (!seq || !cur) { this._lastState = null; return; }
+    const prev = this._lastState;
+    const zoom = this.shared.camera.getZoom();
+    if (prev && zoom >= 0.6) {
+      const b = this.shared.camera.getVisibleBounds();
+      let departs = 0, arrives = 0;
+      for (const id in cur) {
+        const s = cur[id];
+        const was = prev[id];
+        if (!was || was === s.state) continue;
+        if (s.x < b.left || s.x > b.right || s.y < b.top || s.y > b.bottom) continue;
+        if (s.state === 'sailing' && was !== 'sailing' && departs < 3) { seq.play('depart', { x: s.x, y: s.y, angle: s.heading || 0 }); departs++; }
+        else if (s.state === 'docked' && was === 'sailing' && arrives < 3) { seq.play('arrive', { x: s.x, y: s.y }); arrives++; }
+      }
+    }
+    const next = {};
+    for (const id in cur) next[id] = cur[id].state;
+    this._lastState = next;
+  }
+
+  /** Expire transient 'damaged' overlays whose ttl has passed. */
+  _pruneShipFx(now) {
+    if (!this._shipFx.size) return;
+    for (const [id, until] of this._shipFx) if (until <= now) this._shipFx.delete(id);
   }
 
   _emitWakes(now, world) {
@@ -249,6 +410,19 @@ export class SimScene extends Scene {
     cam.y = Math.max(-m, Math.min(this.sim.mapH + m, cam.y));
   }
 
+  /** Recompute the active overlay's derived data (stats/leaderboard/edges) — throttled inside the
+   *  model. The heat discs, the legend, and the almanac all read the result. Skipped when the
+   *  overlay is off and the almanac is closed (nothing consumes it). */
+  _syncOverlay(now, world) {
+    if (this.sim.status !== 'live') return;
+    const spec = overlayByKey(this._overlayKey);
+    const wantModel = spec.kind !== 'off' || (this.dashboard && this.dashboard.visible);
+    if (!wantModel) return;
+    const islands = this.sim.getEcon().islands;
+    if (!islands || !islands.length) return;
+    this._overlayModel.sync(islands, spec, world && world.entities, this.sim.islandsById, now);
+  }
+
   // ─── input ───────────────────────────────────────────────────────
   onMousedown(sx, sy) {
     if (this.ui.onDown(sx, sy)) return; // UI consumes first
@@ -260,7 +434,7 @@ export class SimScene extends Scene {
     this._cursor = { sx, sy };            // for the hover tooltip (recomputed each render)
     this.ui.onMove(sx, sy);
     if (!this._press) {
-      if (this.shared.canvas) this.shared.canvas.style.cursor = this._newsHit(sx, sy) ? 'pointer' : 'default';
+      if (this.shared.canvas) this.shared.canvas.style.cursor = (this.newsPanel.hitPointer(sx, sy) || this.overviewControls.hitPointer(sx, sy)) ? 'pointer' : 'default';
       return;
     }
     const dx = sx - this._press.sx, dy = sy - this._press.sy;
@@ -273,15 +447,14 @@ export class SimScene extends Scene {
 
   onMouseup(sx, sy) {
     this.ui.onUp(sx, sy);
-    if (this._press && !this._press.moved) {
-      const e = this._newsHit(sx, sy);
-      if (e) this._focusEvent(e);   // click a news item → snap the view to it
-      else this._pickAt(sx, sy);    // otherwise a normal select
-    }
+    // News clicks are handled by NewsPanel.onDown (via ui.onDown on mousedown); here a clean click
+    // that the UI didn't consume is a world pick.
+    if (this._press && !this._press.moved) this._pickAt(sx, sy);
     this._press = null;
   }
 
   onWheel(deltaY, sx, sy) {
+    if (this.ui.onWheel(sx, sy, deltaY)) return; // a panel under the cursor scrolls instead of zooming
     const factor = deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP;
     this.shared.camera.zoomAt(factor, sx, sy);
   }
@@ -290,12 +463,20 @@ export class SimScene extends Scene {
     const k = e.key;
     if (PAN_KEYS[k]) { this.keys.add(k); return; }
     if (k === ' ') { e.preventDefault(); this.sim.togglePause(); return; }
-    // `o` cycles the data overlay (off → wealth → prosperity → …); Shift+O steps back.
+    // `o` cycles the scalar data overlays (off → wealth → prosperity → …); Shift+O steps back.
     if (k === 'o' || k === 'O') {
-      const n = OVERLAYS.length;
-      this._overlayIdx = (this._overlayIdx + (e.shiftKey ? n - 1 : 1)) % n;
+      this._overlayKey = cycleOverlay(this._overlayKey, 'scalar', e.shiftKey ? -1 : 1);
       return;
     }
+    // `l` cycles the relational LINK overlays (off → alliances → trade lanes → aid); Shift+L back.
+    if (k === 'l' || k === 'L') {
+      this._overlayKey = cycleOverlay(this._overlayKey, 'edges', e.shiftKey ? -1 : 1);
+      return;
+    }
+    // `h` toggles the news ticker between the compact crawl and the world-history browser.
+    if (k === 'h' || k === 'H') { this.newsPanel.toggle(); return; }
+    // `m` toggles the world almanac (aggregate stats + fly-to leaderboard).
+    if (k === 'm' || k === 'M') { this.dashboard.toggle(); return; }
     // 1/2/3 select the speed presets (SPEEDS = [1,3,10]).
     const idx = { '1': 0, '2': 1, '3': 2 }[k];
     if (idx != null && SPEEDS[idx] != null) this.sim.setSpeed(SPEEDS[idx]);
@@ -345,6 +526,18 @@ export class SimScene extends Scene {
     }
   }
 
+  /** The selected entity's chronicle for the Story tab: deep DB history (fetched lazily + cached in
+   *  this.history) merged with the live event tail, in narrative order (oldest→newest). */
+  _chronicle(kind, id) {
+    const page = this.history.ensure(kind, id, { limit: 100 });
+    const live = this.sim.getHistory(kind, id);
+    return {
+      entries: mergeChronicle(page.entries, live, { ascending: true }),
+      loading: page.loading,
+      truncated: page.entries.length > 0 && !page.done, // earlier history exists beyond the first page
+    };
+  }
+
   // ─── render ──────────────────────────────────────────────────────
   render(now) {
     const { worldRenderer, effects, camera, ctx } = this.shared;
@@ -359,19 +552,27 @@ export class SimScene extends Scene {
       const highlightHome = (sel && sel.kind === 'island') ? sel.id : null;
       const highlightIsland = (sel && sel.kind === 'ship' && sel.data) ? sel.data.homeId : null;
       worldRenderer.beginFrame();
+      this.shared.sea.draw(now, bounds, this.sim.wind, this.sim.season, this.sim.storms);
       worldRenderer.drawIslands(econ.islands, bounds, now, highlightIsland);
-      if (this._overlayIdx > 0) worldRenderer.drawOverlay(econ.islands, bounds, OVERLAYS[this._overlayIdx].key, now);
+      const overlaySpec = overlayByKey(this._overlayKey);
+      if (overlaySpec.kind === 'scalar') worldRenderer.drawOverlay(econ.islands, bounds, overlaySpec, this._overlayModel.stats, now);
+      else if (overlaySpec.kind === 'edges') worldRenderer.drawRelations(this._overlayModel.edges, bounds, overlaySpec, now);
       if (camera.getZoom() >= WAKE_MIN_ZOOM) worldRenderer.drawWakes(effects.getTrails(), now); // skipped at overview (see _emitWakes)
       worldRenderer.drawStorms(this.sim.storms, bounds, now); // named tempests, under the ships
-      worldRenderer.drawShips(world.entities, this.sim.islandsById, bounds, now, highlightHome);
+      worldRenderer.drawShips(world.entities, this.sim.islandsById, bounds, now, highlightHome, this._shipFx);
+      // Client-owned foundering ships (rolled + fading) — cull the spent ones, then draw under the
+      // sink splash/explosion (effects) so the burst reads on top of the going-down hull.
+      if (this._sinkActors.length) {
+        this._sinkActors = this._sinkActors.filter((a) => now - a.born < a.ttl);
+        worldRenderer.drawSinkingActors(this._sinkActors, now);
+      }
       worldRenderer.drawEffects(effects, now); // shipwreck splashes + debris
       if (this._selection) worldRenderer.drawSelection(this._selection, now);
       worldRenderer.endFrame();
       this._statusLine(ctx);
       this._windIndicator(ctx);
       this._overlayLegend(ctx); // active data-overlay key + gradient scale
-      this._newsFeed(ctx);
-      this._hoverTooltip(ctx, now); // drawn before the UI so a docked panel occludes it cleanly
+      this._hoverTooltip(ctx, now); // drawn before the UI so a docked panel occludes it cleanly (incl. the news crawl)
     } else {
       this._overlay(ctx);
     }
@@ -417,11 +618,12 @@ export class SimScene extends Scene {
     const padX = 9, padY = 7, lh = 16, titleH = 2;
     const portSize = portrait != null ? 52 : 0;
     const portGap = portrait != null ? 10 : 0;
+    const ICON_GUTTER = 15; // reserved column for a line's optional ink icon (a bullet glyph)
     ctx.font = '12px system-ui, sans-serif';
     let w = 0;
     for (const l of lines) {
       ctx.font = (l.bold ? 'bold ' : '') + '12px system-ui, sans-serif';
-      w = Math.max(w, ctx.measureText(l.text).width);
+      w = Math.max(w, ctx.measureText(l.text).width + (l.icon ? ICON_GUTTER : 0));
     }
     const textH = lines.length * lh + titleH;
     const boxW = Math.ceil(w) + padX * 2 + portSize + portGap;
@@ -452,9 +654,13 @@ export class SimScene extends Scene {
     const textX = bx + padX + portSize + portGap;
     let ty = by + padY + Math.max(0, (portSize - textH) / 2);
     for (const l of lines) {
+      const col = l.color || 'rgba(228, 240, 246, 0.92)';
+      let tx = textX;
+      if (l.icon) { drawIcon(ctx, l.icon, textX + 6, ty + lh / 2 - 1.5, 12, col); tx += ICON_GUTTER; }
       ctx.font = (l.bold ? 'bold ' : '') + '12px system-ui, sans-serif';
-      ctx.fillStyle = l.color || 'rgba(228, 240, 246, 0.92)';
-      ctx.fillText(l.text, textX, ty);
+      ctx.fillStyle = col;
+      ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+      ctx.fillText(l.text, tx, ty);
       ty += lh + (l.bold ? titleH : 0);
     }
     ctx.restore();
@@ -468,19 +674,30 @@ export class SimScene extends Scene {
     lines.push({ text: `${islandStateWord(isl)} · pop ${isl.population}/${isl.k} (${pct}%)`, color: 'rgba(190, 210, 220, 0.85)' });
     lines.push({ text: `Civ ${Math.round((isl.civ || 0) * 100)}% · ${(isl.produces || []).slice(0, 3).join(', ')}` });
     if (isl.haven) {
-      lines.push({ text: `🏴‍☠ PIRATE HAVEN · grip ${Math.round((isl.haven.strength || 0) * 100)}%`, color: '#c0392b' });
+      lines.push({ text: `PIRATE HAVEN · grip ${Math.round((isl.haven.strength || 0) * 100)}%`, color: '#c0392b', icon: 'skull' });
     } else if (isl.magistrate) {
       lines.push(isl.rebellion
-        ? { text: '🔥 IN REBELLION', color: '#ff5b30' }
+        ? { text: 'IN REBELLION', color: '#ff5b30', icon: 'flame' }
         : { text: `Loyalty ${Math.round((isl.loyalty != null ? isl.loyalty : 1) * 100)}% · ${isl.magistrate.name}`, color: moraleColor(isl.loyalty != null ? isl.loyalty : 1) });
       const amb = isl.magistrate.ambition;
-      if (amb && amb.label) lines.push({ text: `⚑ ${amb.label} agenda · ${Math.round((amb.progress || 0) * 100)}%`, color: '#e8c15a' });
+      if (amb && amb.label) lines.push({ text: `${amb.label} agenda · ${Math.round((amb.progress || 0) * 100)}%`, color: '#e8c15a', icon: 'pennant' });
     }
-    if (isl.blight) lines.push({ text: `⚠ Blight: ${isl.blight}`, color: EVENT_COLOR.blight });
-    if (isl.plague) lines.push({ text: '☠ Plague outbreak', color: EVENT_COLOR.plague });
-    if (isl.danger > 0.25) lines.push({ text: `⚑ Pirate danger ${Math.round(isl.danger * 100)}%`, color: '#c0392b' });
-    if (isl.lawlessness > 0.35) lines.push({ text: `⚔ Lawless ${Math.round(isl.lawlessness * 100)}%`, color: '#c0392b' });
-    if (isl.contract) lines.push({ text: `📜 Wants ${isl.contract.good} · ${isl.contract.reward}g`, color: '#e8c15a' });
+    if (isl.blight) lines.push({ text: `Blight: ${isl.blight}`, color: eventColor('blight'), icon: 'wheat' });
+    if (isl.plague) lines.push({ text: 'Plague outbreak', color: eventColor('plague'), icon: 'skull' });
+    if (isl.danger > 0.25) lines.push({ text: `Pirate danger ${Math.round(isl.danger * 100)}%`, color: '#c0392b', icon: 'pennant' });
+    if (isl.lawlessness > 0.35) lines.push({ text: `Lawless ${Math.round(isl.lawlessness * 100)}%`, color: '#c0392b', icon: 'sabres' });
+    if (isl.contract) lines.push({ text: `Wants ${isl.contract.good} · ${isl.contract.reward}g`, color: '#e8c15a', icon: 'scroll' });
+    // The active data-overlay's value for this port + how it ranks against the archipelago.
+    const ov = overlayByKey(this._overlayKey);
+    if (ov.kind === 'scalar' && this._overlayModel.stats && this._overlayModel.stats.count) {
+      const raw = ov.accessor(isl);
+      if (raw != null && Number.isFinite(raw)) {
+        const lb = this._overlayModel.stats.leaderboard;
+        const rank = lb && lb.rankById.get(isl.id);
+        const suffix = rank ? ` · ${rank}/${lb.count}` : '';
+        lines.push({ text: `${ov.label}: ${fmtValue(ov, isl)}${suffix}`, color: PALETTE.accent, icon: ov.icon });
+      }
+    }
     return lines;
   }
 
@@ -493,10 +710,10 @@ export class SimScene extends Scene {
     const lines = [{ text: s.name || (cap ? `Capt. ${cap.name}` : (home ? `${home.name} ship` : 'Merchant ship')), bold: true }];
     if (cap) lines.push({ text: `Capt. ${cap.name} · ${cap.rank} · ${s.pirate ? 'rogue' : (home ? home.name : '—')}`, color: 'rgba(190, 210, 220, 0.85)' });
     if (s.pirate) {
-      lines.push({ text: '☠ BLACK FLAG — PIRATE', color: '#ff5b4a', bold: true });
+      lines.push({ text: 'BLACK FLAG — PIRATE', color: '#ff5b4a', bold: true, icon: 'skull' });
       if (s.bounty > 0) lines.push({ text: `Bounty ${s.bounty}g on this head`, color: '#ffd166' });
     } else if (s.privateer) {
-      lines.push({ text: '⚔ PRIVATEER — pirate-hunter', color: '#6fa8d8', bold: true });
+      lines.push({ text: 'PRIVATEER — pirate-hunter', color: '#6fa8d8', bold: true, icon: 'sabres' });
     } else lines.push({ text: REASON_LABEL[s.reason] || 'Idle', color: '#c8b3ff' });
     if (dest && s.state === 'sailing') lines.push({ text: `→ ${dest.name}  (~${s.eta}s)` });
     const rel = s.state === 'sailing' ? windRelation(s.heading, this.sim.wind) : null;
@@ -504,47 +721,14 @@ export class SimScene extends Scene {
       text: `Cargo ${s.used}/${s.cap} · ${s.gold}g coin${rel ? '  ·  ' + rel.label : ''}`,
       color: rel ? rel.color : undefined,
     });
-    if (s.cargo && s.cargo.People > 0) lines.push({ text: `⚓ ${s.cargo.People} settlers aboard`, color: '#f2b8d0' });
+    if (s.cargo && s.cargo.People > 0) lines.push({ text: `${s.cargo.People} settlers aboard`, color: '#f2b8d0', icon: 'anchor' });
     if (s.morale != null) {
       lines.push(s.revolt
-        ? { text: '⚔ CREW IN REVOLT', color: '#ff5b4a' }
+        ? { text: 'CREW IN REVOLT', color: '#ff5b4a', icon: 'sabres' }
         : { text: `Morale ${Math.round(s.morale * 100)}% · ${(s.foodDays || 0).toFixed(1)}d food`, color: moraleColor(s.morale) });
     }
-    if (s.sick) lines.push({ text: '☠ Infected', color: EVENT_COLOR.plague });
+    if (s.sick) lines.push({ text: 'Infected', color: eventColor('plague'), icon: 'skull' });
     return lines;
-  }
-
-  _newsFeed(ctx) {
-    const events = this.sim.getEcon().events || [];
-    this._newsRows = [];
-    if (!events.length) return;
-    const recent = events.slice(-NEWS_ROWS);
-    ctx.save();
-    ctx.font = '12px system-ui, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    const x = 16, lh = 18;
-    let y = this._view.height - 30; // vertical centre of the newest (bottom) row
-    const cur = this._cursor;
-    for (let i = recent.length - 1; i >= 0; i--) {
-      const e = recent[i];
-      const loc = this._eventLoc(e);
-      const label = `Day ${e.day}  ·  ${e.text}`;
-      const dot = loc ? 11 : 0;
-      const w = Math.min(this._view.width - 30, ctx.measureText(label).width + dot + 12);
-      const rx = x - 6, ry = y - lh / 2;
-      const hovered = loc && cur && cur.sx >= rx && cur.sx <= rx + w && cur.sy >= ry && cur.sy <= ry + lh;
-      const col = EVENT_COLOR[e.kind] || PALETTE.hudDim;
-      if (hovered) { roundRectPath(ctx, rx, ry, w, lh, 5); ctx.fillStyle = 'rgba(255,255,255,0.14)'; ctx.fill(); }
-      ctx.globalAlpha = hovered ? 1 : Math.max(0.42, 1 - (recent.length - 1 - i) * 0.07);
-      if (loc) { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, 2.6, 0, Math.PI * 2); ctx.fill(); } // clickable locator
-      ctx.fillStyle = hovered ? '#ffffff' : col;
-      ctx.fillText(label, x + dot, y);
-      ctx.globalAlpha = 1;
-      if (loc) this._newsRows.push({ x: rx, y: ry, w, h: lh, e });
-      y -= lh;
-    }
-    ctx.restore();
   }
 
   /** What an event refers to: a live ship (→ select + follow), an island (→ open its panel),
@@ -556,13 +740,6 @@ export class SimScene extends Scene {
     }
     if (e.islandId) { const isl = this.sim.islandsById.get(e.islandId); if (isl) return { x: isl.x, y: isl.y, islandId: e.islandId }; }
     if (e.x != null && e.y != null) return { x: e.x, y: e.y };
-    return null;
-  }
-
-  _newsHit(sx, sy) {
-    const rows = this._newsRows;
-    if (!rows) return null;
-    for (const r of rows) if (sx >= r.x && sx <= r.x + r.w && sy >= r.y && sy <= r.y + r.h) return r.e;
     return null;
   }
 
@@ -586,18 +763,34 @@ export class SimScene extends Scene {
     }
   }
 
+  /** Fly the camera to an island (from an almanac leaderboard click) and open its panel. Mirrors
+   *  _focusEvent's camera-snap + force-select; guards a vanished id. */
+  _focusIsland(id) {
+    const isl = this.sim.islandsById.get(id);
+    if (!isl) return;
+    const cam = this.shared.camera;
+    cam.x = isl.x; cam.y = isl.y;
+    if (cam.getZoom() < 0.7) cam.setZoom(0.7);
+    this._clampCamera();
+    this.sim.focusSelect('island', id);
+    this._followCancelled = true; // don't chase a port
+  }
+
   _statusLine(ctx) {
     const econ = this.sim.getEcon();
     const ships = this._world && this._world.entities ? Object.keys(this._world.entities).length : (econ.economy.shipCount || 0);
+    const title = `BOATZ   ${this.sim.islands.length} islands · ${ships} ships · ${fmtGold(econ.economy.totalGold)} gold`;
+    const hint = 'click: inspect · drag/WASD: pan · scroll: zoom · space: pause · o: data · l: links · m: almanac';
     ctx.save();
-    ctx.font = '15px system-ui, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    ctx.fillStyle = PALETTE.hud;
-    ctx.fillText(`BOATZ   ${this.sim.islands.length} islands · ${ships} ships · ${fmtGold(econ.economy.totalGold)} gold`, 14, 12);
-    ctx.fillStyle = PALETTE.hudDim;
-    ctx.font = '12px system-ui, sans-serif';
-    ctx.fillText('click: inspect   ·   drag/WASD: pan   ·   scroll: zoom   ·   space: pause   ·   o: data overlay', 14, 33);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.font = tfont('heading'); const w1 = ctx.measureText(title).width;
+    ctx.font = tfont('small');   const w2 = ctx.measureText(hint).width;
+    // Framed in the chart-frame plate (light text) — legible over the deeper painted sea.
+    plate(ctx, 10, 10, Math.max(w1, w2) + 24, 46, { radius: 8 });
+    ctx.fillStyle = PALETTE.panelText; ctx.font = tfont('heading');
+    ctx.fillText(title, 22, 17);
+    ctx.fillStyle = PALETTE.panelDim; ctx.font = tfont('small');
+    ctx.fillText(hint, 22, 39);
     ctx.restore();
   }
 
@@ -606,16 +799,27 @@ export class SimScene extends Scene {
   _windIndicator(ctx) {
     const w = this.sim.wind;
     if (!w) return;
-    const cx = Math.round(this._view.width / 2), cy = 30, R = 16;
     const dx = Math.cos(w.dir), dy = Math.sin(w.dir);
     const col = windColor(w.str);
+    const label = `${windWord(w.str)} wind → ${compass8(w.dir)}`;
+    const s = this.sim.season;
+    const R = 15;
     ctx.save();
+    // Measure the text column to size the framed pill.
+    ctx.font = tfont('small'); const lw = ctx.measureText(label).width;
+    const sw = s ? 16 + ctx.measureText(s.name).width : 0;
+    const textCol = Math.max(lw, sw);
+    const bw = 12 + 2 * R + 12 + textCol + 14, bh = 44;
+    const bx = Math.round(this._view.width / 2 - bw / 2), by = 8;
+    plate(ctx, bx, by, bw, bh, { radius: 8 });
+    const cx = bx + 12 + R, cy = by + bh / 2;
+    // Compass dial.
     ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(8, 49, 59, 0.3)'; ctx.lineWidth = 1.5; ctx.stroke();
-    ctx.fillStyle = PALETTE.hudDim; ctx.font = '9px system-ui, sans-serif';
+    ctx.strokeStyle = PALETTE.panelEdge; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = PALETTE.panelDim; ctx.font = '9px ' + 'system-ui, sans-serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('N', cx, cy - R - 5);
-    // Arrow along the wind (points the way it blows).
+    ctx.fillText('N', cx, cy - R - 4);
+    // Arrow along the wind (points the way it blows), round-capped + tapered.
     const tipX = cx + dx * R * 0.72, tipY = cy + dy * R * 0.72;
     ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(cx - dx * R * 0.72, cy - dy * R * 0.72); ctx.lineTo(tipX, tipY); ctx.stroke();
@@ -625,48 +829,76 @@ export class SimScene extends Scene {
     ctx.lineTo(tipX - Math.cos(pa - 0.5) * ah, tipY - Math.sin(pa - 0.5) * ah);
     ctx.lineTo(tipX - Math.cos(pa + 0.5) * ah, tipY - Math.sin(pa + 0.5) * ah);
     ctx.closePath(); ctx.fill();
-    // Label to the right of the dial; the season sits just beneath it.
-    ctx.fillStyle = PALETTE.hud; ctx.font = '12px system-ui, sans-serif';
+    // Label to the right of the dial; the season sits just beneath, with its ink icon.
+    const tx = cx + R + 12;
+    ctx.fillStyle = PALETTE.panelText; ctx.font = tfont('small');
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.fillText(`${windWord(w.str)} wind → ${compass8(w.dir)}`, cx + R + 9, cy - 6);
-    const s = this.sim.season;
-    if (s) { ctx.fillStyle = PALETTE.hudDim; ctx.font = '11px system-ui, sans-serif'; ctx.fillText(`${SEASON_ICON[s.name] || '·'} ${s.name}`, cx + R + 9, cy + 8); }
+    ctx.fillText(label, tx, s ? cy - 7 : cy);
+    if (s) {
+      drawIcon(ctx, seasonIcon(s.name), tx + 6, cy + 9, 12, PALETTE.panelDim);
+      ctx.fillStyle = PALETTE.panelDim; ctx.fillText(s.name, tx + 16, cy + 9);
+    }
     ctx.restore();
   }
 
-  /** Bottom-left-of-top legend for the active data overlay: its name, a red→green heat scale, and
-   *  the lo/hi descriptors. When off, a faint hint that the overlays exist. */
+  /** Legend for the active data overlay (below the overview toolbar): its name, a red→green heat
+   *  scale, and the lo/hi endpoints. When off, nothing — the toolbar buttons are the affordance. */
   _overlayLegend(ctx) {
-    const spec = OVERLAYS[this._overlayIdx];
-    const x = 14, y = 52;
+    const spec = overlayByKey(this._overlayKey);
+    if (spec.kind === 'off') return; // the [Overlays]/[Links]/[Almanac] toolbar carries discovery now
+    const x = 12, y = 94; // sits just under the overview toolbar (y 62–88)
     ctx.save();
-    ctx.font = '12px system-ui, sans-serif';
     ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-    if (!spec || spec.key === 'off') {
-      ctx.fillStyle = PALETTE.hudDim;
-      ctx.fillText('press  o  for data overlays', x, y);
-      ctx.restore();
-      return;
+    const stats = this._overlayModel.stats;
+    const scalar = spec.kind === 'scalar' && stats && stats.count;
+    const edgeRows = spec.kind === 'edges' ? (spec.edgeKinds ? spec.edgeKinds.length : 1) : 0;
+    // Framed legend: metric glyph + label, then either the heat ramp (scalar) or a swatch key (edges).
+    const bw = 214, bh = scalar ? 56 : (edgeRows ? 24 + edgeRows * 15 : 40);
+    plate(ctx, x, y, bw, bh, { radius: 8 });
+    const ix = x + 12, iy = y + 9;
+    drawIcon(ctx, spec.icon || 'hatch', ix + 6, iy + 6, 12, PALETTE.panelText);
+    ctx.fillStyle = PALETTE.panelText; ctx.font = tfont('label');
+    ctx.fillText(spec.label, ix + 18, iy);
+    if (scalar) {
+      // "typical" (median) on the right of the header — the one number to read at a glance.
+      ctx.fillStyle = PALETTE.accent; ctx.font = tfont('numSmall');
+      ctx.textAlign = 'right'; ctx.fillText('~' + spec.vfmt(stats.p50), x + bw - 12, iy + 1); ctx.textAlign = 'left';
+      // Heat scale coloured exactly as the map paints it (low raw = left; colour shows good/bad).
+      const bx = ix, by = y + 28, sw = bw - 24, sh = 9, slices = 26;
+      for (let i = 0; i < slices; i++) {
+        const frac = i / (slices - 1);
+        ctx.fillStyle = heatColor(spec.good ? frac : 1 - frac, 1);
+        ctx.fillRect(bx + (i / slices) * sw, by, sw / slices + 1, sh);
+      }
+      ctx.strokeStyle = PALETTE.panelInk; ctx.lineWidth = 1; ctx.strokeRect(bx, by, sw, sh);
+      // Median tick, positioned by the median's place in the [lo,hi] domain.
+      const mt = stats.hi > stats.lo ? (stats.p50 - stats.lo) / (stats.hi - stats.lo) : 0.5;
+      const mx = bx + Math.max(0, Math.min(1, mt)) * sw;
+      ctx.strokeStyle = '#f4fbff'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(mx, by - 2); ctx.lineTo(mx, by + sh + 2); ctx.stroke();
+      // The live numeric endpoints (auto-ranged), replacing the old adjective-only scale.
+      ctx.font = tfont('numSmall'); ctx.fillStyle = PALETTE.panelDim;
+      ctx.textAlign = 'left'; ctx.fillText(spec.vfmt(stats.lo), bx, by + sh + 3);
+      ctx.textAlign = 'right'; ctx.fillText(spec.vfmt(stats.hi), bx + sw, by + sh + 3);
+    } else if (spec.kind === 'edges') {
+      // Swatch key: a coloured line stub + label per relation kind (mirrors drawRelations colours).
+      const EK = { ally: ['#8ee6a0', 'ally'], rival: ['#ff7b6b', 'rival'], lane: ['#6fd0e0', 'busier lane → brighter'], aid: ['#7fe0b0', 'relief convoy'], embargo: ['#e0863a', 'embargo (trade cut)'], hunt: ['#ff5b4a', 'pirate hunt'], guard: ['#6fa8d8', 'privateer patrol'] };
+      let ly = y + 26;
+      ctx.lineCap = 'round';
+      for (const ek of (spec.edgeKinds || [])) {
+        const sw = EK[ek] || ['#8fc6d4', ek];
+        ctx.strokeStyle = sw[0]; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.moveTo(ix + 4, ly + 6); ctx.lineTo(ix + 30, ly + 6); ctx.stroke();
+        ctx.fillStyle = PALETTE.panelDim; ctx.font = tfont('numSmall');
+        ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+        ctx.fillText(sw[1], ix + 38, ly + 6);
+        ly += 15;
+      }
+      ctx.textBaseline = 'top';
+    } else {
+      ctx.fillStyle = PALETTE.panelDim; ctx.font = tfont('numSmall');
+      ctx.textAlign = 'right'; ctx.fillText('o ↻', x + bw - 12, iy + 1); ctx.textAlign = 'left';
     }
-    ctx.fillStyle = PALETTE.hud;
-    ctx.fillText(`▧ ${spec.label}`, x, y);
-    ctx.fillStyle = PALETTE.hudDim;
-    ctx.font = '10px system-ui, sans-serif';
-    ctx.fillText('o ↻', x + 148, y + 1);
-    // Heat scale: lo (left) → hi (right), coloured exactly as the map paints it.
-    const bx = x, by = y + 18, bw = 156, bh = 9, slices = 26;
-    for (let i = 0; i < slices; i++) {
-      const frac = i / (slices - 1);
-      ctx.fillStyle = heatColor(spec.good ? frac : 1 - frac, 1);
-      ctx.fillRect(bx + (i / slices) * bw, by, bw / slices + 1, bh);
-    }
-    ctx.strokeStyle = 'rgba(8,20,26,0.5)'; ctx.lineWidth = 1;
-    ctx.strokeRect(bx, by, bw, bh);
-    ctx.font = '10px system-ui, sans-serif';
-    ctx.fillStyle = PALETTE.hudDim;
-    ctx.textBaseline = 'top';
-    ctx.textAlign = 'left'; ctx.fillText(spec.lo || 'low', bx, by + bh + 3);
-    ctx.textAlign = 'right'; ctx.fillText(spec.hi || 'high', bx + bw, by + bh + 3);
     ctx.restore();
   }
 

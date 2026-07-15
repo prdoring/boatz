@@ -1,4 +1,5 @@
 {
+  "_doc_boatz": "BOATZ nautical presentation sequences live alongside the leftover critter demo ones (kept because the sequences editor + tests reference them). BOATZ sequences are fired client-side by SimScene from AUTHORITATIVE sim events (SimScene._fireEventFx) and observed snapshot deltas — never by the sim. Audio is a later pass, so they author `vfx` + `signal` steps ONLY (no `sfx`). Every referenced VFX is a one-shot with a duration (safe to fire from a sequence — a persistent effect would leak, having no removal id). `signal` steps route through onSignal → SimScene.onFxSignal, which writes ONLY to a scene-owned presentation overlay and NEVER mutates a snapshot. Positional sequences take opts.x/y (world) and opts.angle (= ship heading) so beam offsets rotate to the vessel's sides.",
   "sequences": {
     "critterSpawn": {
       "positional": true,
@@ -56,6 +57,60 @@
       "steps": [
         { "type": "loopStop", "handle": "music", "delay": 0, "fadeOut": 1.0 },
         { "type": "loopStop", "handle": "wind", "delay": 0, "fadeOut": 1.0 }
+      ]
+    },
+
+    "fireBroadside": {
+      "positional": true,
+      "steps": [
+        { "type": "vfx", "effect": "muzzleFlash", "delay": 0, "offset": { "x": -5, "y": 9 } },
+        { "type": "vfx", "effect": "cannonSmoke", "delay": 0, "offset": { "x": -5, "y": 11 } },
+        { "type": "vfx", "effect": "muzzleFlash", "delay": 90, "offset": { "x": 6, "y": 9 } },
+        { "type": "vfx", "effect": "cannonSmoke", "delay": 90, "offset": { "x": 6, "y": 11 } },
+        { "type": "vfx", "effect": "muzzleFlash", "delay": 180, "offset": { "x": 0, "y": 9 } }
+      ]
+    },
+    "shipHit": {
+      "positional": true,
+      "steps": [
+        { "type": "vfx", "effect": "hullSplinters", "delay": 0 },
+        { "type": "vfx", "effect": "cannonSplash", "delay": 60, "offsetRange": { "x": [-8, 8], "y": [-8, 8] } },
+        { "type": "signal", "name": "markDamaged", "data": { "ttl": 1600 }, "delay": 0 }
+      ]
+    },
+    "shipSinks": {
+      "positional": true,
+      "steps": [
+        { "type": "vfx", "effect": "shipExplosion", "delay": 0 },
+        { "type": "vfx", "effect": "cannonSplash", "delay": 260, "offsetRange": { "x": [-10, 10], "y": [-10, 10] } },
+        { "type": "vfx", "effect": "cannonSmoke", "delay": 400 }
+      ]
+    },
+    "raidPlunder": {
+      "positional": true,
+      "steps": [
+        { "type": "vfx", "effect": "muzzleFlash", "delay": 0, "offset": { "x": 0, "y": 8 } },
+        { "type": "vfx", "effect": "cannonSmoke", "delay": 0, "offset": { "x": 0, "y": 10 } },
+        { "type": "vfx", "effect": "goldBurst", "delay": 200 },
+        { "type": "signal", "name": "markDamaged", "data": { "ttl": 1400 }, "delay": 0 }
+      ]
+    },
+    "tradeComplete": {
+      "positional": true,
+      "steps": [
+        { "type": "vfx", "effect": "goldBurst", "delay": 0 }
+      ]
+    },
+    "depart": {
+      "positional": true,
+      "steps": [
+        { "type": "vfx", "effect": "cannonSplash", "delay": 0 }
+      ]
+    },
+    "arrive": {
+      "positional": true,
+      "steps": [
+        { "type": "vfx", "effect": "cannonSplash", "delay": 0 }
       ]
     }
   }

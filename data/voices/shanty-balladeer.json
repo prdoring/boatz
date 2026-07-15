@@ -1,0 +1,61 @@
+{
+  "id": "shanty-balladeer",
+  "name": "The Shanty Balladeer",
+  "persona": "A sailor who half-sings the log. Rhythmic and rollicking, given to refrains and call-and-response — heave-ho, yo-ho, and away we go. Buoyant, fond of a chorus. Ship: 'we'. Island: 'we'.",
+
+  "pronoun": {
+    "ship":   { "subject": "we", "first": "We" },
+    "island": { "subject": "we", "first": "We" }
+  },
+
+  "handover": {
+    "ship": {
+      "founder":   "Sing it out, lads — a new book and a new hand! I am {name}{rankc}, and this {home} {type} is ours to sail. Heave-ho, and away we go!",
+      "successor": "The log's passed down the line, and I'll take up the tune. I am {name}{rankc}; her song rolls on, and away we go!",
+      "mutiny":    "They pitched the old man to the fishes and clapped the book in my hands — {name}, and a shaky note to open on. Still, heave-ho: the chorus wants a voice, and mine will serve.",
+      "pirate":    "No more honest verses for us! The black flag's aloft, and I — {name}{rankc} — will sing the wicked ones. Yo-ho, and away we go!",
+      "prize":     "She struck, and oh, we gave a roar! I am {name}{rankc}; this hull is ours now, and her log takes up our chorus. Heave-ho!",
+      "recovered": "A hunter ran the rogues down and freed this hull, and I've the keeping of her. I am {name}{rankc} — a new verse, an honest one, and away we go!"
+    },
+    "island": {
+      "founder":   "Gather round, {place}, and hear the first line! I am {name}{rankc}, and this port and I shall sing together. Heave-ho!",
+      "overthrow": "The crowd rose up with a roar like a whole ship's chorus and pulled the old one down; the seal is mine now. I am {name}{rankc}, and {place} strikes up a new tune!",
+      "successor": "The rule of {place} comes round to me, easy as a verse turns to its chorus. I am {name}{rankc}, and I'll carry the song from here."
+    }
+  },
+
+  "connectives": {
+    "same":   ["That very day, oh, ", "Before the sun went down, ", "And hey, ere nightfall, "],
+    "days":   ["A few days on, sing, ", "Soon after, oh, ", "And away a few days, "],
+    "week":   ["A week down the wind, ", "Come the next week, oh, "],
+    "season": ["A season rolling on, ", "When the winds came round again, "],
+    "year":   ["A year and a day, sing hey, ", "Long down the years, oh, "],
+    "long":   ["After a long, quiet spell, ", "Many a long year rolled by, "]
+  },
+
+  "join": ["and ", "and O, ", "; then heave, "],
+
+  "coda": {
+    "ship": {
+      "pirate":  "We're roving yet, singing loud, flag to the wind{bounty} — yo-ho!",
+      "default": "She sails on with a song in her rigging, out of {home}. Heave-ho!",
+      "bounty":  ", and {bounty}g on my head to sweeten the chorus"
+    },
+    "island": {
+      "haven":   "The black flag flies over us now, and only wicked songs are sung in this port.",
+      "default": "{place} rolls on, {population} souls strong, and the chorus never tires."
+    }
+  },
+
+  "quiet": {
+    "ship":   "Little to sing of — fair winds, full holds, a gentle tune. And who would grumble at that?",
+    "island": "A quiet season, and quiet is a fine soft melody. Trade in, trade out, and all hands merry."
+  },
+
+  "kinds": {
+    "plunder": { "recur": { "class": "prize", "phrases": [", the {ord} prize in our chorus", " — heave-ho, and not the last", ", sing hey, as before"] } },
+    "sunk":    { "recur": { "class": "prize", "phrases": [", another gone down to a watery tune"] } },
+    "raid":    { "recur": { "class": "sack",  "phrases": [", the {ord} port to hear our roaring song"] } },
+    "fended":  { "recur": { "class": "stand", "phrases": [" — we've danced clear of wolves before", ", and lived to sing another round"] } }
+  }
+}

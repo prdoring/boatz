@@ -1,0 +1,60 @@
+{
+  "id": "privateer-patriot",
+  "name": "The Privateer Patriot",
+  "persona": "A proud privateer serving flag and Crown under letters of marque. Duty, honour, loyalty, and open contempt for pirates; every action is the King's lawful business. Upright and martial. Uses 'we'.",
+
+  "pronoun": {
+    "ship":   { "subject": "we", "first": "We" },
+    "island": { "subject": "we", "first": "We" }
+  },
+
+  "handover": {
+    "ship": {
+      "founder":   "I set my name to this book as I set it to my commission: {name}{rankc}, in the service of the Crown. This {home} {type} sails under letters of marque, and every line I write here shall do honour to the flag she flies.",
+      "successor": "The log passes to my hand in good order, and I take it up as a charge of duty. I am {name}{rankc}; her service to the Crown goes on under me, unbroken and unstained.",
+      "mutiny":    "A shameful day, and I set it down as such — the crew cast out their lawful master, and the book was forced upon me, {name}, who never sought it. I hold it now only that some honest hand should hold it. God save the King, and God forgive this ship her disorder.",
+      "pirate":    "Let it be written to my lasting shame: we have cast off the King's commission and raised the black flag, and I — {name}{rankc} — gave the word. I who once hunted such men am become one of them. No letter of marque can cover this, and I know it well.",
+      "prize":     "We ran her down and she struck her colours to the Crown's flag, as the lawless must. I am {name}{rankc}. She is a lawful prize, taken under commission, and her log continues now in the King's service and my own.",
+      "recovered": "We ran the black flag to earth and cut this hull free of it, and I am charged to return her to honest colours. I am {name}{rankc}. It is the King's own work, this — the mending of what pirates mar — and I take it up gladly."
+    },
+    "island": {
+      "founder":   "I take up the governance of {place} in the King's name, and this record as a sworn duty. I am {name}{rankc}. These {population} souls are Crown subjects now, and I their loyal servant.",
+      "overthrow": "The people rose and cast the old tyrant down, and the seal has come to me by their will. I am {name}{rankc}. I take it up for the Crown and for good order, and I will hold {place} loyal and lawful, whatever the cost of it.",
+      "successor": "The governance of {place} passes to me in proper form, sealed and lawful. I am {name}{rankc}. I keep its record, and its loyalty to the Crown, from this day forward."
+    }
+  },
+
+  "connectives": {
+    "same":   ["That same day, our colours still flying, ", "Before the watch was changed, ", "Ere the guns were housed, "],
+    "days":   ["A few days on station, ", "Soon after, ", "As our patrol wore on, "],
+    "week":   ["A week upon the King's business, ", "The week following, "],
+    "season": ["A season on station, ", "As the campaign wore on, "],
+    "year":   ["A year in the Crown's service, and ", "Long after, our commission still good, "],
+    "long":   ["After a long and dutiful quiet, ", "When many seasons of good order had passed, "]
+  },
+
+  "join": ["and ", "; then ", "and, by the Crown's commission, "],
+
+  "coda": {
+    "ship": {
+      "pirate":  "We rove the lanes now with no flag but the black to answer for us{bounty} — a fallen ship, and I the officer who let her fall.",
+      "default": "We keep the King's peace upon these lanes yet, out of {home}, our commission good and our colours clean.",
+      "bounty":  ", {bounty}g upon my head — a bitter coin for one who once claimed the bounties himself"
+    },
+    "island": {
+      "haven":   "The black flag flies over {place} now, and the King's peace is fled from it — a den of the very vermin I was commissioned to scour from these waters.",
+      "default": "{place} stands loyal and lawful under my hand — {population} Crown subjects, and the flag secure above them all."
+    }
+  },
+
+  "quiet": {
+    "ship":   "Little to report — the lanes quiet, the lawless keeping to their holes, and good order the only cargo we carry. A patrol well kept is a patrol with little to write.",
+    "island": "A quiet and loyal season — trade in good order, the King's peace unbroken, and not one rogue to trouble the harbour."
+  },
+
+  "kinds": {
+    "hunted":  { "recur": { "class": "hunt",  "phrases": [", the {ord} pirate we have run down for the Crown", " — another rogue answered to the King's law", ", as our commission bids us do"] } },
+    "fended":  { "recur": { "class": "stand", "phrases": [" — we have beaten off worse and kept our colours flying", ", and the flag never once came down"] } },
+    "sunk":    { "recur": { "class": "prize", "phrases": [", sent under, and one less pirate upon the King's waters"] } }
+  }
+}

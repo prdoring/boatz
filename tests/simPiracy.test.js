@@ -73,6 +73,28 @@ test('the world is seeded with a few rogues already at large (the early seas are
   }
 });
 
+test('a pirate does NOT chase a merchant into a port’s shelter — it drops her and blockades (no bouncing off the wharf)', () => {
+  const w = makeWorld();
+  const isle = w.islands[0]; isle.haven = false;
+  const pirate = w.ships.find((s) => s.pirate) || w.ships[0];
+  turnPirate(w, pirate);
+  pirate.cargo = { Gold: 0, People: 0, Food: 999, Weapons: 10 }; // fed → won't raid; it will hunt if it can
+  pirate._huntCd = 0; pirate._prey = null;
+  pirate.x = isle.x + 400; pirate.y = isle.y;                    // out in the approaches
+  const merch = w.ships.find((s) => s !== pirate && !s.pirate) || w.ships[1];
+  merch.pirate = false; merch.privateer = false; merch.state = 'outbound'; // UNDER WAY (not idle/trading) …
+  merch.cargo = { Gold: 500, People: 0, Food: 10, Weapons: 0 };  // …a fat prize, but
+  merch.x = isle.x + 40; merch.y = isle.y;                       // tucked in the port's roads — under its guns
+  w.ships = w.ships.filter((s) => s === pirate || s === merch);
+  w.rules = { ...w.rules, SINK_PER_1000: 0 };
+
+  for (let i = 0; i < 80; i++) piracy(w, w.rules.SIM_STEP);
+  assert.notEqual(pirate._act && pirate._act.k, 'hunt', 'the raider did not chase the sheltering merchant onto the wharf');
+  assert.equal(pirate._act && pirate._act.k, 'blockade', 'it stood off and blockaded, waiting for her to stand back out');
+  assert.ok(!merch._sunk, 'the merchant was safe under the port’s guns');
+  assert.ok(Math.hypot(pirate.x - isle.x, pirate.y - isle.y) > w.rules.PIRATE_RAID_RANGE, 'the pirate held off the port (no bouncing on the wharf)');
+});
+
 test('a fed pirate with no prey does NOT camp an island wharf — it stands off in the approaches', () => {
   const w = makeWorld();
   const isle = w.islands[0];
@@ -106,6 +128,47 @@ test('a blockading pirate circles a port (never camps it) and stokes the fear of
   assert.ok(Math.hypot(pirate.x - isle.x, pirate.y - isle.y) > w.rules.PIRATE_RAID_RANGE, 'held off the wharf');
   // And a blockade makes these waters feared (which is what draws the privateers).
   assert.ok(w.islands.some((i) => (i.danger || 0) > 0), 'the blockade stoked danger, summoning the law');
+});
+
+test('a hungry pirate on a raided port’s cooldown STANDS OFF — it does not park dead-centre on the island', () => {
+  const w = makeWorld();
+  const isle = w.islands[0];
+  const pirate = w.ships.find((s) => s.pirate) || w.ships[0];
+  turnPirate(w, pirate);
+  pirate.cargo = { Gold: 0, People: 0, Food: 0, Weapons: 8 }; // starving → it WANTS to raid…
+  pirate._huntCd = 0; pirate._prey = null;
+  isle.stock = { ...(isle.stock || {}), Food: 0 };           // …but the port is stripped bare and
+  isle._raidCd = w.simTime + 100000;                         // freshly raided → on a long cooldown (can't raid)
+  pirate.x = isle.x + 300; pirate.y = isle.y;
+  for (const p of w.islands) p.haven = false;                // no haven to slink to
+  for (const s of w.ships) if (!s.pirate) s.state = 'idle';  // no prey at sea
+  w.rules = { ...w.rules, SINK_PER_1000: 0 };                // deterministic: no foundering mid-test
+
+  for (let i = 0; i < 120; i++) piracy(w, w.rules.SIM_STEP);
+  const d = Math.hypot(pirate.x - isle.x, pirate.y - isle.y);
+  assert.ok(d > w.rules.PIRATE_RAID_RANGE,
+    `the raider held off the port (dist ${Math.round(d)}u) instead of freezing in its centre`);
+  assert.equal(pirate._act && pirate._act.k, 'blockade', 'it fell through to blockading the approaches');
+});
+
+test('a STARVING pirate hunts a lean prize its greedy, well-fed self would scorn (and won’t lie low)', () => {
+  const w = makeWorld();
+  const pirate = w.ships[0], victim = w.ships[1];
+  turnPirate(w, pirate);
+  pirate.captain.traits = { ...pirate.captain.traits, greed: 0.95, wanderlust: 0.1 }; // greedy (scorns lean hulls) + not a rover
+  pirate.captain.xp = 5000;                                    // skilled → wins the boarding
+  pirate.cargo = { Gold: 0, People: 0, Food: 0, Weapons: 40 }; // STARVING (the prize is food, not plunder)
+  pirate.x = 3000; pirate.y = 3000; pirate.morale = 1;
+  pirate._huntCd = w.simTime + 100000;                         // "resting" with loot — a FED pirate would not hunt
+  const lean = { Gold: 5, People: 0, Food: 1, Weapons: 0 };    // prize ≈ 15, well under PIRATE_GREED_MIN_PRIZE (55)
+  victim.x = 3000; victim.y = 3000; victim.state = 'outbound'; victim.pirate = false;
+  victim.cargo = { ...lean }; victim.morale = 0.05;
+  w.ships = w.ships.filter((s) => s === pirate || s === victim);
+  w.rules = { ...w.rules, SINK_PER_1000: 0 };                  // deterministic: no foundering mid-test
+
+  piracy(w, w.rules.SIM_STEP);
+  assert.equal(pirate._act && pirate._act.k, 'hunt', 'the starving raider chose to HUNT the lean hull (greed/rest overridden)');
+  assert.ok(weaponsAboard(pirate) < 40, 'and actually engaged it — a fight burned powder (it did not scorn the prize)');
 });
 
 test('a pirate DEFENDS its haven — it turns on a besieging privateer instead of standing off', () => {
@@ -212,5 +275,38 @@ test('a pirate captain EARNS experience from taking a prize (like a merchant doe
   victim.captain.xp = 0;
   const xpBefore = pirate.captain.xp;
   piracy(w, w.rules.SIM_STEP);
-  assert.ok(pirate.captain.xp > xpBefore, 'the raider’s captain gained experience for the prize (grows more skilled)');
+  assert.ok(pirate.captain.xp.gun > xpBefore, 'the raider’s captain gained experience for the prize (grows more skilled)');
+});
+
+test('a pirate takes a struck merchant as a PRIZE — the hull changes flag and joins the black fleet', () => {
+  const w = makeWorld();
+  w.rules = { ...w.rules, PRIZE_CHANCE: 5, PIRATE_MAX_FRAC: 1 }; // certain capture; the seas can bear it
+  const pirate = w.ships[0], victim = w.ships[1];
+  turnPirate(w, pirate);
+  pirate.x = victim.x = 1000; pirate.y = victim.y = 1000;
+  pirate.morale = 1; pirate._huntCd = 0; pirate.cargo = { Gold: 0, People: 0, Weapons: 40 };
+  pirate.captain.xp = { sea: 0, gun: 5000, cmd: 0 };
+  pirate.captain.traits = { boldness: 0.8, wanderlust: 0.3, greed: 0.3 };
+  victim.pirate = false; victim.state = 'outbound'; victim.morale = 0.04; victim.hull = 1; victim.rig = 1;
+  victim.cargo = { Gold: 100, People: 0, Food: 10, Weapons: 1 };
+  victim.captain.xp = { sea: 0, gun: 0, cmd: 0 };
+  for (let i = 0; i < 12 && !victim.pirate && !victim._sunk; i++) { piracy(w, w.rules.SIM_STEP); w.simTime += w.rules.COMBAT_ROUND_SEC; }
+  assert.ok(victim.pirate, 'she struck, was boarded, and now flies the black flag as a prize');
+});
+
+test('prize capture respects the fleet-fraction cap — at the cap, the struck merchant is not taken', () => {
+  const w = makeWorld();
+  w.rules = { ...w.rules, PRIZE_CHANCE: 5, PIRATE_MAX_FRAC: 0 }; // the seas are already at their pirate limit
+  const pirate = w.ships[0], victim = w.ships[1];
+  turnPirate(w, pirate);
+  pirate.x = victim.x = 1000; pirate.y = victim.y = 1000;
+  pirate.morale = 1; pirate._huntCd = 0; pirate.cargo = { Gold: 0, People: 0, Weapons: 40 };
+  pirate.captain.xp = { sea: 0, gun: 5000, cmd: 0 };
+  pirate.captain.traits = { boldness: 0.8, wanderlust: 0.3, greed: 0.3 };
+  victim.pirate = false; victim.state = 'outbound'; victim.morale = 0.04; victim.hull = 1; victim.rig = 1;
+  victim.cargo = { Gold: 500, People: 0, Food: 30, Weapons: 1 };
+  victim.captain.xp = { sea: 0, gun: 0, cmd: 0 };
+  for (let i = 0; i < 12 && !victim._sunk && victim.state !== 'inbound'; i++) { piracy(w, w.rules.SIM_STEP); w.simTime += w.rules.COMBAT_ROUND_SEC; }
+  assert.ok(!victim.pirate, 'no capture when the seas are already at their pirate cap');
+  assert.ok(victim._sunk || victim.state === 'inbound', 'she was scuttled or freed to limp home stripped instead');
 });

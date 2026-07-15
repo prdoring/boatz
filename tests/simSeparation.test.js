@@ -54,15 +54,30 @@ test('a crossing GIVE-WAY vessel (other on its starboard) yields; the stand-on v
   assert.ok(aMoved > bMoved + 2, 'the give-way hull yielded while the stand-on hull essentially held');
 });
 
-test('a hull and its chase target are EXEMPT — a boarding action closes, it does not give way', () => {
+test('a chase drops the polite give-way, but the HARD FLOOR still forbids overlap (no welding)', () => {
   const w = makeWorld();
   const hunter = w.ships[0], prey = w.ships[1];
   only(w, [hunter, prey]);
   hunter._prey = prey.id;
   hunter.x = 3000; hunter.y = 3000; hunter.heading = 0;
-  prey.x = 3020; prey.y = 3000; prey.heading = 0; // just ahead, inside the shove range — would normally be pushed off
-  const d0 = Math.hypot(hunter.x - prey.x, hunter.y - prey.y);
-  for (let i = 0; i < 20; i++) separation(w, w.rules.SIM_STEP);
+  prey.x = 3020; prey.y = 3000; prey.heading = 0; // 20u — inside the collision floor (the old bug held them here forever)
+  for (let i = 0; i < 40; i++) separation(w, w.rules.SIM_STEP);
   const d1 = Math.hypot(hunter.x - prey.x, hunter.y - prey.y);
-  assert.ok(Math.abs(d1 - d0) < 1e-6, 'no avoidance is applied between a hunter and its prey');
+  assert.ok(d1 >= w.rules.SHIP_COLLIDE_RANGE - 1e-6, `the boarding pair was held off the collision floor (${d1.toFixed(1)}u)`);
+  assert.ok(d1 < w.rules.SHIP_SEPARATION_RANGE, 'but only to the floor, not the full separation range — the give-way stays exempt for a chase');
+});
+
+test('dead-stacked combatants never stay welded — even a whole SWARM is held off one target', () => {
+  const w = makeWorld();
+  const target = w.ships[0], a = w.ships[1], b = w.ships[2], c = w.ships[3];
+  only(w, [target, a, b, c]);
+  // Three attackers all focus-firing `target` (each has it as _prey) — the exemption is per-attacker, so
+  // the old code dropped separation between the target and its ENTIRE swarm. Stack them all on its position.
+  for (const s of [a, b, c]) { s._prey = target.id; s.x = 4000; s.y = 4000; }
+  target.x = 4000; target.y = 4000;
+  for (let i = 0; i < 60; i++) separation(w, w.rules.SIM_STEP);
+  for (const s of [a, b, c]) {
+    const d = Math.hypot(s.x - target.x, s.y - target.y);
+    assert.ok(d >= w.rules.SHIP_COLLIDE_RANGE - 1e-6, `attacker held off the target (${d.toFixed(1)}u ≥ floor)`);
+  }
 });

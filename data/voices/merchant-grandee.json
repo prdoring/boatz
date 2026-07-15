@@ -1,0 +1,61 @@
+{
+  "id": "merchant-grandee",
+  "name": "The Merchant Grandee",
+  "persona": "A pompous, status-obsessed trading magnate who confuses the log with a monument to himself. Preens over reputation, investors, contracts, and the family name; holds profit to be honor and honor to be profit. Ship: the master merchant, 'I'. Island: a self-crowned magnate, the royal 'we'.",
+
+  "pronoun": {
+    "ship":   { "subject": "I",  "first": "I"  },
+    "island": { "subject": "we", "first": "We" }
+  },
+
+  "handover": {
+    "ship": {
+      "founder":   "Let it be recorded, in a hand befitting the occasion, that I — {name}{rankc}, of no small standing — now command this {home} {type}, and intend to make her name synonymous with my own.",
+      "successor": "The stewardship of this fine venture passes into my keeping. I am {name}{rankc}, and I shall carry her accounts, and her reputation, to heights the last hand never dreamt of.",
+      "mutiny":    "A regrettable, undignified affair: the crew disposed of their master and thrust the book upon me, {name}, a person of no rank as yet. I shall rise regardless; men of my quality invariably do.",
+      "pirate":    "Let the timid name it piracy; I name it enterprise unshackled. I am {name}{rankc}, and from this day I answer to no charter but my own ambition.",
+      "prize":     "She struck her colours and acknowledged her betters. I am {name}{rankc}; this hull is now an asset of my house, and her ledger a further chapter in my rising fortune.",
+      "recovered": "A hunter of some competence has restored this vessel to lawful hands — namely, mine. I am {name}{rankc}, and I shall polish away every stain the brigands left upon her good name."
+    },
+    "island": {
+      "founder":   "We take up the governance of {place}, as befits our station. We are {name}{rankc}, and beneath our hand this port shall become a name pronounced with envy.",
+      "overthrow": "The rabble unseated the former incumbent — a crude business, though the seal is ours now. We are {name}{rankc}, and {place} shall soon learn what proper administration looks like.",
+      "successor": "The rule of {place} descends to us, as is only fitting. We are {name}{rankc}, and we shall govern it as an estate worthy of our name."
+    }
+  },
+
+  "connectives": {
+    "same":   ["That very day, to my great satisfaction, ", "Before the day's business was closed, ", "That same afternoon, "],
+    "days":   ["Some days thereafter, ", "In short order, ", "As my affairs advanced, "],
+    "week":   ["Within the week, ", "The following week, as anticipated, "],
+    "season": ["As the season turned in my favour, ", "A quarter on, my fortunes rising, "],
+    "year":   ["A year later, and considerably the richer, ", "When a twelvemonth had swelled the coffers, "],
+    "long":   ["After a long and prosperous interval, ", "Years on, my name now well established, "]
+  },
+
+  "join": ["and ", "; moreover, ", "and, to my further credit, "],
+
+  "coda": {
+    "ship": {
+      "pirate":  "I range the lanes yet, a merchant prince of my own making{bounty}. Envy is the sincerest tribute.",
+      "default": "The house prospers and I with it, sailing out of {home} as its foremost name.",
+      "bounty":  ", a scandalous {bounty}g posted against my distinguished person"
+    },
+    "island": {
+      "haven":   "The black flag flies over all that we built — a low end for a fine estate, and no honest ledger left to grace our name.",
+      "default": "{place} flourishes beneath our administration — {population} souls, and every one the richer for our stewardship."
+    }
+  },
+
+  "quiet": {
+    "ship":   "Little of note to record, the trade being merely lucrative — I do so prefer my triumphs eventful.",
+    "island": "A placid and profitable season, our coffers full and our name unblemished. Prosperity, alas, makes for dull chronicling."
+  },
+
+  "kinds": {
+    "plunder": { "recur": { "class": "prize", "phrases": [", my {ord} acquisition of note", " — another asset entered to my house", ", as my reputation warrants"] } },
+    "raid":    { "recur": { "class": "sack",  "phrases": [", the {ord} port to feel the reach of my enterprise", ", another market corrected by force of arms"] } },
+    "fended":  { "recur": { "class": "stand", "phrases": [" — men of my standing are not so easily robbed", ", my colours undiminished"] } },
+    "hunted":  { "recur": { "class": "hunt",  "phrases": [", the {ord} brigand brought to account by my own hand"] } }
+  }
+}

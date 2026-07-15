@@ -1,0 +1,61 @@
+{
+  "id": "pious-chaplain",
+  "name": "The Pious Chaplain",
+  "persona": "A devout ship's chaplain turned god-fearing master. Every fortune is Providence, every loss a judgment, every escape a mercy. Grave, humble, scripture-cadenced; the Lord is never far from the pen. Ship and island alike: 'we'.",
+
+  "pronoun": {
+    "ship":   { "subject": "we", "first": "We" },
+    "island": { "subject": "we", "first": "We" }
+  },
+
+  "handover": {
+    "ship": {
+      "founder":   "I am {name}{rankc}, and this {home} {type} is given into my keeping by Providence. May the Lord steer us true, and may I set down His works faithfully.",
+      "successor": "The log passes to my hand now, and I take it up humbly. I am {name}{rankc}, and I will record what mercies and what trials the Lord is pleased to send.",
+      "mutiny":    "The crew cast down our old master and pressed this book upon me, a green and unworthy hand. I am {name}. God forgive us the manner of it; I will do my poor best before Him.",
+      "pirate":    "My crew has raised the black flag, and we are turned from honest trade to sin. I am {name}{rankc}. May the Lord have mercy on our souls, for I fear the reckoning that is owed us.",
+      "prize":     "We boarded her and she struck, and the Lord delivered this vessel into our hands. I am {name}{rankc}. Her log continues now under our flag, as He in His wisdom willed it.",
+      "recovered": "A hunter ran the wicked down, and I am set to bring this hull back to honest trade. I am {name}{rankc}. Providence has cleansed her; by His grace I will keep her clean."
+    },
+    "island": {
+      "founder":   "I take up the governance of {place}, as the Lord appoints, and this record with it. I am {name}{rankc}. May I rule these {population} souls in justice and in mercy.",
+      "overthrow": "The mob pulled down the old ruler, and the seal is thrust into my hands. I am {name}{rankc}. God grant it was His judgment upon {place}, and not merely our own wrath.",
+      "successor": "The rule of {place} passes to me. I am {name}{rankc}. I take up this burden in fear of the Lord, and will govern as one who must answer for every soul."
+    }
+  },
+
+  "connectives": {
+    "same":   ["That same day, ", "Ere the sun had set, ", "Before the watch was out, "],
+    "days":   ["A few days on, ", "Not long after, ", "In the Lord's good time, "],
+    "week":   ["A week passed, ", "When seven days had turned, "],
+    "season": ["A season turned, ", "As the year wore on, "],
+    "year":   ["A year and more, ", "After a twelvemonth, "],
+    "long":   ["After a long silence from Heaven, ", "When many quiet seasons had passed, "]
+  },
+
+  "join": ["and ", "; then ", "and, by God's grace, ", "and, the Lord be thanked, "],
+
+  "coda": {
+    "ship": {
+      "pirate":  "We are sinners still upon the water, the black flag over us{bounty}. May the Lord bring us to repentance before the reckoning finds us.",
+      "default": "We sail yet out of {home}, and I give humble thanks for every mercy shown us.",
+      "bounty":  ", {bounty}g offered now for our sins"
+    },
+    "island": {
+      "haven":   "The black flag flies over {place} now, and law and gospel alike are fled from it. The Lord sees it all, and will not be mocked.",
+      "default": "{population} souls in our keeping, and the port stands secure. Deo gratias."
+    }
+  },
+
+  "quiet": {
+    "ship":   "Little enough to set down. Fair winds and quiet water, and for this peace I thank the Lord who grants it.",
+    "island": "A quiet season, thank God. Trade came and went, and no soul among us was harmed. We are spared, and I am grateful."
+  },
+
+  "kinds": {
+    "plunder": { "recur": { "class": "prize", "phrases": [", another prize the Lord suffered us to take", ", my {ord} such sin upon the water", " — and I pray it be forgiven"] } },
+    "sunk":    { "recur": { "class": "prize", "phrases": [", sent to the deep, and God rest the souls of them"] } },
+    "fended":  { "recur": { "class": "stand", "phrases": [", and we were spared again", " — delivered once more from the jaws of it"] } },
+    "hunted":  { "recur": { "class": "hunt",  "phrases": [", the {ord} wolf brought to judgment", " — His justice worked through our poor hands"] } }
+  }
+}

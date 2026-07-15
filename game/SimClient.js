@@ -43,9 +43,12 @@ export class SimClient {
     this.wind = { dir: 0, str: 0 }; // global wind (dir it blows toward, strength 0..1)
     this.storms = [];              // active named storm cells { id, name, x, y, r }
     this.season = null;            // { idx, name, day } — the turning year
+    this.seasons = null;           // season NAME list (from WELCOME) — lets the chronicler date past events
+    this.seasonDays = null;        // days per season (from WELCOME)
     this.selected = null;          // { kind:'island'|'ship', id }
     this.status = 'connecting';    // 'connecting' | 'live' | 'disconnected'
     this.clientId = null;
+    this.worldId = null;           // rosterSeed of the live sea (from WELCOME) — scopes /api/history
     this.versionMismatch = false;
     this.clock = { simTime: 0, speed: 1, paused: false, dayLength: 60 };
 
@@ -70,11 +73,14 @@ export class SimClient {
   _onWelcome(m) {
     this.checkVersion(m);
     this.clientId = m.clientId;
+    if (m.worldId != null) this.worldId = m.worldId;
     if (m.mapW) this.mapW = m.mapW;
     if (m.mapH) this.mapH = m.mapH;
     if (Array.isArray(m.goods)) this.goods = m.goods;
     if (Array.isArray(m.raw)) this.raw = m.raw;
     if (m.dayLength) this.clock.dayLength = m.dayLength;
+    if (Array.isArray(m.seasons)) this.seasons = m.seasons;
+    if (m.seasonDays) this.seasonDays = m.seasonDays;
     // Static layout: positions/name/type/color, so islands draw before the first
     // economy snapshot arrives. Merge-by-id (never wholesale replace).
     for (const isl of (m.layout || [])) this._mergeIsland(isl);
@@ -120,7 +126,7 @@ export class SimClient {
       const push = (key) => {
         let arr = this._history.get(key);
         if (!arr) { arr = []; this._history.set(key, arr); }
-        arr.push({ id: e.id, day: e.day, kind: e.kind, text: e.text });
+        arr.push({ id: e.id, day: e.day, kind: e.kind, text: e.text, data: e.data });
         if (arr.length > HIST_MAX) arr.shift();
       };
       if (e.shipId != null) push('ship:' + e.shipId);

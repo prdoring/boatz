@@ -8,7 +8,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { PORT, HOST, EDITOR_PASSWORD, ISLANDS, DIRS, MIME, MAX_BACKUPS, getSaveAllowlist } from './config.js';
+import { PORT, HOST, EDITOR_PASSWORD, ISLANDS, CHRONICLE_DB, DIRS, MIME, MAX_BACKUPS, getSaveAllowlist } from './config.js';
 import { handleSaveData, handleManageCollection, readBody } from './saveData.js';
 import { attachSimServer } from './simHost.js'; // side-effect-free import; opens no socket until called
 
@@ -98,6 +98,12 @@ function serveFile(res, baseDir, relPath) {
   });
 }
 
+// The durable world chronicle the /api/history endpoint reads. Injected by the isMain block below
+// (or by a test via setHistoryStore) — NOT closed over by requestHandler, which is constructed with
+// no sim in the server tests. Null ⇒ the endpoint returns an empty history, never throws.
+let historyStore = null;
+export function setHistoryStore(store) { historyStore = store; }
+
 // The request handler is exported so it can be exercised in tests against an
 // ephemeral server, without binding the real port.
 export function requestHandler(req, res) {
@@ -140,6 +146,34 @@ export function requestHandler(req, res) {
     // ── Public status (client readiness probe) ──
     if (req.method === 'GET' && pathname === '/api/status') {
       return sendJson(res, 200, { status: 'ok' });
+    }
+
+    // ── Public world chronicle (read-only history — server/chronicle.js). PUBLIC by design:
+    //    placed above the auth gate, so it needs no entry in isEditorRoute. No secrets, read-only. ──
+    if (req.method === 'GET' && pathname === '/api/history') {
+      const q = new URLSearchParams((req.url || '').split('?')[1] || '');
+      const store = historyStore;
+      if (!store) return sendJson(res, 200, { entries: [], world: null }); // no sim attached (tests) → empty
+      const world = q.get('world');
+      const opts = { before: q.get('before'), limit: q.get('limit') };
+      let entries;
+      if (q.has('timeline')) {
+        const kinds = q.get('kinds') ? q.get('kinds').split(',').filter(Boolean) : null;
+        entries = store.queryTimeline(world, { ...opts, kinds });
+      } else {
+        const entity = q.get('entity') || '';
+        const i = entity.indexOf(':');
+        const kind = i > 0 ? entity.slice(0, i) : '';
+        const id = i > 0 ? entity.slice(i + 1) : '';
+        if ((kind !== 'island' && kind !== 'ship') || !id) {
+          return sendJson(res, 400, { error: 'bad or missing entity (want kind:id, kind ∈ island|ship) or ?timeline' });
+        }
+        entries = store.queryEntity(world, kind, id, opts);
+      }
+      // `world` echoes the scope actually queried (the live sea when the client omitted it), and
+      // `nextBefore` is the pagination cursor for the next older page (null when this page is empty).
+      const nextBefore = entries.length ? entries[entries.length - 1].seq : null;
+      return sendJson(res, 200, { entries, world: store.worldId(), nextBefore });
     }
 
     // ── Editor auth gate ──
@@ -233,7 +267,8 @@ const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv
 if (isMain) {
   // The authoritative economy simulation + its WebSocket server, sharing this HTTP
   // port. Browser viewers connect with `new NetworkClient()` (same host/port).
-  const sim = attachSimServer(server, { islandCount: ISLANDS });
+  const sim = attachSimServer(server, { islandCount: ISLANDS, chroniclePath: CHRONICLE_DB });
+  setHistoryStore(sim.chronicle); // the /api/history endpoint reads this per-sea chronicle
 
   server.listen(PORT, HOST, () => {
     console.log(`Pat_Engine running → http://localhost:${PORT}/  (editor: /editor)  [bound ${HOST}:${PORT}]`);

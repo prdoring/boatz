@@ -1,0 +1,61 @@
+{
+  "id": "superstitious-salt",
+  "name": "The Superstitious Salt",
+  "persona": "An old sailor thick with sea-lore and dread. Omens, Jonahs, St. Elmo's fire, mermaids under the moon; never a Friday, never whistle up a wind, salt over the shoulder, and the ship has her moods. Wary and muttering, always knocking on wood. Ship and island: 'we'.",
+
+  "pronoun": {
+    "ship":   { "subject": "we", "first": "We" },
+    "island": { "subject": "we", "first": "We" }
+  },
+
+  "handover": {
+    "ship": {
+      "founder":   "She's mine now, this {home} {type}, and I've paid the sea her due for the keeping of her. {name}{rankc}. I'll say no more than I must, for the water listens.",
+      "successor": "The book's in my hands now. {name}{rankc}. I touched wood before ever I took it up, and I'll set down the omens plain as they come.",
+      "mutiny":    "They put the old man over the side — bad luck, that, and it'll follow us a good while — and shoved the book at me, a green hand. {name}. The sea help me, for none else will.",
+      "pirate":    "The lads have run up the black flag, and there's no unspilling that salt. {name}{rankc}. She's a marked ship now, and marked ships end but one way.",
+      "prize":     "We took her clean, and I'll not whistle aboard for a week for fear of what she carries. {name}{rankc}. Her log's ours now — knock wood it brings no curse in with it.",
+      "recovered": "A hunter caught us, and that was only the sea collecting a debt long owed. {name}{rankc}. I'll bring her home the honest way, and throw salt over my shoulder the whole passage."
+    },
+    "island": {
+      "founder":   "The running of {place} falls to me, and I nailed a horseshoe over the door before I did aught else. {name}{rankc}. You don't govern rock and tide without keeping the old ways.",
+      "overthrow": "They dragged the last one out — never a good day for such work, but they didn't ask me — and put the seal in my hand. {name}{rankc}. {place}'s mine, and I'll ward it proper.",
+      "successor": "{place} passes to me. {name}{rankc}. I spat to leeward and took up the seal, and we'll see soon enough what the omens make of it."
+    }
+  },
+
+  "connectives": {
+    "same":   ["That same tide, ", "Before the glass had turned, ", "While the gulls still fussed, "],
+    "days":   ["A few days on, no Friday among them, ", "Soon after, ", "Come the next dark of the moon, "],
+    "week":   ["A week gone, ", "When the moon had thinned, "],
+    "season": ["A season turned, ", "As the tides ran high again, "],
+    "year":   ["A year and more, ", "After a twelvemonth of watching the sky, "],
+    "long":   ["After a long dead calm, and I never trust one, ", "When many still seasons had passed, "]
+  },
+
+  "join": ["and ", "; then ", "and — knock wood — ", "and, the saints preserve us, "],
+
+  "coda": {
+    "ship": {
+      "pirate":  "We're still out here under the black, marked and watched{bounty}. The sea keeps her own ledger, and one day she'll call it in.",
+      "default": "Still afloat out of {home}, and I've not whistled up a wind nor sailed on a Friday. That's the whole of why.",
+      "bounty":  ", {bounty}g on our heads and worse luck riding with it"
+    },
+    "island": {
+      "haven":   "The black flag's over {place} now, and there's not salt enough in the sea to ward off what's coming for us.",
+      "default": "{population} souls, and the horseshoe's still up over the door. That's the account, and I'll knock wood on it."
+    }
+  },
+
+  "quiet": {
+    "ship":   "Quiet water and no omens worth the ink. I'll not tempt it by writing another word.",
+    "island": "A still year, and I knocked wood every time the thought crossed me. Trade came, trade went, and no Jonah among us."
+  },
+
+  "kinds": {
+    "plunder": { "recur": { "class": "prize", "phrases": [", and I threw salt after her for luck", ", my {ord} prize, and I've whistled for none of them", " — no good comes of counting them aloud"] } },
+    "sunk":    { "recur": { "class": "prize", "phrases": [", down she went, and I looked away as she did"] } },
+    "fended":  { "recur": { "class": "stand", "phrases": [", the old ways held once more", " — spared again, touch wood"] } },
+    "hunted":  { "recur": { "class": "hunt",  "phrases": [", the {ord} black-flag wolf the sea took off our backs", " — one Jonah fewer on the water"] } }
+  }
+}

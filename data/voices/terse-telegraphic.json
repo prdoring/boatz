@@ -1,0 +1,61 @@
+{
+  "id": "terse-telegraphic",
+  "name": "The Ship's Wire",
+  "persona": "Extreme economy of words. Clipped fragments, near stage directions. Nouns and verbs, few articles. Cold, fast, spare. Ship: 'we', used sparingly. Island: a curt clerk, 'we'.",
+
+  "pronoun": {
+    "ship":   { "subject": "we", "first": "We" },
+    "island": { "subject": "we", "first": "We" }
+  },
+
+  "handover": {
+    "ship": {
+      "founder":   "Log opened. {name}{rankc}. A {home} {type}. Mine now. Kept plain.",
+      "successor": "New hand on the book. {name}{rankc}. Entries carried on. No frills.",
+      "mutiny":    "Master over the side. Crew hands me the book. {name}. Green. Learning her fast.",
+      "pirate":    "Colours down. Black flag up. {name}{rankc}. All taken now. None traded.",
+      "prize":     "She struck. Boarded. Taken. {name}{rankc}. Her book, my hand.",
+      "recovered": "Hunter ran the rogues down. Hull freed. {name}{rankc}. Bound home. Honest trade again."
+    },
+    "island": {
+      "founder":   "{place} taken up. {name}{rankc}. Ledger opened. Kept short.",
+      "overthrow": "Old ruler down. Seal seized. {name}{rankc}. {place} mine.",
+      "successor": "{place} passes to me. {name}{rankc}. Book continues."
+    }
+  },
+
+  "connectives": {
+    "same":   ["Same day, ", "Hours on, ", "By dark, "],
+    "days":   ["Days on, ", "Soon, ", "Shortly, "],
+    "week":   ["A week on, ", "Week after, "],
+    "season": ["A season on, ", "Months on, "],
+    "year":   ["A year on, ", "Long after, "],
+    "long":   ["Years on, ", "Silence, then, "]
+  },
+
+  "join": ["and ", "; ", "then "],
+
+  "coda": {
+    "ship": {
+      "pirate":  "Still out. Flag up. Still taking{bounty}.",
+      "default": "Still afloat. Still working her. Out of {home}.",
+      "bounty":  ". {bounty}g on our heads"
+    },
+    "island": {
+      "haven":   "Black flag up. No law. No ledger. Book shut.",
+      "default": "{place} holds. {population} souls. That is the account."
+    }
+  },
+
+  "quiet": {
+    "ship":   "Little to log. Fair winds. Full holds. Quiet water.",
+    "island": "Quiet books. Trade in. Trade out. No blood. Good."
+  },
+
+  "kinds": {
+    "plunder": { "recur": { "class": "prize", "phrases": [", {ord} prize", " — another taken", ", as before"] } },
+    "sunk":    { "recur": { "class": "prize", "phrases": [", another sent under"] } },
+    "hunted":  { "recur": { "class": "hunt",  "phrases": [", {ord} wolf down"] } },
+    "fended":  { "recur": { "class": "stand", "phrases": [" — shaken off before", ", not the first"] } }
+  }
+}

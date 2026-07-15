@@ -1,0 +1,61 @@
+{
+  "id": "cartographer-naturalist",
+  "name": "The Cartographer-Naturalist",
+  "persona": "A curious observer-scientist who keeps the log as a field journal: latitudes and currents noted, weather read off the glass, specimens and strange creatures recorded with restrained wonder. Measured, inquisitive, precise. Always 'I'.",
+
+  "pronoun": {
+    "ship":   { "subject": "I", "first": "I" },
+    "island": { "subject": "I", "first": "I" }
+  },
+
+  "handover": {
+    "ship": {
+      "founder":   "This journal I open as I would a survey. I am {name}{rankc}, master of this {home} {type}, and I mean to record her waters as faithfully as any coastline — every wind, every current, every strange thing the sea consents to show me.",
+      "successor": "The journal comes into my keeping. I am {name}{rankc}; I shall continue the record in the same careful hand, and note where the last observer left off.",
+      "mutiny":    "The crew removed the old master and set this journal before me. I am {name}, untried in command and candid about it, and I will record what I do not yet understand beside what I do.",
+      "pirate":    "We have turned to the black flag — a change I set down plainly, as I would any turn of weather. I am {name}{rankc}, and I mean to observe this darker trade as closely as I once observed the birds.",
+      "prize":     "We boarded and took her; I record it as fact, without ornament. I am {name}{rankc}, and this vessel and the waters she knows now fall within my survey.",
+      "recovered": "A hunter overtook the pirates, and I was appointed to restore this hull. I am {name}{rankc}, glad to return her to honest trade — and to resume a proper record of her passages."
+    },
+    "island": {
+      "founder":   "I take up the governance of {place}, and I shall keep its record as a naturalist keeps a district — its harvests, its weather, its people, all set down in order. I am {name}{rankc}.",
+      "overthrow": "The populace deposed the former ruler; the seal has passed to me. I am {name}{rankc}, and I will observe {place} under my charge as carefully as any new-found shore.",
+      "successor": "The administration of {place} passes to me — {name}{rankc}. I take up its record, and I mean to keep it accurate."
+    }
+  },
+
+  "connectives": {
+    "same":   ["The same day, by the log, ", "Later that watch, ", "Before nightfall, the glass steady, "],
+    "days":   ["Some days on, ", "Three days later, by my count, ", "Shortly after, "],
+    "week":   ["A week on, the season noted, ", "The following week, "],
+    "season": ["A season later, the winds shifted as expected, ", "By the next quarter, ", "As the year turned, "],
+    "year":   ["A year on, by the journal, ", "A full twelvemonth later, "],
+    "long":   ["After a long interval left unrecorded, ", "Years on, resuming the survey, "]
+  },
+
+  "join": ["and ", "and, of note, ", "; further, ", "and "],
+
+  "coda": {
+    "ship": {
+      "pirate":  "I range the lanes still{bounty}, and I confess the work has taught me more of men than ever it did of birds.",
+      "default": "I keep her at sea out of {home} yet, the journal filling with fair passages and small wonders.",
+      "bounty":  ", with {bounty}g posted against my name — a curious sort of renown"
+    },
+    "island": {
+      "haven":   "The black flag governs {place} now; the record is abandoned, and no observer remains to keep it.",
+      "default": "{place} endures under my administration — {population} souls, duly counted."
+    }
+  },
+
+  "quiet": {
+    "ship":   "Little of incident to record — steady winds, a calm glass, and time enough to note the gulls and the changing colour of the water.",
+    "island": "An uneventful season, which I record with some satisfaction — steady trade, mild weather, and the population in good health."
+  },
+
+  "kinds": {
+    "plunder": { "recur": { "class": "prize", "phrases": [", the {ord} such prize by my reckoning", " — I note the pattern without pride", ", duly entered in the record"] } },
+    "sunk":    { "recur": { "class": "prize", "phrases": [", her wreck noted and its position marked", " — another lost to the depths I chart"] } },
+    "fended":  { "recur": { "class": "stand", "phrases": [" — I have observed this manoeuvre serve before", ", a repetition I set down with interest"] } },
+    "hunted":  { "recur": { "class": "hunt",  "phrases": [", the {ord} raider so accounted for", " — the outcome grows predictable"] } }
+  }
+}

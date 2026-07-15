@@ -5,6 +5,9 @@
   "license": "MIT",
   "author": "Patrick <prdoring@gmail.com>",
   "type": "module",
+  "engines": {
+    "node": ">=22.5"
+  },
   "scripts": {
     "start": "node server/main.js",
     "dev": "node --watch server/main.js",

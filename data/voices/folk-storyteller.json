@@ -1,0 +1,61 @@
+{
+  "id": "folk-storyteller",
+  "name": "The Fireside Teller",
+  "persona": "A homespun teller of tales who keeps the book as if speaking it aloud by the hearth. Proverbs, a grandmother's sayings, warm digressions, an easy oral cadence. Ship: 'we'. Island: a folksy steward, 'we'.",
+
+  "pronoun": {
+    "ship":   { "subject": "we", "first": "We" },
+    "island": { "subject": "we", "first": "We" }
+  },
+
+  "handover": {
+    "ship": {
+      "founder":   "Now, here's the way of it: this book is mine to keep, and I'm {name}{rankc}. She's a {home} {type}, and as my grandmother used to say, a ship well minded minds you back — so I mean to mind her.",
+      "successor": "Well now, the book has come round to my hand, {name}{rankc}, the way a story passes mouth to mouth of a winter's night. I'll take up the telling where the last teller left it.",
+      "mutiny":    "The crew put the old master over the rail, bless us, and pressed this book on me. I'm {name}, green as spring grass — but a green hand grips the tightest, so they tell it, and I'll do right by her.",
+      "pirate":    "So we've gone and turned our coats to the black flag, and there's no gilding it. I'm {name}{rankc}, and I'll set it down honest, for a lie told to a logbook is a lie told to your own self.",
+      "prize":     "She struck her colours to us, fair and square, and now, would you believe it, her book is mine. I'm {name}{rankc}, and I'll carry on her tale under my own flag, the way the winner always does.",
+      "recovered": "A hunter ran the black-flag rogues to ground and handed this weary hull back to honest folk. I'm {name}{rankc}, come to walk her home to fair trade — for even a strayed dog finds its own hearth, they say."
+    },
+    "island": {
+      "founder":   "Well, they've given me the keeping of {place} and this old record with it. I'm {name}{rankc}. Sit close, and I'll tell you how it all goes.",
+      "overthrow": "The whole town rose up and pulled the old ruler down by his fine collar, and the seal came warm into my hand. I'm {name}{rankc}, and {place} is mine to govern now, and mine to tell of.",
+      "successor": "The care of {place} passes to me, {name}{rankc}, gentle as a boat handed bow to bow. I'll keep its tale from here."
+    }
+  },
+
+  "connectives": {
+    "same":   ["That very same day, ", "Before the sun was down, ", "And wouldn't you know, that same evening, "],
+    "days":   ["A day or two on, ", "Not long after, ", "A handful of days on, "],
+    "week":   ["A week come and gone, ", "The next week round, "],
+    "season": ["A whole season turned about, ", "By the time the leaves had gone, "],
+    "year":   ["A year and a day later, ", "A long while after, when the tale had near been forgot, "],
+    "long":   ["After many a long year, ", "Years and years on, when I was an old hand by then, "]
+  },
+
+  "join": ["and ", "and then, would you believe it, ", "; then "],
+
+  "coda": {
+    "ship": {
+      "pirate":  "We rove the lanes yet, and that is a tale still in the telling{bounty}.",
+      "default": "She sails on under me still, out of {home}, and long may the telling carry on.",
+      "bounty":  ", and a fat {bounty}g promised to whoever brings the story to its end"
+    },
+    "island": {
+      "haven":   "The black flag flies over it now, and no honest tongue keeps this tale — a sorry end, though sorry ends do make the truest stories.",
+      "default": "{place} bides on under my hand, {population} souls, and every last one of them a tale in their own right."
+    }
+  },
+
+  "quiet": {
+    "ship":   "Little enough to tell — fair winds and full bellies — and as my grandmother used to say, no news off the water is the sweetest news there is.",
+    "island": "Not much worth the telling this while: trade in, trade out, and the folk sleeping sound. A dull tale is a happy one."
+  },
+
+  "kinds": {
+    "plunder": { "recur": { "class": "prize", "phrases": [", the {ord} such prize, and each one a story", " — and not the first, as you'll have gathered", ", the way it always seems to go with us"] } },
+    "raid":    { "recur": { "class": "sack",  "phrases": [", the {ord} proud town we've put to the torch"] } },
+    "fended":  { "recur": { "class": "stand", "phrases": [" — and we've shaken off worse than that, believe me", ", the way we always seem to wriggle free"] } },
+    "hunted":  { "recur": { "class": "hunt",  "phrases": [", the {ord} wolf we've run to ground, and folk still tell of it"] } }
+  }
+}

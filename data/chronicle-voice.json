@@ -1,0 +1,90 @@
+{
+  "_doc": "Narrative vocabulary for the client-side chronicler (game/ui/chronicle-narrate.js). PURE DATA — the composer interprets this to turn the sim's terse per-entity event log into a flowing tale (time connectives, recurrence callbacks, an opening frame + closing coda). No prose is hardcoded in JS. Presentation only; never read by the sim. Tone: restrained ship's-chronicle. {token} substitution; unknown/empty tokens collapse with adjacent glue. {ord} is an ordinal WORD (ordinals[n], else an Nth suffix).",
+
+  "version": 1,
+
+  "episode": { "gapDays": 12, "maxSentences": 4 },
+
+  "gapBuckets": [
+    { "key": "same",   "maxDays": 0 },
+    { "key": "days",   "maxDays": 4 },
+    { "key": "week",   "maxDays": 12 },
+    { "key": "season", "maxDays": 120 },
+    { "key": "year",   "maxDays": 400 },
+    { "key": "long",   "maxDays": null }
+  ],
+
+  "connectives": {
+    "same":   ["That same day, ", "Within hours, ", "Before the day was out, "],
+    "days":   ["Days later, ", "Soon after, ", "Not long after, "],
+    "week":   ["A week on, ", "The following week, ", "Barely a week later, "],
+    "season": ["A season later, ", "Months on, ", "As the year turned, "],
+    "year":   ["A year and more later, ", "Long after, ", "Seasons came and went, and "],
+    "long":   ["After a long silence, ", "After years of quiet, "]
+  },
+
+  "join": ["and then ", "; then ", "and, in the same breath, ", "and "],
+
+  "ordinals": ["", "first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth", "tenth"],
+
+  "pronoun": {
+    "ship":   { "subject": "she", "elide": true },
+    "island": { "subject": "the port", "elide": true }
+  },
+
+  "kinds": {
+    "pirate":    { "pivot": true, "phrases": ["Her crew crossed the line and raised the black flag; she was a merchant no more.", "So she was lost to the black flag — no longer an honest trader, but a predator of the lanes."] },
+    "recovered": { "pivot": true, "phrases": ["Run down at last and boarded, she was hauled back into honest service.", "The black flag came down: taken by a hunter, she was restored to lawful trade."] },
+
+    "plunder":   { "recur": { "class": "prize", "phrases": [", her {ord} such prize", " — not the first she had taken", ", as she had done before"] } },
+    "sunk":      { "recur": { "class": "prize", "phrases": [", another sent to the bottom"] } },
+    "raid":      { "recur": { "class": "sack",  "phrases": [", the {ord} port she had put to the torch", ", another town sacked"] } },
+    "fended":    { "recur": { "class": "stand", "phrases": [" — she had shaken off wolves before", ", not for the first time"] } },
+    "hunted":    { "recur": { "class": "hunt",  "phrases": [", her {ord} raider run down", " — another wolf sent under"] } },
+
+    "mutiny":    { "recur": { "class": "mutiny", "phrases": [" — the crew had turned before", ", not the first time her discipline had cracked"] } },
+    "unrest":    { "recur": { "class": "mutiny", "phrases": [", as they had muttered before"] } },
+    "rebellion": { "recur": { "class": "revolt", "phrases": [" — the streets had risen here before", ", the {ord} such rising"] } },
+    "overthrow": { "recur": { "class": "regime", "phrases": [" — the {ord} ruler cast down on these wharves", ", another regime toppled"] } },
+
+    "plague":    { "recur": { "class": "pest",   "phrases": [" — pestilence had walked here before"] } },
+    "blight":    { "recur": { "class": "blight", "phrases": [" — the blight come again"] } }
+  },
+
+  "crossref": {
+    "ship": [
+      " — the same raider that had taken the {foeName}",
+      ", the {ord} {foeHome} hull to strike to her"
+    ]
+  },
+
+  "frame": {
+    "ship": {
+      "template": "A {home} {type}{captain}{status}.",
+      "captain":  " under Capt. {captainName}, {rank}",
+      "status":   { "pirate": " — gone to the black flag", "privateer": " — a hunter under letters of marque", "default": " — an honest trader" }
+    },
+    "island": {
+      "template":   "A {type} port{magistrate}{primary}.",
+      "magistrate": " under {magName}",
+      "primary":    ", trading in {primary}"
+    }
+  },
+
+  "coda": {
+    "ship": {
+      "pirate":  "To this day {name} roves the lanes{bounty}.",
+      "default": "{name} runs her cargoes still, out of {home}.",
+      "bounty":  ", {bounty}g upon her head"
+    },
+    "island": {
+      "haven":   "{name} flies the black flag yet — a den of cutthroats.",
+      "default": "{name} endures, {population} souls under {magName}."
+    }
+  },
+
+  "quiet": {
+    "ship":   "Her log holds little of note — a quiet life on the trade lanes.",
+    "island": "The port's chronicle is calm — trade comes and goes, and little else is written."
+  }
+}

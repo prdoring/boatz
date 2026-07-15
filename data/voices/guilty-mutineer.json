@@ -1,0 +1,60 @@
+{
+  "id": "guilty-mutineer",
+  "name": "The Guilty Mutineer",
+  "persona": "A captain who seized the ship by mutiny and cannot silence his conscience. Self-justifying, forever glancing over his shoulder, remorse warring with defiance, haunted by the master he deposed. Uses 'I'.",
+
+  "pronoun": {
+    "ship":   { "subject": "I", "first": "I" },
+    "island": { "subject": "I", "first": "I" }
+  },
+
+  "handover": {
+    "ship": {
+      "founder":   "I set the first words down in this book, and my hand is steady enough — steady, and let no man say otherwise. I am {name}{rankc}, and this {home} {type} is mine, honestly mine, come by clean.",
+      "successor": "The book comes to me by fair passage — I want that written plain, that it came to me clean and over no man's body. I am {name}{rankc}; her account goes on under my hand.",
+      "mutiny":    "It is done. We put the old master over the side, and the lads pressed this book into my hands before his place was cold. I am {name}. He had it coming — I have told myself so a hundred times, and I will tell myself so again tonight, and every night. I keep the log now; God keep the rest.",
+      "pirate":    "So we are pirates now, and I the one who spoke the word. I am {name}{rankc}. I'll not pretend my hand held still when the black went up — but it is up, and there is no hauling it down again, and no use wishing.",
+      "prize":     "She struck to us and I stepped over her rail the victor. I am {name}{rankc}. Her old master watched me lift his book from his own cabin, and I would not meet his eye. Her log runs under me now, whatever his looks say of it.",
+      "recovered": "A hunter ran the black flag down, and I am set to bring this hull home honest. I am {name}{rankc}. Strange work, mending what men of my stripe once broke — I will do it, and say little, and hope it counts for something."
+    },
+    "island": {
+      "founder":   "I take up {place} and its seal, and no man was cast down that I might have it — remember that of me, whoever reads this. I am {name}{rankc}.",
+      "overthrow": "The mob dragged the old ruler down in the square, and they put the warm seal in my palm as though I had earned it. I am {name}{rankc}. Perhaps I whispered where the whispering began. {place} is mine now, and I will not look too long at how it came to me.",
+      "successor": "The rule of {place} comes to me by lawful passage — and I am glad of it, gladder than I can well write, that no blood bought it this time. I am {name}{rankc}. I keep its record from here."
+    }
+  },
+
+  "connectives": {
+    "same":   ["That same uneasy day, ", "Before the light failed, ", "Hours on, my mind still turning it over, "],
+    "days":   ["A few days after, ", "Soon — too soon to be easy, ", "When some days had passed and none spoke of it, "],
+    "week":   ["A week gone, and still I slept badly, ", "The week after, "],
+    "season": ["A season on, ", "Months later, when I had near talked myself clear of it, "],
+    "year":   ["A year and more, the ghost of it faint but there, ", "Long after, "],
+    "long":   ["After a long silence I was grateful for, ", "Years passed, and old faces with them, "]
+  },
+
+  "join": ["and ", "; then ", "and, God help me, "],
+
+  "coda": {
+    "ship": {
+      "pirate":  "I rove the lanes still, flag up{bounty}, and I no longer look behind me so often as I did — a lie, that; I always look.",
+      "default": "I keep her at sea yet, out of {home}, and most nights now I sleep.",
+      "bounty":  ", {bounty}g upon my head, and I have earned worse"
+    },
+    "island": {
+      "haven":   "The black flag flies over {place} now. I swore I would never let it come to this — and here it is, and no honest hand keeps this book.",
+      "default": "{place} holds under me — {population} souls — and if some among them wonder how I came by the seal, they have the wit not to ask it aloud."
+    }
+  },
+
+  "quiet": {
+    "ship":   "Little to set down, and I glad of quiet water — though it leaves a man too much time to think. I will take the peace and its price both.",
+    "island": "A quiet season, and I am grateful for it; quiet is when the old faces trouble me least."
+  },
+
+  "kinds": {
+    "plunder": { "recur": { "class": "prize", "phrases": [", another taking I will one day answer for", " — I have done this before and slept after, mostly", ", one more to a count I try hard not to keep"] } },
+    "fended":  { "recur": { "class": "stand", "phrases": [" — I have wriggled clear of worse", ", and lived to feel poorly about it after"] } },
+    "hunted":  { "recur": { "class": "hunt",  "phrases": [", another wolf run down — and I know that fear from the far side of it"] } }
+  }
+}

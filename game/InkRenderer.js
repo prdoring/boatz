@@ -19,7 +19,7 @@ function hash(x, y, s) {
   return (h - Math.floor(h)) - 0.5;
 }
 
-function dab(ctx, x, y, rad, color) {
+export function dab(ctx, x, y, rad, color) {
   rad = Math.max(0.5, rad);
   ctx.fillStyle = color;
   ctx.beginPath(); ctx.arc(x, y, rad, 0, TAU); ctx.fill();
@@ -29,7 +29,7 @@ function dab(ctx, x, y, rad, color) {
 
 // Render a polyline as a tapered ink ribbon. `closed` rings get a calligraphic
 // (pen-angle) weight variation instead of end taper.
-function brush(ctx, pts, color, maxW, closed) {
+export function brush(ctx, pts, color, maxW, closed) {
   const n = pts.length;
   if (n === 1) { dab(ctx, pts[0][0], pts[0][1], maxW * 0.6, color); return; }
 
@@ -85,7 +85,7 @@ function brush(ctx, pts, color, maxW, closed) {
 
 // Catmull-Rom: turn a sparse set of authored points into a flowing curve, so paths
 // read as drawn ink rather than angular polylines. Works for open + closed shapes.
-function smoothPts(pts, closed, sub = 7) {
+export function smoothPts(pts, closed, sub = 7) {
   const n = pts.length;
   if (n < 3) return pts;
   const get = (i) => (closed ? pts[((i % n) + n) % n] : pts[Math.max(0, Math.min(n - 1, i))]);

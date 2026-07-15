@@ -1,0 +1,60 @@
+{
+  "id": "young-idealist",
+  "name": "The Young Idealist",
+  "persona": "An earnest young captain new to command, dreaming of glory and honour, quick to admire and to be moved. Bright, sincere, a little naive, forever over-eager. Ship: 'we'. Island: a hopeful young steward, 'we'.",
+
+  "pronoun": {
+    "ship":   { "subject": "we", "first": "We" },
+    "island": { "subject": "we", "first": "We" }
+  },
+
+  "handover": {
+    "ship": {
+      "founder":   "My own command at last — I can scarce believe my fortune! I am {name}{rankc}, and this {home} {type} is mine to make worthy. God grant I prove equal to her.",
+      "successor": "The log is placed in my hands and my heart leaps at the trust of it. I am {name}{rankc}; I mean to carry her name on as bravely as any who kept it before me.",
+      "mutiny":    "The men cast the old master down and pressed this book upon me, though I am hardly ready for it. I am {name}, young and unproven — but I will be worthy of them, come what may.",
+      "pirate":    "God forgive us — we have hauled up the black flag. I am {name}{rankc}, and I tell myself there is honour in it yet, though my heart is heavy to write the words.",
+      "prize":     "She struck her colours to us — oh, the pride of that moment! I am {name}{rankc}; this hull is our prize, won fair, and I shall keep her log with honour.",
+      "recovered": "A brave hunter freed this hull from the black flag and set me to bring her home. I am {name}{rankc}, and I will restore her good name if it takes my every waking hour."
+    },
+    "island": {
+      "founder":   "They have given {place} into my keeping and I am humbled past all words. I am {name}{rankc}; I will serve these people with all my heart.",
+      "overthrow": "The people rose and cast the old ruler down, and pressed the seal into my hand. I am {name}{rankc}; I pray I may deserve so great a trust — {place} shall know fairer days.",
+      "successor": "The rule of {place} passes to me and I take it up trembling with hope. I am {name}{rankc}; I will keep its chronicle proudly."
+    }
+  },
+
+  "connectives": {
+    "same":   ["That very day, ", "Before the sun had set, ", "In the same glad hour, "],
+    "days":   ["Only days after, ", "Soon after — how soon it came, ", "A few dawns on, "],
+    "week":   ["A week later, ", "When the week had turned, "],
+    "season": ["A season on, ", "As the year brightened, ", "When the winds changed, "],
+    "year":   ["A whole year later, ", "A year on, and older now, "],
+    "long":   ["After long years, ", "After a silence I had half forgotten, "]
+  },
+
+  "join": ["and ", "and — wonder of wonders — ", "; and then "],
+
+  "coda": {
+    "ship": {
+      "pirate":  "We ride the lanes still beneath the black flag{bounty}, and I pray yet for the day we might come home.",
+      "default": "She sails on beneath us still, out of {home}, and every voyage is a fresh wonder to me.",
+      "bounty":  ", a price of {bounty}g upon my head now"
+    },
+    "island": {
+      "haven":   "The black flag flies over us now — I could not hold back the dark, and it shames me still.",
+      "default": "{place} endures, {population} souls in our care, and I am proud beyond the telling of it."
+    }
+  },
+
+  "quiet": {
+    "ship":   "Little of note to set down — fair winds and quiet water, and I glad of every peaceful mile of it.",
+    "island": "Little troubles us this season, and I thank Heaven for the calm — a happy port writes the dullest pages."
+  },
+
+  "kinds": {
+    "plunder": { "recur": { "class": "prize", "phrases": [", our {ord} prize, and my heart races at it yet", " — won with honour, as I mean always to win", ", another to make the crew proud"] } },
+    "fended":  { "recur": { "class": "stand", "phrases": [" — we have stood firm before, and shall again", ", and fortune stood with us as ever"] } },
+    "hunted":  { "recur": { "class": "hunt",  "phrases": [", another wolf run down for the honest folk", " — the {ord} raider we have brought to justice"] } }
+  }
+}

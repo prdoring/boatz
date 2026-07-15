@@ -1,0 +1,60 @@
+{
+  "id": "salt-poet",
+  "name": "The Salt Poet",
+  "persona": "A romantic who mistook a logbook for a canvas. Long, lyrical sentences; the sea is always a lover or a grave. Fond of dashes and metaphor. Ship: 'we'. Island: a wistful ruler, 'we'.",
+
+  "pronoun": {
+    "ship":   { "subject": "we", "first": "We" },
+    "island": { "subject": "we", "first": "We" }
+  },
+
+  "handover": {
+    "ship": {
+      "founder":   "Let this page remember me: I am {name}{rankc}, and this {home} {type} — this creature of canvas and salt — is mine to love and to lose.",
+      "successor": "The book comes to my hands like a gull to a mast. I am {name}{rankc}; her story flows on, and I the poor pen of it.",
+      "mutiny":    "They gave the old master to the deep and the book to me — {name}, unproven, my heart in my throat. The sea will teach me her sorrows soon enough.",
+      "pirate":    "We have wed the black flag, and I — {name}{rankc} — set down our vows in salt. Honest waters weep for us; let them.",
+      "prize":     "She yielded to us as the tide yields to the moon. I am {name}{rankc}, and I write her fate in my own dark hand.",
+      "recovered": "A hunter's guns unmade our night, and dawn found me — {name}{rankc} — bound to bring this weary hull back to gentler water, and to sing her home."
+    },
+    "island": {
+      "founder":   "I take up {place} as one takes up a wounded bird — I am {name}{rankc}, and its griefs and harvests are mine to chronicle.",
+      "overthrow": "The people rose like a spring tide and cast the old one down; the seal, still warm, is mine. I am {name}{rankc}, keeper now of {place} and its long lament.",
+      "successor": "{place} passes to me as evening passes to night — I am {name}{rankc}, and I take up its song."
+    }
+  },
+
+  "connectives": {
+    "same":   ["That same tide, ", "Before the light had gone, ", "While the day still bled, "],
+    "days":   ["A handful of dawns later, ", "As the sea breathed on, ", "Soon, too soon, "],
+    "week":   ["A week of grey water later, ", "When the moon had turned once, "],
+    "season": ["A season down the wind, ", "As the year leaned into autumn, ", "When the trade winds shifted, "],
+    "year":   ["A year and its thousand waves later, ", "Long after, when the salt had dried on all of it, "],
+    "long":   ["After a silence deep as the trench, ", "When years had gone to foam, "]
+  },
+
+  "join": ["and ", "and there, ", "; and so ", "and, God help us, "],
+
+  "coda": {
+    "ship": {
+      "pirate":  "We haunt the lanes still, a rumour under black canvas{bounty}.",
+      "default": "She sails on beneath me, out of {home}, and I am content to be her pen.",
+      "bounty":  ", {bounty}g promised to whoever ends the song"
+    },
+    "island": {
+      "haven":   "The black flag is our banner now; the ledger keeps only the names of the drowned.",
+      "default": "{place} endures, {population} souls under my restless hand — a harbour, and a heart, that will not sink."
+    }
+  },
+
+  "quiet": {
+    "ship":   "The book holds little but weather and wonder — a gentle passage, and I grateful for the dull, sweet peace of it.",
+    "island": "Little is written but the turning of the seasons — and is that not, in its way, the finest verse a port can offer?"
+  },
+
+  "kinds": {
+    "plunder": { "recur": { "class": "prize", "phrases": [", the {ord} heart we have broken", " — not the first the sea has fed us", ", as the tide has taught us"] } },
+    "sunk":    { "recur": { "class": "prize", "phrases": [", another given to the green dark"] } },
+    "fended":  { "recur": { "class": "stand", "phrases": [" — we have outrun the wolves before", ", and lived to write of it again"] } }
+  }
+}

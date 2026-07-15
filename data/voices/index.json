@@ -1,0 +1,30 @@
+{
+  "_doc": "Manifest of first-person logbook writing STYLES for the Story-tab chronicler. game/voices.js loads each id as data/voices/<id>.json, merged over data/voices/_defaults.json (first-person scaffolding) over data/chronicle-voice.json (structural base). Each captain/magistrate is assigned an opaque voiceSeed; the client picks its style with `voiceSeed % styles.length`, so every keeper's log reads in a distinct hand. Add a style: drop a <id>.json in this folder and append the id below. More styles → fewer repeats.",
+  "version": 1,
+  "styles": [
+    "boastful-buccaneer",
+    "cartographer-naturalist",
+    "cynical-mercenary",
+    "drunken-rake",
+    "farflung-trader",
+    "folk-storyteller",
+    "grandiloquent-orator",
+    "guilty-mutineer",
+    "haunted-captain",
+    "iron-matriarch",
+    "jolly-steward",
+    "ledger-hand",
+    "merchant-grandee",
+    "naval-martinet",
+    "pious-chaplain",
+    "privateer-patriot",
+    "salt-poet",
+    "saltbitten-mate",
+    "scheming-courtier",
+    "shanty-balladeer",
+    "superstitious-salt",
+    "terse-telegraphic",
+    "weatherbeaten-fatalist",
+    "young-idealist"
+  ]
+}

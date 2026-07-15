@@ -4,8 +4,9 @@
 // AUTHORITATIVE clock in the latest snapshot (a dropped command simply doesn't light);
 // never an optimistic local toggle. Bottom-center avoids the top-right volume overlay.
 
-import { Widget, Button, roundRect } from './UIStack.js';
+import { Widget, Button } from './UIStack.js';
 import { PALETTE } from '../config.js';
+import { plate, font } from './theme.js';
 
 const BW = 46, BH = 34, GAP = 8, CLOCK_W = 150, LABEL_GAP = 14;
 
@@ -14,10 +15,10 @@ export class SimControls extends Widget {
     super();
     this.getClock = getClock;
     this.pauseBtn = new Button({
-      label: '⏸',
+      icon: 'pause',
+      iconSize: 15,
       onClick: () => onTogglePause(),
       isActive: () => this.getClock().paused,
-      font: '16px system-ui, sans-serif',
     });
     this.speedBtns = speeds.map((s) => new Button({
       label: s + '×',
@@ -45,26 +46,21 @@ export class SimControls extends Widget {
 
   draw(ctx) {
     if (!this.visible) return;
-    // Pause glyph reflects the authoritative state.
-    this.pauseBtn.label = this.getClock().paused ? '▶' : '⏸';
+    // Pause/play icon reflects the authoritative state.
+    this.pauseBtn.icon = this.getClock().paused ? 'play' : 'pause';
     for (const b of this.buttons) b.draw(ctx);
 
     const c = this.getClock();
-    // Clock pill.
+    // Clock pill — the shared chart-frame plate (double-ruled ink edge).
     ctx.save();
-    roundRect(ctx, this._clockX - 8, this.y, CLOCK_W, BH, 7);
-    ctx.fillStyle = PALETTE.panelBg;
-    ctx.fill();
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = PALETTE.panelEdge;
-    ctx.stroke();
+    plate(ctx, this._clockX - 8, this.y, CLOCK_W, BH, { radius: 7 });
     ctx.fillStyle = PALETTE.panelText;
-    ctx.font = '14px system-ui, sans-serif';
+    ctx.font = font('label');
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     ctx.fillText(`Day ${c.day}`, this._clockX, this.y + BH / 2);
     ctx.fillStyle = PALETTE.panelDim;
-    ctx.font = '14px ui-monospace, "SF Mono", Menlo, monospace';
+    ctx.font = font('num');
     ctx.textAlign = 'right';
     ctx.fillText(c.timeLabel, this._clockX - 8 + CLOCK_W - 12, this.y + BH / 2);
     ctx.restore();

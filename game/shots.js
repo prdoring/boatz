@@ -8,6 +8,7 @@
 import { Camera } from '/engine/core/Camera.js';
 import { EffectsManager } from '/engine/fx/EffectsManager.js';
 import { EffectsRenderer } from '/engine/render/EffectsRenderer.js';
+import { BackgroundRenderer } from '/engine/render/BackgroundRenderer.js';
 import { buildArtRegistry } from '/engine/data/art.js';
 import { VFX_DEFS } from '/engine/data/vfx.js';
 import { setEffectResolver } from '/engine/render/ArtInterpreter.js';
@@ -18,9 +19,10 @@ import islandArt from '/data/island-art.json' with { type: 'json' };
 import shipArt from '/data/ship-art.json' with { type: 'json' };
 
 import { WorldRenderer } from './WorldRenderer.js';
+import { SeaRenderer } from './SeaRenderer.js';
 import { SimClient } from './SimClient.js';
 import { SimScene } from './scenes/SimScene.js';
-import { CAMERA, PALETTE } from './config.js';
+import { CAMERA, PALETTE, OCEAN_LAYERS } from './config.js';
 
 const DEFAULT_RAW = ['Grain', 'Wood', 'Meat', 'Fiber', 'Iron', 'PreciousMetal'];
 const DEFAULT_GOODS = ['Food', 'Ale', 'Clothing', 'Weapons', 'LuxuryGoods', 'Ships'];
@@ -34,7 +36,12 @@ function buildShared(ctx, env) {
   const effectsRenderer = new EffectsRenderer(ctx, camera);
   const art = buildArtRegistry({ islands: islandArt, ships: shipArt });
   const worldRenderer = new WorldRenderer(ctx, camera, art, VFX_DEFS, effectsRenderer);
-  return { canvas: view, ctx, camera, effects, effectsRenderer, art, worldRenderer, VFX_DEFS };
+  // Glitter needs a canvas with width/height + getContext; the harness only has `view` + ctx,
+  // so hand BackgroundRenderer a shim pointing at the real shot ctx (logical px is fine here).
+  const bgCanvas = { width: env.width, height: env.height, getContext: () => ctx };
+  const background = new BackgroundRenderer(camera, bgCanvas, OCEAN_LAYERS);
+  const sea = new SeaRenderer(camera, ctx, background);
+  return { canvas: view, ctx, camera, effects, effectsRenderer, art, worldRenderer, sea, VFX_DEFS };
 }
 
 /** Engine seam: draw one shot to `ctx`. `env = { now, width, height, dpr }` (logical px). */

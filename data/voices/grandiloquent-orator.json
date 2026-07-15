@@ -1,0 +1,61 @@
+{
+  "id": "grandiloquent-orator",
+  "name": "The Grand Orator",
+  "persona": "A florid, Latinate rhetorician who mistook a logbook for a triumphal arch. Long periodic sentences, rhetorical questions, apostrophe to Fate and Fortune, magnificent self-regard. Ship: the singular 'I'. Island: the royal 'we'.",
+
+  "pronoun": {
+    "ship":   { "subject": "I",  "first": "I"  },
+    "island": { "subject": "we", "first": "We" }
+  },
+
+  "handover": {
+    "ship": {
+      "founder":   "Let the very firmament bear witness: I, {name}{rankc}, do this day take unto myself the keeping of this {home} {type}, and swear before Fortune herself that no vessel afloat shall be more gloriously commanded.",
+      "successor": "The book, that noble instrument of memory, descends now into my keeping — I, {name}{rankc}, who shall bear her chronicle to heights the former hand never dared to dream.",
+      "mutiny":    "The crew, in their fury, cast the old tyrant to the deep and thrust this book upon me — I, {name}, untried, yet surely not unworthy; for shall not the raw ore, well hammered, yield the finest blade of all?",
+      "pirate":    "Farewell, then, to the mean and grovelling trade of honest men! I, {name}{rankc}, raise the black flag as a king raises his standard, and write my defiance large across the very face of the sea.",
+      "prize":     "She struck to me — and how, I ask you, could she have done otherwise? I, {name}{rankc}, her victor and her master, take up her chronicle at the sword's bright point, that all who read may know to whom she now belongs.",
+      "recovered": "Behold: a hunter's guns have loosed this hapless hull from her captivity, and I, {name}{rankc}, am appointed her deliverer — to lead her out of the wilderness of piracy and back to the blessed shores of lawful trade."
+    },
+    "island": {
+      "founder":   "We, {name}{rankc}, do graciously assume the governance of {place} and the keeping of this chronicle; and under our hand, let it be known, shall it flourish as no dominion has flourished before.",
+      "overthrow": "The multitude rose as one great tide and dashed the former ruler from his seat; and lo, the seal has come — still warm — into our hand. We are {name}{rankc}, and {place} is ours to command.",
+      "successor": "The sovereignty of {place} devolves, by right and by Fortune both, upon us — {name}{rankc} — and we take up its chronicle as a laurel is taken up: gladly, and as our plain due."
+    }
+  },
+
+  "connectives": {
+    "same":   ["That selfsame day, ere the sun had quit the sky, ", "Upon the very same tide, ", "Before the day was wholly spent, "],
+    "days":   ["A brief span of days thereafter, ", "Not many suns had risen when, ", "Soon, as Fortune would have it, "],
+    "week":   ["A week having run its course, ", "When seven days had turned, "],
+    "season": ["A whole season having wheeled about, ", "As the very year inclined toward its close, "],
+    "year":   ["A twelvemonth and more being fled, ", "Long after, when the salt of it had dried to legend, "],
+    "long":   ["After an age of silence, ", "When many a long year had crumbled into memory, "]
+  },
+
+  "join": ["and ", "; and thereupon ", "and, in that same glorious hour, "],
+
+  "coda": {
+    "ship": {
+      "pirate":  "I range the lanes yet, a terror crowned in black canvas, and let bleak Fortune bar my way who dares{bounty}.",
+      "default": "She bears me onward still, out of {home}, and long may the very heavens smile upon so fine a partnership.",
+      "bounty":  ", a princely {bounty}g pledged to whatever wretch would dare unseat me"
+    },
+    "island": {
+      "haven":   "The black flag usurps our banner now, and this once-proud chronicle keeps nothing but the sorry roll of the drowned and the damned.",
+      "default": "{place} endures in splendour beneath our hand — {population} souls, and not the least of them but owes their quiet peace to us."
+    }
+  },
+
+  "quiet": {
+    "ship":   "Little of consequence graces these pages — a placid passage — and shall a man of my parts not permit the sea one small interval of calm?",
+    "island": "Little disturbs our dominion this season; and is not a tranquil realm the surest monument that may be raised to the wisdom of its ruler?"
+  },
+
+  "kinds": {
+    "plunder": { "recur": { "class": "prize", "phrases": [", the {ord} such conquest to adorn my name", " — as I have done, and shall assuredly do again", ", another jewel set in my crown of victories"] } },
+    "raid":    { "recur": { "class": "sack",  "phrases": [", the {ord} proud town I have humbled unto ashes"] } },
+    "hunted":  { "recur": { "class": "hunt",  "phrases": [", the {ord} wolf I have hunted to his utter ruin", " — another villain swept from the sea by this hand alone"] } },
+    "fended":  { "recur": { "class": "stand", "phrases": [" — for what tempest of foes has ever yet unmade me?", ", as I have ever done, and ever shall"] } }
+  }
+}

@@ -12,6 +12,8 @@
 
 import { streamFloat } from './rng.js';
 import { logEvent } from './events.js';
+import { skill01, awardSeamanshipXp } from './captains.js';
+import { damageHull, damageRig, hullRisk } from './repair.js';
 
 const TAU = Math.PI * 2;
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -83,23 +85,53 @@ export function weather(world, h) {
     }
     world.storms = world.storms.filter((s) => s.life > 0);
 
-    // Ships caught inside a storm risk foundering — the deadly, watchable part.
+    // Ships caught inside a storm are BATTERED — hull & rig ground down (a master mariner shelters most
+    // of it), the worst hulls thrown down outright, and a poor navigator blown off course. The deadly,
+    // watchable part — but now a ship usually LIMPS OUT crippled and seeking repair, not simply vanishing.
     if (world.storms.length) {
       let sunk = false;
+      const days = h / daySec;
       for (const ship of world.ships) {
         if (ship._sunk) continue;
         const st = stormOver(world, ship.x, ship.y);
         if (!st) continue;
-        const p = t.STORM_SINK_PER_DAY * st.intensity * (h / daySec);
-        if (streamFloat(world, 'weather') < p) {
-          ship._sunk = true; sunk = true;
-          const who = ship.captain ? ` under Capt. ${ship.captain.name}` : '';
-          logEvent(world, 'stormloss', `${ship.name || 'A ship'}${who} was lost with all hands to Storm ${st.name}.`, { x: ship.x, y: ship.y });
-        }
+        if (stormBatter(world, ship, st, days)) sunk = true;
       }
       if (sunk) world.ships = world.ships.filter((s) => !s._sunk);
     }
   }
+}
+
+/** A storm batters a ship each substep it spends inside one: hull & rig ground down by the tempest (a
+ *  captain's SEAMANSHIP shelters much of it), a rare chance the worst hulls are thrown down outright, and
+ *  a chance a poor navigator loses the bearings and is blown ADRIFT. Weathering it earns seamanship.
+ *  Returns true if the ship foundered. */
+function stormBatter(world, ship, st, days) {
+  const t = world.rules;
+  const sea = skill01(ship.captain, t, 'sea');   // a master mariner rides out a blow
+  const shelter = 1 - 0.6 * sea;                  // seamanship absorbs up to ~60% of the battering
+  damageHull(ship, (t.STORM_HULL_DMG_PER_DAY || 0) * st.intensity * days * shelter, t);
+  damageRig(ship, (t.STORM_RIG_DMG_PER_DAY || 0) * st.intensity * days * shelter, t);
+  awardSeamanshipXp(ship.captain, (t.XP_STORM || 0) * st.intensity * days); // hard-won weather sense
+  // FOUNDER — a hull beaten to nothing, or a rare catastrophic knockdown (worse for an already-leaky hull).
+  const knockdown = (t.STORM_SINK_PER_DAY || 0) * st.intensity * days * hullRisk(ship, t);
+  if (ship.hull <= 0 || streamFloat(world, 'weather') < knockdown) {
+    ship._sunk = true;
+    const who = ship.captain ? ` under Capt. ${ship.captain.name}` : '';
+    logEvent(world, 'stormloss', `${ship.name || 'A ship'}${who} was lost with all hands to Storm ${st.name}.`, { x: ship.x, y: ship.y, shipId: ship.id });
+    return true;
+  }
+  // BLOWN OFF COURSE — low seamanship loses the bearings (a distress state: wanders, eats, easy prey).
+  // Only merchants carry the drifting-voyage machine (ship.js); pirates/privateers ride the storm out.
+  if (!ship.adrift && !ship.pirate && !ship.privateer) {
+    const lostP = (t.STORM_LOST_CHANCE || 0) * st.intensity * days * (1 - sea);
+    if (streamFloat(world, 'weather') < lostP) {
+      ship.adrift = { since: world.simTime };
+      const who = ship.captain ? ` under Capt. ${ship.captain.name}` : '';
+      logEvent(world, 'adrift', `${ship.name || 'A ship'}${who} was blown off course by Storm ${st.name} — adrift, with no bearings.`, { x: ship.x, y: ship.y, shipId: ship.id });
+    }
+  }
+  return false;
 }
 
 /** The storm covering a point (with a 0..1 intensity that falls off toward the edge), or null. */

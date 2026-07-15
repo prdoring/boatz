@@ -5,6 +5,7 @@ import { ship as shipSystem, moveToward } from '/game/sim/ship.js';
 import { dispatch } from '/game/sim/trade.js';
 import { applyIntents } from '/game/sim/intents.js';
 import { turnPirate } from '/game/sim/piracy.js';
+import { snapshotShips } from '/game/sim/snapshot.js';
 
 test('moveToward reaches and snaps to the target', () => {
   const s = { x: 0, y: 0, heading: 0 };
@@ -72,6 +73,62 @@ test('a merchant fleeing a pirate commits to ONE refuge and does not spin in pla
     if (d > 2.4) flips++; // a ~140°+ reversal in one substep = spinning, not sailing
   }
   assert.ok(flips <= 2, `heading stays stable while fleeing (had ${flips} sharp reversals — the spin bug is >30)`);
+});
+
+test('a ship that makes port SHELTERS docked and holds station, then resumes only once the coast is clear', () => {
+  const w = makeWorld();
+  w.rules.SINK_PER_1000 = 0;
+  const merch = w.ships.find((s) => !s.pirate && !s.privateer);
+  const pirate = w.ships.find((s) => s !== merch);
+  turnPirate(w, pirate);
+  w.ships = w.ships.filter((s) => s === merch || s === pirate);
+  const port = w.islands[0];
+  // She's reached the refuge and ducked in — the state panicRun sets on crossing the harbour line.
+  merch.state = 'outbound';
+  merch.voyage = { reason: 'trade', index: 0, stops: [{ islandId: w.islands[1].id, sell: {}, buy: {}, people: 0 }] };
+  merch.targetX = w.islands[1].x; merch.targetY = w.islands[1].y;
+  merch.x = port.x + 40; merch.y = port.y;
+  merch._sheltered = true; merch._shelterAt = port.id; merch._shelterClear = 0;
+  merch.captain.xp = 0;
+  merch.captain.traits = { boldness: 0.5, wanderlust: 0.5, greed: 0.5 };
+  // A raider still loitering just off the port → she stays put behind the harbour.
+  pirate.x = port.x + 700; pirate.y = port.y;
+
+  const p0 = { x: merch.x, y: merch.y };
+  for (let i = 0; i < 200; i++) shipSystem(w, 0.05);
+  assert.ok(merch._sheltered, 'she rode out the raider sheltered, not bouncing off the port');
+  assert.ok(Math.hypot(merch.x - p0.x, merch.y - p0.y) < 5, 'she held station at the berth (no bounce)');
+  assert.equal(snapshotShips(w)[merch.id].state, 'docked', 'a sheltering hull renders as docked/berthed, not sailing');
+
+  // Coast clears — after a captain-scaled settling spell she weighs anchor and resumes her voyage.
+  pirate.x = port.x + 6000; pirate.y = port.y + 6000;
+  let resumed = false;
+  for (let i = 0; i < 2000 && !resumed; i++) { shipSystem(w, 0.05); if (!merch._sheltered) resumed = true; }
+  assert.ok(resumed, 'once the raider was gone she weighed anchor and left the refuge');
+});
+
+test('a BOLD captain weighs anchor sooner than a cautious one (shelter timing rides on captain nerve)', () => {
+  function shelterUntilResume(boldness) {
+    const w = makeWorld();
+    w.rules.SINK_PER_1000 = 0;
+    const m = w.ships.find((s) => !s.pirate && !s.privateer);
+    w.ships = w.ships.filter((s) => s === m); // no raiders → the coast is clear from the first tick
+    const port = w.islands[0];
+    m.state = 'outbound';
+    m.voyage = { reason: 'trade', index: 0, stops: [{ islandId: w.islands[1].id, sell: {}, buy: {}, people: 0 }] };
+    m.targetX = w.islands[1].x; m.targetY = w.islands[1].y;
+    m.x = port.x + 40; m.y = port.y;
+    m._sheltered = true; m._shelterAt = port.id; m._shelterClear = 0;
+    m.captain.xp = 0; // hold skill fixed so the only variable is nerve
+    m.captain.traits = { boldness, wanderlust: 0.5, greed: 0.5 };
+    let steps = 0;
+    for (; steps < 4000 && m._sheltered; steps++) shipSystem(w, 0.05);
+    return steps;
+  }
+  const boldSteps = shelterUntilResume(0.95);
+  const cautiousSteps = shelterUntilResume(0.15);
+  assert.ok(boldSteps > 0 && cautiousSteps > 0, 'both captains dwelt at anchor before leaving');
+  assert.ok(boldSteps < cautiousSteps, `a bold captain leaves sooner (bold ${boldSteps} < cautious ${cautiousSteps} substeps)`);
 });
 
 test('a player intent sets a ship voyage that NPC dispatch does not stomp', () => {

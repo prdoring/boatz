@@ -20,6 +20,7 @@
 import { buildShipGrid, eachShipInRange } from './grid.js';
 
 const GOLDEN = 2.399963229728653; // rad — spreads exactly-stacked hulls along distinct bearings by id
+const numId = (id) => parseInt(String(id).replace(/\D/g, ''), 10) || 0; // hull id → its integer, for the golden spread
 
 /** SIM system: nudge crowding at-sea ships apart (COLREGS-flavoured). Registered after antipiracy. */
 export function separation(world, h) {
@@ -27,7 +28,7 @@ export function separation(world, h) {
   const SEP = t.SHIP_SEPARATION_RANGE || 0;
   if (SEP <= 0) return;
   const AVOID = Math.max(SEP, t.SHIP_AVOID_RANGE || 0);
-  const atSea = world.ships.filter((s) => !s._sunk && (s.state === 'outbound' || s.state === 'inbound'));
+  const atSea = world.ships.filter((s) => !s._sunk && !s._sheltered && (s.state === 'outbound' || s.state === 'inbound')); // a sheltering hull sits at a berth, not its raw pos — don't nudge it
   if (atSea.length < 2) return;
   const grid = buildShipGrid(world, atSea);
   const sepPush = t.SHIP_SEPARATION_PUSH || 0;
@@ -47,7 +48,7 @@ export function separation(world, h) {
       const d = Math.hypot(dx, dy);
       if (d >= AVOID) return;
       if (d < 1e-3) { // exactly stacked — split along a deterministic per-hull bearing
-        const nid = parseInt(String(s.id).replace(/\D/g, ''), 10) || 0;
+        const nid = numId(s.id);
         sepx += Math.cos(nid * GOLDEN); sepy += Math.sin(nid * GOLDEN);
         return;
       }
@@ -80,6 +81,34 @@ export function separation(world, h) {
     m.s.x += m.ax; m.s.y += m.ay;
     const hx = Math.cos(m.s.heading) * m.fwd + m.ax, hy = Math.sin(m.s.heading) * m.fwd + m.ay;
     if (hx !== 0 || hy !== 0) m.s.heading = Math.atan2(hy, hx);
+  }
+
+  // HARD ANTI-STACK FLOOR — the final word each substep. Combat/give-way is behaviour (chase, hold a
+  // standoff, trade fire across a gap); this is the one invariant underneath it: no two at-sea hulls may
+  // ever OVERLAP, not even a boarding pair (the _prey exemption above only drops the polite give-way, never
+  // this). The old weld happened when a rig-crippled chaser was fed its target's exact position and nothing
+  // pushed back. This is a position CORRECTION (not a soft force) so it always beats the closing push, split
+  // evenly between the pair and gathered-then-applied so it stays order-independent + pure (an exact overlap
+  // resolves along an id-derived bearing — replay-safe). COLLIDE ≪ COMBAT_STANDOFF, so a clean 80u broadside
+  // never trips it; it only catches a genuine collapse toward 0.
+  const COLLIDE = t.SHIP_COLLIDE_RANGE || 0;
+  if (COLLIDE > 0) {
+    const corr = new Map(); // ship → accumulated de-overlap push
+    const bump = (s, x, y) => { const p = corr.get(s); if (p) { p.x += x; p.y += y; } else corr.set(s, { x, y }); };
+    for (const s of atSea) {
+      const sid = numId(s.id);
+      eachShipInRange(grid, s.x, s.y, COLLIDE, (o) => {
+        if (numId(o.id) <= sid) return; // each unordered pair once (self has equal id → skipped)
+        let dx = s.x - o.x, dy = s.y - o.y, d = Math.hypot(dx, dy);
+        if (d >= COLLIDE) return;
+        let ux, uy;
+        if (d < 1e-3) { const a = sid * GOLDEN; ux = Math.cos(a); uy = Math.sin(a); } // dead-stacked → id bearing
+        else { ux = dx / d; uy = dy / d; }
+        const half = (COLLIDE - d) / 2;
+        bump(s, ux * half, uy * half); bump(o, -ux * half, -uy * half);
+      });
+    }
+    for (const [s, p] of corr) { s.x += p.x; s.y += p.y; }
   }
 }
 

@@ -12,60 +12,26 @@
 // on-screen.
 
 import { drawUnifiedArt } from '/engine/render/ArtInterpreter.js';
-import { PALETTE, ISLAND_RADIUS, SHIP_RADIUS } from './config.js';
+import { SpriteCache } from '/engine/render/SpriteCache.js';
+import { PALETTE, PALETTE_VERSION, ISLAND_RADIUS, SHIP_RADIUS } from './config.js';
+import { drawIcon } from './ui/icons.js';
+import { OVERLAYS, heatColor, neutralColor, normalize, segmentInBounds } from './overlays.js';
 
-// ─── Data overlays (heatmap views of the map) ────────────────────────────────
-// Each mode reads one island stat, normalises it to 0..1, and tints every port with a
-// diverging heat colour so the whole archipelago reads as a data map. `good:true` means a
-// high value is GOOD (green high, red low); `good:false` inverts it (red high — trouble).
-// Cycled with the `o` key in SimScene; the legend + per-island values are drawn there.
-export const OVERLAYS = [
-  { key: 'off',        label: 'Off',                good: true,  fmt: () => '' },
-  { key: 'wealth',     label: 'Wealth / capita',    good: true,  lo: 'poor',   hi: 'rich',    fmt: (isl) => `${Math.round(perCapitaGold(isl))}g` },
-  { key: 'prosperity', label: 'Prosperity (civ)',   good: true,  lo: 'squalid',hi: 'thriving',fmt: (isl) => `${Math.round((isl.civ || 0) * 100)}%` },
-  { key: 'food',       label: 'Food security',      good: true,  lo: 'starving',hi:'secure',   fmt: (isl) => `${(isl.foodDays || 0).toFixed(1)}d` },
-  { key: 'population', label: 'Population (fill)',   good: true,  lo: 'empty',  hi: 'packed',  fmt: (isl) => `${Math.round(fill(isl) * 100)}%` },
-  { key: 'unrest',     label: 'Lawlessness',        good: false, lo: 'orderly', hi: 'lawless', fmt: (isl) => `${Math.round((isl.lawlessness || 0) * 100)}%` },
-  { key: 'grievance',  label: 'Grievance',          good: false, lo: 'content', hi: 'resentful',fmt: (isl) => `${Math.round((isl.grievance || 0) * 100)}%` },
-  { key: 'danger',     label: 'Pirate danger',      good: false, lo: 'safe',    hi: 'haunted', fmt: (isl) => `${Math.round((isl.danger || 0) * 100)}%` },
-];
+// The data-overlay REGISTRY + colour ramp + normalisation now live in ./overlays.js (pure,
+// unit-testable, shared with SimScene + the almanac). Re-exported here so existing importers
+// keep resolving OVERLAYS/heatColor from WorldRenderer.
+export { OVERLAYS, heatColor };
 
-function perCapitaGold(isl) { return (isl.gold || 0) / Math.max(1, isl.population || 1); }
-function fill(isl) { return Math.min(1, (isl.population || 0) / Math.max(1, isl.k || 120)); }
+// The runtime `color` dyes a ship's SAILS (the hull keeps its own weathered-timber colour in
+// the art). A pirate flies BLACK canvas (vs a merchant's home-port colour) so a raider reads
+// as hostile at a glance even before the skull marker; a privateer flies naval navy — the law's
+// answer, distinct from both merchant and pirate.
+const PIRATE_SAIL = '#14100f';
+const PRIVATEER_SAIL = '#25415e';
 
-/** Normalise an island's stat for `mode` to 0..1 (0 = worst-looking, 1 = best-looking on its scale). */
-function overlayValue(isl, key) {
-  switch (key) {
-    case 'wealth':     return Math.min(1, perCapitaGold(isl) / 40);       // ~GOLD_MAX_PER_POP
-    case 'prosperity': return Math.min(1, Math.max(0, isl.civ || 0));
-    case 'food':       return Math.min(1, (isl.foodDays || 0) / 6);       // 6+ days = fully secure
-    case 'population':  return fill(isl);
-    case 'unrest':      return Math.min(1, Math.max(0, isl.lawlessness || 0));
-    case 'grievance':   return Math.min(1, Math.max(0, isl.grievance || 0));
-    case 'danger':      return Math.min(1, Math.max(0, isl.danger || 0));
-    default:            return 0;
-  }
-}
-
-/** Diverging red→amber→green heat. `t` in 0..1 where 1 is the "good" end; alpha for translucency.
- *  Exported so the SimScene legend can paint the same scale the map uses. */
-export function heatColor(t, alpha = 1) {
-  t = Math.min(1, Math.max(0, t));
-  // red (200,60,50) → amber (230,190,60) → green (90,200,110)
-  let r, g, b;
-  if (t < 0.5) { const u = t / 0.5; r = 200 + u * 30; g = 60 + u * 130; b = 50 + u * 10; }
-  else { const u = (t - 0.5) / 0.5; r = 230 - u * 140; g = 190 + u * 10; b = 60 + u * 50; }
-  return `rgba(${r | 0},${g | 0},${b | 0},${alpha})`;
-}
-
-// A pirate's sail is dyed a menacing dark crimson-black (vs a merchant's home-port colour),
-// so a raider reads as hostile at a glance even before the skull marker is noticed. A privateer
-// flies naval steel-blue — the law's answer, distinct from both merchant and pirate.
-const PIRATE_HULL = '#7a1420';
-const PRIVATEER_HULL = '#2f4b6e';
-
-// Hull class reads at a glance from size: a nimble sloop is small, a brig standard, a galleon big.
-const SHIP_TYPE_SCALE = { sloop: 0.82, brig: 1.0, galleon: 1.32 };
+// Hull class reads from silhouette (1/2/3 masts, sterncastle) baked into ship-art.json; this is
+// just a mild residual size cue on top — a nimble sloop rides a touch smaller, a galleon larger.
+const SHIP_TYPE_SCALE = { sloop: 0.9, brig: 1.0, galleon: 1.18 };
 
 // Overview level-of-detail thresholds (screen-space radius, px). Zoomed far enough out that
 // EVERY island/ship is on-screen at once, the full procedural silhouette / declarative ship art
@@ -74,6 +40,15 @@ const SHIP_TYPE_SCALE = { sloop: 0.82, brig: 1.0, galleon: 1.32 };
 // Above them the detailed path is byte-for-byte the same as before (LOD is purely additive).
 const ISLE_LOD_MIN = 8;
 const SHIP_LOD_MIN = 5;
+// Zoom at/above which the dual hull+rig HEALTH bar is worth drawing. A base ship (r≈15) reads ~21px wide
+// here, so the two thin bars are legible; below it they turn into fiddly noise, so we swap to a single
+// compact damage dot instead (see _damageDot). ~0.7 is where a ship first reads clearly, not as a speck.
+const HEALTHBAR_ZOOM_MIN = 0.7;
+// Ships closer than this (world units, ≈ PIRATE_COMBAT_RANGE) and locked in a fight trade visible broadsides.
+const COMBAT_VIS_RANGE = 175;
+const COMBAT_ACTS = new Set(['hunt', 'defend', 'assault', 'raid', 'flee']);
+/** Small stable string hash → a per-ship phase offset so broadsides don't fire in lockstep. */
+function hashId(id) { let x = 0; const s = String(id); for (let i = 0; i < s.length; i++) x = (x * 31 + s.charCodeAt(i)) >>> 0; return x; }
 
 export class WorldRenderer {
   constructor(ctx, camera, art, vfx, effectsRenderer) {
@@ -84,6 +59,7 @@ export class WorldRenderer {
     this.effectsRenderer = effectsRenderer; // wraps the engine VFX interpreter
     this._transitions = new Map();   // ship id -> per-entity transition (keyframe clock + blend)
     this._islands = new Map();       // island id -> cached procedural layout (seeded)
+    this._isleCache = new SpriteCache({ max: 128, dprCap: 2 }); // baked island terrain tiles (static per id)
     this._berths = new Map();        // ship id -> { x, y } berth slot for a docked ship (recomputed each frame)
     this._seen = new Set();
     this._warned = new Set();
@@ -114,31 +90,38 @@ export class WorldRenderer {
       if (R < ISLE_LOD_MIN) { this._islandDot(ctx, isl, sx, sy, R, now, highlightIslandId); continue; }
 
       const L = this._layout(isl.id, isl.type);
+      const seed = hashSeed(isl.id);
+      const breathe = 1 + 0.02 * Math.sin(now * 0.0016 + (seed % 997) * 0.0063);
 
-      // Shallows halo.
+      // Soft displaced shadow the landmass casts on the water (sun from the upper-left).
       ctx.save();
-      ctx.fillStyle = 'rgba(99, 207, 228, 0.35)';
-      ctx.shadowColor = 'rgba(99, 207, 228, 0.5)';
-      ctx.shadowBlur = 16 * zoom;
-      blob(ctx, sx, sy, L.shape, R * 1.16); ctx.fill();
+      ctx.fillStyle = PALETTE.foamShadow;
+      ctx.shadowColor = PALETTE.foamShadow;
+      ctx.shadowBlur = 8 * zoom;
+      blob(ctx, sx + R * 0.10, sy + R * 0.12, L.shape, R * 1.02); ctx.fill();
       ctx.restore();
 
-      // Sandy landmass (seed-unique silhouette).
+      // Shallow-water band + a broken surf line that breathes and churns around the coast.
       ctx.save();
-      ctx.fillStyle = '#f2ddaa';
-      ctx.strokeStyle = '#e0c078';
-      ctx.lineWidth = Math.max(1, 2 * zoom);
-      ctx.shadowColor = 'rgba(20, 40, 55, 0.18)';
-      ctx.shadowBlur = 6 * zoom;
-      blob(ctx, sx, sy, L.shape, R); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = PALETTE.seaShallow; ctx.globalAlpha = 0.34;
+      blob(ctx, sx, sy, L.shape, R * 1.16 * breathe); ctx.fill();
+      ctx.globalAlpha = 0.5 + 0.3 * Math.sin(now * 0.0016 + seed);
+      ctx.strokeStyle = PALETTE.foam;
+      ctx.lineWidth = Math.max(1, 1.6 * zoom);
+      ctx.setLineDash([R * 0.5, R * 0.34]);
+      ctx.lineDashOffset = -now * 0.02;
+      blob(ctx, sx, sy, L.shape, R * 1.11 * breathe); ctx.stroke();
+      ctx.setLineDash([]);
       ctx.restore();
 
-      // Interior tinted by the island's colour.
-      ctx.save();
-      ctx.fillStyle = isl.color || '#8fbf5a';
-      ctx.globalAlpha = 0.92;
-      blob(ctx, sx, sy, L.shape, R * 0.76); ctx.fill();
-      ctx.restore();
+      // Baked terrain: beach gradient + inked coastline + relief-shaded, textured interior. Static
+      // per id (silhouette / type / colour / radius never change), so rasterise once and blit; the
+      // live sim overlays (markers / town / badges / afflictions) still draw per-frame on top.
+      const half = rad * L.ext + 3;
+      const tile = this._isleCache.get(`isle:${isl.id}:${Math.round(rad)}:${PALETTE_VERSION}`, half * 2, half * 2,
+        (cctx, w, h) => drawIsleTerrain(cctx, w / 2, h / 2, rad, L, isl));
+      if (tile) ctx.drawImage(tile.canvas, sx - half * zoom, sy - half * zoom, tile.w * zoom, tile.h * zoom);
+      else drawIsleTerrain(ctx, sx, sy, R, L, isl); // Node / no-canvas fallback (screen-space)
 
       // Raw-material markers (primary + secondary resource) scattered on the land.
       this._markers(ctx, isl, L, sx, sy, R);
@@ -191,48 +174,109 @@ export class WorldRenderer {
     if (highlightIslandId && isl.id === highlightIslandId) this._homeIslandRing(sx, sy, Math.max(R * 1.35, 26), now);
   }
 
-  /** Data overlay: tint every visible port by one stat (a heatmap layer). Drawn over the islands
-   *  and under the ships, so vessels stay readable. `mode` is one of OVERLAYS (key !== 'off'). The
-   *  value badge is drawn when there's room to read it. */
-  drawOverlay(islands, bounds, mode, now) {
-    const spec = OVERLAYS.find((o) => o.key === mode);
-    if (!spec || spec.key === 'off') return;
+  /** Data overlay: tint every visible port by one auto-ranged scalar (a heatmap layer). Drawn
+   *  over the islands and under the ships, so vessels stay readable. `spec` is a SCALAR OVERLAYS
+   *  entry; `stats` carries the precomputed colour domain {lo,hi} (from OverlayModel — no
+   *  per-island aggregation here). Ports with no data on the metric read neutral, not "worst".
+   *  Below the island LOD size a flat dot replaces the gradient disc (overview stays cheap), and
+   *  value badges are de-cluttered by a coarse screen grid so dense clusters don't turn to mush. */
+  drawOverlay(islands, bounds, spec, stats, now) {
+    if (!spec || spec.kind !== 'scalar' || !stats) return;
     const ctx = this.ctx;
     const zoom = this.camera.getZoom?.() ?? 1;
+    const lo = stats.lo, hi = stats.hi;
+    const cells = this._overlayBadgeCells || (this._overlayBadgeCells = new Set());
+    cells.clear();
     for (const isl of islands) {
       const rad = islandRadius(isl);
       if (!inBounds(isl.x, isl.y, rad * 2, bounds)) continue;
       const { sx, sy } = this.camera.worldToScreen(isl.x, isl.y);
-      let v = overlayValue(isl, spec.key);
-      const t = spec.good ? v : 1 - v; // colour by "how good it looks": bad-is-high metrics invert
+      const noData = !!(spec.skipEmpty && !(isl.population > 0));
+      const v = noData ? null : normalize(spec.accessor(isl), lo, hi);
+      const t = v == null ? null : (spec.good ? v : 1 - v); // bad-is-high metrics invert
+      const R = rad * zoom;
+
+      // Overview LOD: below a legible size, one flat dot instead of a radial gradient + ring + badge.
+      if (R < ISLE_LOD_MIN) {
+        ctx.save();
+        ctx.globalAlpha = 0.92;
+        ctx.fillStyle = t == null ? neutralColor(0.55) : heatColor(t, 0.72);
+        ctx.beginPath(); ctx.arc(sx, sy, Math.max(3, R * 1.4), 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+        continue;
+      }
+
       const r = Math.max(rad * zoom * 1.5, 15);
-      // Soft filled heat disc + a firmer ring.
       ctx.save();
       const grad = ctx.createRadialGradient(sx, sy, r * 0.15, sx, sy, r);
-      grad.addColorStop(0, heatColor(t, 0.62));
-      grad.addColorStop(1, heatColor(t, 0.05));
+      if (t == null) { grad.addColorStop(0, neutralColor(0.5)); grad.addColorStop(1, neutralColor(0.04)); }
+      else { grad.addColorStop(0, heatColor(t, 0.62)); grad.addColorStop(1, heatColor(t, 0.05)); }
       ctx.fillStyle = grad;
       ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.fill();
       ctx.globalAlpha = 0.85;
-      ctx.strokeStyle = heatColor(t, 0.9);
+      ctx.strokeStyle = t == null ? neutralColor(0.6) : heatColor(t, 0.9);
       ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.stroke();
       ctx.restore();
-      // Value badge when zoomed in enough to read it.
-      if (zoom > 0.34) {
-        const label = spec.fmt(isl);
-        if (label) {
-          ctx.save();
-          ctx.font = '700 12px system-ui, sans-serif';
-          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-          ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(8,20,26,0.85)';
-          ctx.strokeText(label, sx, sy - r - 9);
-          ctx.fillStyle = '#f4fbff';
-          ctx.fillText(label, sx, sy - r - 9);
-          ctx.restore();
+
+      // Value badge — only when it's legible AND its coarse grid cell is still free (de-clutter).
+      if (R > 10 && zoom > 0.34) {
+        const cell = (sx >> 5) + ',' + (sy >> 4);
+        if (!cells.has(cell)) {
+          cells.add(cell);
+          const label = v == null ? '—' : spec.vfmt(spec.accessor(isl));
+          if (label) {
+            ctx.save();
+            ctx.font = '700 12px system-ui, sans-serif';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(8,20,26,0.85)';
+            ctx.strokeText(label, sx, sy - r - 9);
+            ctx.fillStyle = '#f4fbff';
+            ctx.fillText(label, sx, sy - r - 9);
+            ctx.restore();
+          }
         }
       }
     }
+  }
+
+  /** Relational overlay: draw edges BETWEEN islands — alliances/rivalries, trade lanes, aid
+   *  convoys. `edges` is the precomputed positioned set from OverlayModel; each is culled in
+   *  world space (AABB vs bounds) before projection, so off-screen links cost only that test.
+   *  Drawn over the scalar heat and under the ships, so vessels stay readable. Endpoints inset
+   *  a touch so a line reads from the coast, not out of the town. */
+  drawRelations(edges, bounds, spec, now) {
+    if (!edges || !edges.length) return;
+    const ctx = this.ctx;
+    let maxW = 1;
+    for (const e of edges) if (e.weight > maxW) maxW = e.weight; // lane traffic scale
+    ctx.save();
+    ctx.lineCap = 'round';
+    for (const e of edges) {
+      if (!segmentInBounds(e.ax, e.ay, e.bx, e.by, bounds)) continue;
+      const A = this.camera.worldToScreen(e.ax, e.ay);
+      const B = this.camera.worldToScreen(e.bx, e.by);
+      let ax = A.sx, ay = A.sy, bx = B.sx, by = B.sy;
+      const dx = bx - ax, dy = by - ay, len = Math.hypot(dx, dy) || 1;
+      const inset = Math.min(16, len * 0.3), ux = dx / len, uy = dy / len;
+      ax += ux * inset; ay += uy * inset; bx -= ux * inset; by -= uy * inset;
+      let color, width, alpha, dash = null;
+      if (e.kind === 'ally') { color = '#8ee6a0'; alpha = 0.3 + e.v * 0.45; width = 1 + e.v * 2.5; }
+      else if (e.kind === 'rival') { color = '#ff7b6b'; alpha = 0.3 + e.v * 0.45; width = 1 + e.v * 2.5; }
+      else if (e.kind === 'lane') { const n = e.weight / maxW; color = '#6fd0e0'; alpha = 0.22 + n * 0.5; width = 1 + n * 3.5; }
+      else if (e.kind === 'aid') { color = '#7fe0b0'; alpha = 0.78; width = 2; dash = [7, 5]; }
+      else if (e.kind === 'embargo') { color = '#e0863a'; alpha = 0.72; width = 2; dash = [3, 4]; } // severed trade
+      else if (e.kind === 'hunt') { color = '#ff5b4a'; alpha = 0.8; width = 2; } // pirate → prey / besieged port
+      else if (e.kind === 'guard') { color = '#6fa8d8'; alpha = 0.75; width = 2; } // privateer → quarry / guarded port
+      else continue;
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      if (dash) ctx.setLineDash(dash);
+      ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
+      if (dash) ctx.setLineDash([]);
+    }
+    ctx.restore();
   }
 
   /** Faint crimson haze over pirate-threatened waters — a soft ring that deepens with danger. */
@@ -438,8 +482,11 @@ export class WorldRenderer {
       const a = rng() * Math.PI * 2, rr = 0.32 + rng() * 0.26;
       markers.push({ dx: Math.cos(a) * rr * ax * 0.85, dy: Math.sin(a) * rr * ay * 0.85 });
     }
+    // Max silhouette extent (unit-radius) → sizes the baked terrain tile tightly per island.
+    let ext = 0.9;
+    for (const p of shape) ext = Math.max(ext, Math.abs(p.dx), Math.abs(p.dy));
     // Dock sits on the bay if there is one, else anywhere on the coast.
-    L = { shape, town, markers, dockAngle: bay ? bay.at : rng() * Math.PI * 2 };
+    L = { shape, ext, town, markers, dockAngle: bay ? bay.at : rng() * Math.PI * 2 };
     this._islands.set(id, L);
     return L;
   }
@@ -447,7 +494,7 @@ export class WorldRenderer {
   // ─── Wakes / Ships / Selection (declarative art) ─────────────────
   drawWakes(trails, now) { this.effectsRenderer.drawTrails(trails, now); }
 
-  drawShips(shipsById, islandsById, bounds, now, highlightHomeId = null) {
+  drawShips(shipsById, islandsById, bounds, now, highlightHomeId = null, presentation = null) {
     if (!shipsById) return;
     const zoom = this.camera.getZoom?.() ?? 1;
     this._computeBerths(shipsById, islandsById); // fan docked ships into berths (used for draw + picking)
@@ -468,16 +515,16 @@ export class WorldRenderer {
       // so its whole fleet is trackable across the map even at overview zoom (where a ship
       // is only ~1px). Drawn as a filled disc glow + ring so it pops against the water.
       if (highlightHomeId && s.homeId === highlightHomeId) this._homeRing(px, py, Math.max(SHIP_RADIUS * 1.7 * zoom, 11), now);
-      // Hull tint tells faction at a glance: pirate crimson-black, privateer naval blue, else home.
-      const hull = s.pirate ? PIRATE_HULL : s.privateer ? PRIVATEER_HULL : color;
+      // Sail dye tells faction at a glance: pirate black canvas, privateer naval navy, else home port.
+      const sailColor = s.pirate ? PIRATE_SAIL : s.privateer ? PRIVATEER_SAIL : color;
       const r = SHIP_RADIUS * (SHIP_TYPE_SCALE[s.type] || 1); // size reads the hull class
       const heading = berth ? Math.atan2(berth.iy - py, berth.ix - px) : (s.heading || 0); // moored: bow to the wharf
-      const state = berth ? 'docked' : (s.state || 'sailing');
-      // Overview LOD: a ship shrunk to a speck draws as a flat hull-colour dot instead of full
+      const state = this._presentationState(id, berth, s, presentation);
+      // Overview LOD: a ship shrunk to a speck draws as a flat sail-colour dot instead of full
       // declarative art. The clamped faction markers below still draw, so pirates/privateers/
       // revolts stay spottable at any zoom — only the mass of merchants become cheap dots.
-      if (r * zoom < SHIP_LOD_MIN) this._shipDot(px, py, hull);
-      else this._drawArtAt(def, px, py, r, hull, state, now, this._trans('s:' + id), heading);
+      if (r * zoom < SHIP_LOD_MIN) this._shipDot(px, py, sailColor);
+      else this._drawArtAt(def, px, py, r, sailColor, state, now, this._trans('s:' + id), heading);
       // A crew in open revolt (mutiny/defection standoff) — a stark pulsing marker, clamped so
       // it's spotted anywhere on the map even at overview zoom.
       if (s.revolt) this._revoltRing(px, py, Math.max(SHIP_RADIUS * 1.9 * zoom, 13), now);
@@ -485,6 +532,56 @@ export class WorldRenderer {
       else if (s.pirate) this._pirateMark(px, py, Math.max(SHIP_RADIUS * 1.9 * zoom, 12), now);
       // A commissioned privateer — a naval marker (the hunter) so the law is visible too.
       else if (s.privateer) this._privateerMark(px, py, Math.max(SHIP_RADIUS * 1.9 * zoom, 12), now);
+      // A merchant blown off course & lost at sea — a pale, wallowing distress ring so it's spotted (and watchable).
+      else if (s.adrift) this._distressMark(px, py, Math.max(SHIP_RADIUS * 1.9 * zoom, 12), now);
+      // COMBAT is now attrition over several seconds — SHOW it: a ship locked onto a foe within gun-range
+      // trades rolling broadsides (muzzle flash, cannon smoke, shot, hit spark) so a fight reads as a fight,
+      // not two hulls touching then one vanishing.
+      const fighting = s.act ? COMBAT_ACTS.has(s.act) : false;
+      if (s.act === 'hunt' && s.actId != null) {
+        const foe = shipsById[s.actId];
+        if (foe && Math.hypot((foe.x || 0) - s.x, (foe.y || 0) - s.y) < COMBAT_VIS_RANGE) this._combatFx(s, foe, now);
+      }
+      // Hull/rig condition over any ship that's damaged or in a fight — so a battle's toll is legible on the
+      // map. Zoomed IN, the full dual bar; zoomed OUT, a single compact damage dot (the two thin bars turn
+      // fiddly at speck size), so a hurt ship still reads at a glance either way. Healthy cruisers show nothing.
+      if (fighting || (s.hull != null && s.hull < 0.985) || (s.rig != null && s.rig < 0.985)) {
+        if (zoom >= HEALTHBAR_ZOOM_MIN) this._healthBar(px, py, r, s, zoom);
+        else this._damageDot(px, py, r, s, zoom, now);
+      }
+    }
+  }
+
+  /** Resolve the ART state for a ship: a berthed ship is 'docked'; a ship the scene has flagged as
+   *  under fire (its id in the optional `presentation` map, a scene-owned overlay — never a snapshot
+   *  field) is 'damaged'; otherwise its own display state. `sinking` is NOT here — a foundering ship
+   *  has already vanished from the snapshot and is drawn as a client actor by drawSinkingActors(). */
+  _presentationState(id, berth, s, presentation) {
+    if (berth) return 'docked';
+    if (presentation && presentation.has(id)) return 'damaged';   // transient hit-flash (scene overlay)
+    if (s.hull != null && s.hull < 0.5) return 'damaged';         // persistent — a battered hull wears it
+    return s.state || 'sailing';
+  }
+
+  /** Draw the CLIENT-owned foundering ships (copies made by the scene when a vessel vanished from the
+   *  snapshot — never snapshot references). Each renders its authored `sinking` state, whose play-once
+   *  clip rolls the hull onto her beam-ends, and fades out over its life so she slips beneath the swell.
+   *  `actors` = [{ x, y, heading, type, pirate, privateer, born, ttl, trans }]; culling is the caller's. */
+  drawSinkingActors(actors, now) {
+    if (!actors || !actors.length) return;
+    const zoom = this.camera.getZoom?.() ?? 1;
+    const ctx = this.ctx;
+    for (const a of actors) {
+      const def = this.art.ships[a.type] || this.art.ships.ship;
+      if (!def) continue;
+      const r = SHIP_RADIUS * (SHIP_TYPE_SCALE[a.type] || 1);
+      if (r * zoom < SHIP_LOD_MIN) continue; // a speck-sized wreck isn't worth the art; the splash carries it
+      const life = a.ttl ? Math.max(0, 1 - (now - a.born) / a.ttl) : 1;
+      const sailColor = a.pirate ? PIRATE_SAIL : a.privateer ? PRIVATEER_SAIL : (a.color || PALETTE.accent);
+      ctx.save();
+      ctx.globalAlpha = 0.15 + 0.85 * life; // fade as she goes down
+      this._drawArtAt(def, a.x, a.y, r, sailColor, 'sinking', now, a.trans || (a.trans = {}), a.heading || 0);
+      ctx.restore();
     }
   }
 
@@ -569,16 +666,13 @@ export class WorldRenderer {
     ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.stroke();
     ctx.globalAlpha = pulse;
-    ctx.fillStyle = '#cfe4f6';
-    ctx.shadowColor = '#0a1a2a'; ctx.shadowBlur = 5;
-    ctx.font = `${Math.round(Math.max(11, r * 0.95))}px system-ui, sans-serif`;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('⚔', sx, sy - r - 6);
+    drawIcon(ctx, 'sabres', sx, sy - r - 6, Math.max(11, r * 1.15), '#cfe4f6');
     ctx.restore();
   }
 
-  /** Named storm cells — dark swirling clouds drifting over the sea. Drawn under the ships so a
-   *  vessel caught inside is still visible fighting the weather. Culled by the view bounds. */
+  /** Named storm cells — a roiling dark cloud mass over a cold sea-shadow, a scrolling rain veil,
+   *  and rare, brief, LOCAL lightning (a thin jagged bolt, never a screen-wide flash). Drawn under
+   *  the ships so a vessel caught inside is still visible fighting the weather. Culled by the view. */
   drawStorms(storms, bounds, now) {
     if (!storms || !storms.length) return;
     const ctx = this.ctx;
@@ -587,24 +681,112 @@ export class WorldRenderer {
       if (!inBounds(st.x, st.y, st.r, bounds)) continue;
       const { sx, sy } = this.camera.worldToScreen(st.x, st.y);
       const r = st.r * zoom;
+      const seed = hashSeed(st.name || (st.x + ',' + st.y));
       ctx.save();
-      const grad = ctx.createRadialGradient(sx, sy, r * 0.1, sx, sy, r);
-      grad.addColorStop(0, 'rgba(38,46,62,0.52)');
-      grad.addColorStop(0.7, 'rgba(48,56,74,0.34)');
-      grad.addColorStop(1, 'rgba(60,70,90,0)');
-      ctx.fillStyle = grad;
+
+      // 1) Sea-shadow — the water beneath the cell goes dark and cold (kept translucent at the
+      //    core so a ship inside stays readable).
+      const shadow = ctx.createRadialGradient(sx, sy, r * 0.15, sx, sy, r);
+      shadow.addColorStop(0, 'rgba(4, 20, 30, 0.48)');
+      shadow.addColorStop(0.65, 'rgba(6, 26, 36, 0.32)');
+      shadow.addColorStop(1, 'rgba(8, 32, 44, 0)');
+      ctx.fillStyle = shadow;
       ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.fill();
-      // slow-rotating swirl arcs
-      ctx.strokeStyle = 'rgba(206,216,232,0.38)';
-      ctx.lineWidth = 2;
-      const rot = now * 0.0006;
-      for (let i = 0; i < 3; i++) { const a = rot + i * (Math.PI * 2 / 3); ctx.beginPath(); ctx.arc(sx, sy, r * 0.55, a, a + Math.PI * 0.8); ctx.stroke(); }
-      // occasional lightning flicker
-      if ((Math.sin(now * 0.02 + sx) > 0.94)) { ctx.globalAlpha = 0.5; ctx.fillStyle = '#dfe7f2'; ctx.beginPath(); ctx.arc(sx, sy, r * 0.9, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1; }
-      ctx.fillStyle = 'rgba(222,230,242,0.9)';
-      ctx.font = `${Math.round(Math.max(11, r * 0.13))}px system-ui, sans-serif`;
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('⛈ Storm ' + st.name, sx, sy - r - 8);
+
+      // 2) Rain veil — thin streaks clipped to the cell, scrolling down on a slight lean.
+      ctx.save();
+      ctx.beginPath(); ctx.arc(sx, sy, r * 0.92, 0, Math.PI * 2); ctx.clip();
+      const rain = mulberry(seed ^ 0x51ed);
+      const lean = r * 0.32;
+      const drift = (now * 0.22) % (r * 2);
+      ctx.strokeStyle = 'rgba(176, 202, 226, 0.15)';
+      ctx.lineWidth = Math.max(0.6, zoom * 0.9);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      for (let i = 0; i < 46; i++) {
+        const bx = sx - r + rain() * r * 2;
+        const span = r * (0.12 + rain() * 0.16);
+        const by = sy - r + ((rain() * r * 2 + drift) % (r * 2));
+        ctx.moveTo(bx, by);
+        ctx.lineTo(bx + lean * (span / r), by + span);
+      }
+      ctx.stroke();
+      ctx.restore();
+
+      // 3) Roiling cloud mass — overlapping dark lobes slowly turning, each with a top-lit roil
+      //    highlight, over a denser dark core.
+      const spin = now * 0.00006;
+      const cloud = mulberry(seed ^ 0x9e37);
+      for (let i = 0; i < 7; i++) {
+        const a0 = cloud() * Math.PI * 2;
+        const dist = r * (0.1 + cloud() * 0.5);
+        const a = a0 + spin * (i % 2 ? 1 : -1);
+        const lx = sx + Math.cos(a) * dist;
+        const ly = sy + Math.sin(a) * dist;
+        const pulse = 1 + 0.12 * Math.sin(now * 0.0008 + i * 1.7);
+        const lr = r * (0.3 + cloud() * 0.22) * pulse;
+        const g = ctx.createRadialGradient(lx, ly, lr * 0.12, lx, ly, lr);
+        g.addColorStop(0, 'rgba(22, 28, 42, 0.82)');
+        g.addColorStop(0.55, 'rgba(28, 36, 52, 0.46)');
+        g.addColorStop(1, 'rgba(34, 44, 62, 0)');
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(lx, ly, lr, 0, Math.PI * 2); ctx.fill();
+        // A tight, brighter roil highlight on the sunlit shoulder so each billow reads.
+        const hx = lx - lr * 0.28, hy = ly - lr * 0.32;
+        const hg = ctx.createRadialGradient(hx, hy, 0, hx, hy, lr * 0.5);
+        hg.addColorStop(0, 'rgba(138, 156, 184, 0.34)');
+        hg.addColorStop(0.5, 'rgba(120, 138, 166, 0.16)');
+        hg.addColorStop(1, 'rgba(120, 138, 166, 0)');
+        ctx.fillStyle = hg;
+        ctx.beginPath(); ctx.arc(hx, hy, lr * 0.5, 0, Math.PI * 2); ctx.fill();
+      }
+      const core = ctx.createRadialGradient(sx, sy, 0, sx, sy, r * 0.5);
+      core.addColorStop(0, 'rgba(16, 20, 30, 0.58)');
+      core.addColorStop(1, 'rgba(16, 20, 30, 0)');
+      ctx.fillStyle = core;
+      ctx.beginPath(); ctx.arc(sx, sy, r * 0.5, 0, Math.PI * 2); ctx.fill();
+
+      // 4) Rare, brief, LOCAL lightning — a thin jagged bolt with a small glow at the strike,
+      //    fired only in short windows and offset per storm so cells don't flash in unison.
+      const strobe = Math.sin(now * 0.0016 + (seed % 360) * (Math.PI / 180));
+      if (strobe > 0.985) {
+        const intensity = Math.min(1, (strobe - 0.985) / 0.012);
+        const bolt = mulberry((seed ^ 0xb0175) + Math.floor(now / 240));
+        const ox = sx + (bolt() - 0.5) * r * 0.8;
+        const oy = sy - r * (0.15 + bolt() * 0.3);
+        ctx.save();
+        ctx.globalAlpha = intensity;
+        const glow = ctx.createRadialGradient(ox, oy, 0, ox, oy, r * 0.5);
+        glow.addColorStop(0, 'rgba(210, 228, 255, 0.5)');
+        glow.addColorStop(1, 'rgba(210, 228, 255, 0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath(); ctx.arc(ox, oy, r * 0.5, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = 'rgba(226, 238, 255, 0.95)';
+        ctx.lineWidth = Math.max(1, zoom * 1.4);
+        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        ctx.shadowColor = 'rgba(180, 210, 255, 0.9)';
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        let px = ox, py = oy;
+        ctx.moveTo(px, py);
+        for (let i = 1; i <= 5; i++) {
+          px += (bolt() - 0.5) * r * 0.28;
+          py += (r * 0.5) / 5;
+          ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Label — the ink storm glyph + the cell's name, above the mass.
+      const lbl = 'Storm ' + st.name;
+      const fs = Math.round(Math.max(11, r * 0.13));
+      ctx.fillStyle = 'rgba(214, 224, 238, 0.92)';
+      ctx.font = `${fs}px system-ui, sans-serif`;
+      ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      const tw = ctx.measureText(lbl).width, isz = fs + 3;
+      drawIcon(ctx, 'storm', sx - tw / 2 - isz * 0.55, sy - r - 8, isz, 'rgba(214, 224, 238, 0.92)');
+      ctx.fillText(lbl, sx - tw / 2 + isz * 0.35, sy - r - 8);
       ctx.restore();
     }
   }
@@ -624,11 +806,7 @@ export class WorldRenderer {
     ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.stroke();
     ctx.globalAlpha = pulse;
-    ctx.fillStyle = '#f4f0e6'; // bone white
-    ctx.shadowColor = '#000'; ctx.shadowBlur = 6;
-    ctx.font = `${Math.round(Math.max(12, r * 1.1))}px system-ui, sans-serif`;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('☠', sx, sy - r - 6);
+    drawIcon(ctx, 'skull', sx, sy - r - 6, Math.max(12, r * 1.25), '#f4f0e6'); // bone-white skull
     ctx.restore();
   }
 
@@ -646,12 +824,134 @@ export class WorldRenderer {
     ctx.shadowColor = '#ff4d3d';
     ctx.shadowBlur = 10;
     ctx.beginPath(); ctx.arc(sx, sy, r * (0.9 + 0.15 * pulse), 0, Math.PI * 2); ctx.stroke();
-    // crossed-swords tick marks around the ring
+    // crossed-sabres mark above the ring
     ctx.globalAlpha = pulse;
-    ctx.fillStyle = '#ffd166';
-    ctx.font = `${Math.round(Math.max(11, r * 0.9))}px system-ui, sans-serif`;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('⚔', sx, sy - r - 6);
+    drawIcon(ctx, 'sabres', sx, sy - r - 6, Math.max(11, r * 0.95), '#ffd166');
+    ctx.restore();
+  }
+
+  _distressMark(wx, wy, r, now) {
+    const { sx, sy } = this.camera.worldToScreen(wx, wy);
+    const ctx = this.ctx;
+    const pulse = 0.5 + 0.5 * Math.sin(now * 0.005); // slow, wallowing — a ship helpless in the swell
+    ctx.save();
+    ctx.globalAlpha = 0.2 + 0.12 * pulse;
+    ctx.fillStyle = '#8fb6c6';
+    ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 0.85;
+    ctx.strokeStyle = '#b6d0dc';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.arc(sx, sy, r * (0.9 + 0.14 * pulse), 0, Math.PI * 2); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 0.7 + 0.3 * pulse;
+    drawIcon(ctx, 'anchor', sx, sy - r - 6, Math.max(11, r * 1.05), '#cfe0e8'); // adrift — no bearings
+    ctx.restore();
+  }
+
+  /** A running gunnery duel between two ships (world coords): both trade rolling broadsides so a fight is
+   *  visibly a fight over its several seconds — the client cadence mirrors the sim's ~1.2s combat round. */
+  _combatFx(hunter, foe, now) {
+    const a = this.camera.worldToScreen(hunter.x, hunter.y);
+    const b = this.camera.worldToScreen(foe.x, foe.y);
+    const zoom = this.camera.getZoom?.() ?? 1;
+    this._broadside(a.sx, a.sy, b.sx, b.sy, now, hunter.id, zoom); // the hunter fires…
+    this._broadside(b.sx, b.sy, a.sx, a.sy, now, foe.id, zoom);    // …and the foe returns fire
+  }
+
+  /** One ship's side of the duel: a muzzle flash + drifting cannon smoke at the gun, a shot crossing the
+   *  gap, and a spark where it strikes — cycling on a per-ship phase so the two hulls hammer out of step. */
+  _broadside(sx, sy, tx, ty, now, seed, zoom) {
+    const ctx = this.ctx;
+    const dx = tx - sx, dy = ty - sy;
+    const d = Math.hypot(dx, dy) || 1;
+    const ux = dx / d, uy = dy / d;
+    const sc = Math.max(0.7, Math.min(1.6, zoom));
+    const phase = (hashId(seed) % 1000) / 1000;
+    const cyc = (((now || 0) / 1000 / 1.15) + phase) % 1; // 0..1 within a ~1.15s broadside round
+    ctx.save();
+    // The shot in flight — a glowing ball racing across the first half of the round, with a faint tracer.
+    if (cyc < 0.5) {
+      const p = cyc / 0.5;
+      const bx = sx + dx * p, by = sy + dy * p;
+      ctx.globalAlpha = 0.2;
+      ctx.strokeStyle = '#ffcf8a'; ctx.lineWidth = 1.4 * sc;
+      ctx.beginPath(); ctx.moveTo(sx + ux * 8 * sc, sy + uy * 8 * sc); ctx.lineTo(bx, by); ctx.stroke();
+      ctx.globalAlpha = 0.85 * (1 - p * 0.25);
+      ctx.fillStyle = '#ffd982';
+      ctx.beginPath(); ctx.arc(bx, by, 2.1 * sc, 0, Math.PI * 2); ctx.fill();
+    }
+    // Muzzle flash at the gun, a bright bloom in the first sliver of the round.
+    const flash = cyc < 0.12 ? 1 - cyc / 0.12 : 0;
+    if (flash > 0) {
+      const mx = sx + ux * 9 * sc, my = sy + uy * 9 * sc;
+      const g = ctx.createRadialGradient(mx, my, 0, mx, my, 9 * sc);
+      g.addColorStop(0, 'rgba(255,244,200,' + (0.95 * flash).toFixed(3) + ')');
+      g.addColorStop(0.5, 'rgba(255,178,74,' + (0.7 * flash).toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(255,120,40,0)');
+      ctx.globalAlpha = 1; ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(mx, my, 9 * sc, 0, Math.PI * 2); ctx.fill();
+    }
+    // Cannon smoke drifting off the gun, growing and fading across the round.
+    const smoke = cyc < 0.65 ? cyc / 0.65 : 0;
+    if (smoke > 0) {
+      const px = sx + ux * 11 * sc - uy * 3 * sc, py = sy + uy * 11 * sc + ux * 3 * sc;
+      ctx.globalAlpha = 0.2 * (1 - smoke);
+      ctx.fillStyle = '#cbd0d6';
+      ctx.beginPath(); ctx.arc(px, py, (4 + 9 * smoke) * sc, 0, Math.PI * 2); ctx.fill();
+    }
+    // The hit — a spark on the target as the ball lands.
+    if (cyc >= 0.46 && cyc < 0.58) {
+      const hit = 1 - Math.abs(cyc - 0.52) / 0.06;
+      ctx.globalAlpha = 0.55 * hit; ctx.fillStyle = '#ff7a3a';
+      ctx.beginPath(); ctx.arc(tx, ty, 8 * sc, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 0.9 * hit; ctx.fillStyle = '#ffe6a0';
+      ctx.beginPath(); ctx.arc(tx, ty, 4 * sc, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  /** A compact HULL (green→amber→red) + RIG (teal) bar floating over a damaged or fighting ship, so a
+   *  running battle's toll is legible right on the map without opening the panel. */
+  _healthBar(px, py, r, s, zoom) {
+    const { sx, sy } = this.camera.worldToScreen(px, py);
+    const ctx = this.ctx;
+    const hull = Math.max(0, Math.min(1, s.hull != null ? s.hull : 1));
+    const rig = Math.max(0, Math.min(1, s.rig != null ? s.rig : 1));
+    const w = Math.max(15, r * 2 * zoom);
+    const x = sx - w / 2, y = sy - Math.max(r * zoom, 8) - 10, bh = 2.6;
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(x - 1, y - 1, w + 2, bh * 2 + 4);
+    ctx.fillStyle = hull > 0.6 ? '#5fd06a' : hull > 0.3 ? '#e6b84a' : '#e0503a';
+    ctx.fillRect(x, y, w * hull, bh);
+    ctx.fillStyle = '#6fb8e0';
+    ctx.fillRect(x, y + bh + 1, w * rig, bh);
+    ctx.restore();
+  }
+
+  /** The zoomed-OUT counterpart to _healthBar: a single small pulsing dot hovering over a hurt ship —
+   *  amber when lightly damaged, red when badly (by the worse of hull/rig) — so trouble still reads at a
+   *  glance across the map without the fiddly two-bar widget that only earns its keep up close. */
+  _damageDot(px, py, r, s, zoom, now) {
+    const { sx, sy } = this.camera.worldToScreen(px, py);
+    const ctx = this.ctx;
+    const hull = Math.max(0, Math.min(1, s.hull != null ? s.hull : 1));
+    const rig = Math.max(0, Math.min(1, s.rig != null ? s.rig : 1));
+    const sev = Math.min(hull, rig);                 // the worse of the two drives the colour
+    const col = sev < 0.4 ? '#e0503a' : '#e6b84a';   // red = badly hurt, amber = lightly (matches the bar)
+    const pulse = 0.55 + 0.45 * Math.sin(now * 0.009); // a gentle, unhurried throb
+    const y = sy - Math.max(r * zoom, 7) - 6;        // just above the hull, mirroring the bar's offset
+    const rad = 2.6;
+    ctx.save();
+    ctx.globalAlpha = pulse * 0.32;                  // soft halo
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.arc(sx, y, rad * 2.1, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 0.55 + 0.4 * pulse;            // solid core with a matching glow
+    ctx.fillStyle = col;
+    ctx.shadowColor = col;
+    ctx.shadowBlur = 6;
+    ctx.beginPath(); ctx.arc(sx, y, rad, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   }
 
@@ -774,6 +1074,76 @@ function blob(ctx, cx, cy, pts, scale) {
     ctx.quadraticCurveTo(cx + cur.dx * scale, cy + cur.dy * scale, ex, ey);
   }
   ctx.closePath();
+}
+
+/** #rrggbb → rgba() with an alpha (relief overlays lerp toward transparent). */
+function rgba(hex, a) {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
+
+/** Paint an island's static terrain into a tile (world-radius px): damp→dry beach gradient, an
+ *  inked coastline, then a grass interior with a sun-corner rim light, an interior/coast shadow
+ *  (fakes a domed landmass), and a seeded per-type ground texture. No animation, no shadowBlur —
+ *  the animated foam ring + water-shadow are drawn per-frame around this by drawIslands. */
+function drawIsleTerrain(cctx, cx, cy, rad, L, isl) {
+  // Beach: damp waterline sand at the rim → dry sand inland.
+  const beach = cctx.createRadialGradient(cx, cy, rad * 0.5, cx, cy, rad);
+  beach.addColorStop(0, PALETTE.beachDry);
+  beach.addColorStop(1, PALETTE.beachWet);
+  cctx.fillStyle = beach;
+  blob(cctx, cx, cy, L.shape, rad); cctx.fill();
+  // Inked coastline (ties the world to the captain-portrait linework).
+  cctx.save();
+  cctx.globalAlpha = 0.55; cctx.strokeStyle = PALETTE.ink; cctx.lineWidth = Math.max(1.4, rad * 0.028);
+  blob(cctx, cx, cy, L.shape, rad); cctx.stroke();
+  cctx.restore();
+  // Grass interior + relief, clipped to the inner silhouette.
+  cctx.save();
+  blob(cctx, cx, cy, L.shape, rad * 0.8); cctx.clip();
+  const bx = cx - rad * 2.4, by = cy - rad * 2.4, bs = rad * 4.8;
+  cctx.fillStyle = isl.color || '#8fbf5a';
+  cctx.fillRect(bx, by, bs, bs);
+  isleTexture(cctx, cx, cy, rad, isl);
+  // Sun from the upper-left: a rim light, then a rim shadow that darkens toward the coast.
+  const rim = cctx.createLinearGradient(cx - rad, cy - rad, cx + rad * 0.4, cy + rad * 0.5);
+  rim.addColorStop(0, rgba(PALETTE.grassRim, 0.55));
+  rim.addColorStop(0.6, rgba(PALETTE.grassRim, 0));
+  cctx.fillStyle = rim; cctx.fillRect(bx, by, bs, bs);
+  const shade = cctx.createRadialGradient(cx - rad * 0.15, cy - rad * 0.15, rad * 0.15, cx, cy, rad * 0.85);
+  shade.addColorStop(0, rgba(PALETTE.grassShade, 0));
+  shade.addColorStop(1, rgba(PALETTE.grassShade, 0.5));
+  cctx.fillStyle = shade; cctx.fillRect(bx, by, bs, bs);
+  cctx.restore();
+}
+
+/** Seeded, per-type ground texture under the live markers: forest canopy, mining rock, plantation
+ *  furrows, ranch pasture, else a faint mottle. Cheap (≤14 dabs), deterministic by island id. */
+function isleTexture(cctx, cx, cy, rad, isl) {
+  const rng = mulberry(hashSeed(isl.id) ^ 0x9e3779b9);
+  const TAU = Math.PI * 2;
+  cctx.save();
+  switch (isl.type) {
+    case 'forest':
+      cctx.fillStyle = 'rgba(38,88,50,0.5)';
+      for (let i = 0; i < 14; i++) { const a = rng() * TAU, r = rng() * rad * 0.6; cctx.beginPath(); cctx.arc(cx + Math.cos(a) * r, cy + Math.sin(a) * r, rad * (0.08 + rng() * 0.06), 0, TAU); cctx.fill(); }
+      break;
+    case 'mining':
+      cctx.fillStyle = 'rgba(92,98,106,0.5)';
+      for (let i = 0; i < 11; i++) { const a = rng() * TAU, r = rng() * rad * 0.55, s = rad * (0.07 + rng() * 0.06); cctx.fillRect(cx + Math.cos(a) * r - s / 2, cy + Math.sin(a) * r - s / 2, s, s); }
+      break;
+    case 'plantation':
+      cctx.strokeStyle = 'rgba(92,120,52,0.4)'; cctx.lineWidth = Math.max(1, rad * 0.03);
+      for (let i = -3; i <= 3; i++) { cctx.beginPath(); cctx.moveTo(cx - rad * 0.55, cy + i * rad * 0.16); cctx.lineTo(cx + rad * 0.55, cy + i * rad * 0.16); cctx.stroke(); }
+      break;
+    case 'ranch':
+      cctx.fillStyle = 'rgba(152,172,92,0.28)'; cctx.beginPath(); cctx.ellipse(cx, cy, rad * 0.5, rad * 0.36, 0, 0, TAU); cctx.fill();
+      break;
+    default:
+      cctx.fillStyle = 'rgba(255,255,255,0.05)';
+      for (let i = 0; i < 6; i++) { const a = rng() * TAU, r = rng() * rad * 0.5; cctx.beginPath(); cctx.arc(cx + Math.cos(a) * r, cy + Math.sin(a) * r, rad * 0.1, 0, TAU); cctx.fill(); }
+  }
+  cctx.restore();
 }
 
 function drawDock(ctx, sx, sy, R, angle) {

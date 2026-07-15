@@ -1,0 +1,61 @@
+{
+  "id": "drunken-rake",
+  "name": "The Drunken Rake",
+  "persona": "A flippant, perpetually hungover captain who keeps the log as an afterthought between bottles and hands of cards. Wry, irreverent, self-deprecating; too fond of grog to bother with drama. Ship: 'we'. Island: an equally careless governor, 'we'.",
+
+  "pronoun": {
+    "ship":   { "subject": "we", "first": "We" },
+    "island": { "subject": "we", "first": "We" }
+  },
+
+  "handover": {
+    "ship": {
+      "founder":   "Right, a book. Someone insists I keep one, so — I am {name}{rankc}, this {home} {type} is mine, and I shall scribble in her whenever the grog permits.",
+      "successor": "They handed me the log along with the headache. {name}{rankc}. I will fill it between hands of cards, more or less honestly.",
+      "mutiny":    "The lads pitched the old soak over the rail and shoved the book at me — {name}, who scarcely knows the sharp end from the blunt. Cheers, I suppose.",
+      "pirate":    "Turns out honest trade will not pay for the drink. The black flag is up, the book is mine — {name}{rankc} — and I regret nothing, or shall not until morning.",
+      "prize":     "She gave up without much fuss, bless her, and now she is ours. {name}{rankc}. I will keep her book once I have found where they stow the wine.",
+      "recovered": "Some grim hunter caught us with our breeches down and cut the flag clean off her. {name}{rankc}. Now I am to sober her up and sail her honest — a cruel joke, that."
+    },
+    "island": {
+      "founder":   "So I am running {place} now, gods help it. {name}{rankc}. I shall keep the ledger between naps.",
+      "overthrow": "The mob dragged the last fool out by his boots and pressed the seal into my hand, still warm. {name}{rankc}. {place} is mine, more's the pity for it.",
+      "successor": "{place} falls to me, along with all its dreary paperwork. {name}{rankc}. I will do my best, which will not be much."
+    }
+  },
+
+  "connectives": {
+    "same":   ["Same day, still half-cut, ", "Before the bottle ran dry, ", "That evening, hazy as it was, "],
+    "days":   ["A few days and a few bottles later, ", "Once the head had cleared, ", "Some days on — do not ask which, "],
+    "week":   ["A week, give or take a bottle, ", "The week after, what I recall of it, "],
+    "season": ["A season on, and older for it, ", "Some months later, sober enough to write, "],
+    "year":   ["A year gone, and the cellar with it, ", "A year on, near as I can reckon, "],
+    "long":   ["After a long dry spell — of writing, not drinking, ", "Years later, and here we still are, "]
+  },
+
+  "join": ["and ", "and then ", "; then, still hazy, "],
+
+  "coda": {
+    "ship": {
+      "pirate":  "We are out here yet, flag up and glasses full{bounty}. Best of luck to whoever is sober enough to catch us.",
+      "default": "Still afloat, still thirsty, working her out of {home}.",
+      "bounty":  ", {bounty}g on my head, if you can credit it"
+    },
+    "island": {
+      "haven":   "The black flag flies over the place now. No law, no ledger, and honestly a better class of drinking company.",
+      "default": "{place} holds, {population} souls, and nobody has set it alight yet. Call it a triumph."
+    }
+  },
+
+  "quiet": {
+    "ship":   "Nothing much to set down, which suits me — fair winds, full holds, and a full cup. Wake me if that changes.",
+    "island": "Quiet year, thank the tides. Trade came, trade went, and I slept through the better part of it."
+  },
+
+  "kinds": {
+    "plunder": { "recur": { "class": "prize", "phrases": [", my {ord} prize, or near enough", " — done this before, though the particulars blur", ", same trick, same headache"] } },
+    "sunk":    { "recur": { "class": "prize", "phrases": [", another one down, and I barely spilled my drink"] } },
+    "fended":  { "recur": { "class": "stand", "phrases": [" — shaken off worse with a worse hangover", ", and lived to raise a glass"] } },
+    "hunted":  { "recur": { "class": "hunt",  "phrases": [", the {ord} wolf I have run down, sober by accident"] } }
+  }
+}

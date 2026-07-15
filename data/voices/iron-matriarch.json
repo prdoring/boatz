@@ -1,0 +1,60 @@
+{
+  "id": "iron-matriarch",
+  "name": "The Iron Matriarch",
+  "persona": "A stern island governor of unbending will and maternal severity — the port is her household to keep in order. Duty, discipline, and a mother's cold love for her people. Island: 'I'. Ship: the same commanding, no-nonsense hand, 'I'.",
+
+  "pronoun": {
+    "ship":   { "subject": "I", "first": "I" },
+    "island": { "subject": "I", "first": "I" }
+  },
+
+  "handover": {
+    "ship": {
+      "founder":   "This vessel is mine to command, and I will have her run as tight as any house I ever kept. I am {name}{rankc}; this {home} {type} answers to me, and to me alone.",
+      "successor": "The log comes to my hand. I am {name}{rankc}. What was slack before will be slack no longer; she is mine now, and she will learn it soon enough.",
+      "mutiny":    "The crew threw down their master and forced the book upon me, raw as I am. I am {name}. They will find me no gentler than the one they drowned — order will be kept.",
+      "pirate":    "We are done with honest trade; the black flag is up. I am {name}{rankc}. Thieves or no, this crew will keep discipline under me, or they will answer for the lack.",
+      "prize":     "She struck to me, and I have taken her. I am {name}{rankc}; this hull is mine now, and she will be run properly or she will not be run at all.",
+      "recovered": "I have brought this hull out from under the black flag and mean to see her decent again. I am {name}{rankc}; whatever bad habits she learned, I will break them."
+    },
+    "island": {
+      "founder":   "I take up {place} as a mother takes a neglected house — with a firm hand and no illusions. I am {name}{rankc}; these people are mine to keep now, and keep them I shall.",
+      "overthrow": "The mob pulled down the old ruler; I did not stop them, and I will not mourn him. The seal is mine. I am {name}{rankc}. {place} has wanted a firm hand, and now it has one.",
+      "successor": "The governance of {place} passes to me. I am {name}{rankc}. There will be order under my roof, and the people will be the better for it, whether they thank me or no."
+    }
+  },
+
+  "connectives": {
+    "same":   ["That same day, ", "Before nightfall, ", "The very same day, "],
+    "days":   ["A few days after, ", "Soon after, ", "Within the week, "],
+    "week":   ["A week on, ", "The week following, "],
+    "season": ["A season later, ", "As the season turned, ", "Come the next quarter, "],
+    "year":   ["A year on, ", "A full year later, "],
+    "long":   ["After long years, ", "When years had passed, "]
+  },
+
+  "join": ["and ", "; and ", "and further, "],
+
+  "coda": {
+    "ship": {
+      "pirate":  "I keep the lanes still, black flag and all{bounty}, and under me there is discipline yet.",
+      "default": "She sails on under my hand, out of {home}, run as she ought to be.",
+      "bounty":  ", {bounty}g set upon my head for it"
+    },
+    "island": {
+      "haven":   "The black flag flies over {place} now. I held the door as long as I was able; the dark came through it in the end.",
+      "default": "{place} stands in good order — {population} souls, kept and accounted for, under my hand."
+    }
+  },
+
+  "quiet": {
+    "ship":   "Little to set down — the work done, the watches kept, no idleness suffered. As it should be.",
+    "island": "Little troubles this port, and that is no accident. A well-kept house is a quiet one."
+  },
+
+  "kinds": {
+    "plunder": { "recur": { "class": "prize", "phrases": [", the {ord} prize I have taken and seen properly divided", " — no less orderly than the last", ", handled as I handle all things"] } },
+    "fended":  { "recur": { "class": "stand", "phrases": [" — I have turned wolves from my door before", ", and sent them off the poorer, as ever"] } },
+    "raid":    { "recur": { "class": "sack",  "phrases": [", the {ord} town I have put back in its place"] } }
+  }
+}

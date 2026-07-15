@@ -1,0 +1,58 @@
+{
+  "_doc": "FIRST-PERSON defaults for the per-keeper logbook voice. Every writing STYLE in data/voices/*.json inherits this (merge order: data/chronicle-voice.json structural base <- THIS <- the style file), so a style need only override the flavour it wants and still renders cleanly. This is what turns a Story tab into a first-person log handed from keeper to keeper: `pronoun.<kind>.first` makes clauses that open on the entity's own name read as 'we/I', and `handover.<kind>.<cause>` is the note each new keeper writes on taking up the book. Restrained ship's-chronicle tone here; styles supply personality. TOKENS: {name} keeper's name · {rank} rank label (may be empty) · {rankc} '', or ', <rank>' (SAFE optional-rank — prefer this over {rank}) · {type} ship/island type · {ship} vessel name · {home} home port · {place} island name · {population} souls · {bounty} bounty · {ord} ordinal word · {foeName}/{foeHome} a recurring foe. Unknown/empty tokens collapse with adjacent glue.",
+
+  "pronoun": {
+    "ship":   { "subject": "we", "first": "We", "elide": true },
+    "island": { "subject": "we", "first": "We", "elide": true }
+  },
+
+  "handover": {
+    "ship": {
+      "founder":   "Here begins my keeping of this log. I am {name}{rankc}, and this {home} {type} answers to me now.",
+      "successor": "The log passes into my hand. I am {name}{rankc}; her account goes on under me.",
+      "mutiny":    "The crew put the old master over the side and pressed the book on me. I am {name}, green to command, and set down what I can.",
+      "pirate":    "No more honest trade. The black flag is up, and I — {name}{rankc} — keep this log in my own hand now.",
+      "prize":     "She struck to us. I am {name}{rankc}; this hull sails under my flag now, and her log continues at the point of a cutlass.",
+      "recovered": "A hunter ran us down and the black flag came down with him. I am {name}{rankc}, set to bring this hull back to honest trade — and to keep her book."
+    },
+    "island": {
+      "founder":   "I take up the governance of {place}, and this record with it. I am {name}{rankc}.",
+      "overthrow": "The mob pulled down the old ruler, and the seal has come to me. I am {name}{rankc}; {place} is mine to govern now.",
+      "successor": "The rule of {place} passes to me — {name}{rankc}. I keep its chronicle from here."
+    }
+  },
+
+  "join": ["and then ", "; then ", "and, in the same breath, ", "and "],
+
+  "kinds": {
+    "plunder":   { "recur": { "class": "prize", "phrases": [", my {ord} such prize", " — not the first I have taken", ", as I have done before"] } },
+    "sunk":      { "recur": { "class": "prize", "phrases": [", another I have sent to the bottom"] } },
+    "raid":      { "recur": { "class": "sack",  "phrases": [", the {ord} port I have put to the torch", ", another town I have sacked"] } },
+    "fended":    { "recur": { "class": "stand", "phrases": [" — I have shaken off wolves before", ", not for the first time"] } },
+    "hunted":    { "recur": { "class": "hunt",  "phrases": [", the {ord} raider I have run down", " — another wolf I have sent under"] } }
+  },
+
+  "crossref": {
+    "ship": [
+      " — the same wolf that took the {foeName}",
+      ", the {ord} {foeHome} hull to strike to me"
+    ]
+  },
+
+  "coda": {
+    "ship": {
+      "pirate":  "I rove the lanes yet{bounty}.",
+      "default": "I keep her at sea still, out of {home}.",
+      "bounty":  ", {bounty}g upon my head"
+    },
+    "island": {
+      "haven":   "It flies the black flag now — a den of cutthroats, and no lawful hand keeps this book.",
+      "default": "The port endures under my hand — {population} souls."
+    }
+  },
+
+  "quiet": {
+    "ship":   "Little enough to set down — a quiet life on the trade lanes, and I glad of it.",
+    "island": "Little troubles this port; trade comes and goes, and I keep a calm ledger."
+  }
+}

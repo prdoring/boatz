@@ -8,7 +8,7 @@ import { GOLD, cargoUnits } from './resources.js';
 import { foodDays } from './island.js';
 import { intelSummary, currentDay } from './beliefs.js';
 import { factSummary } from './intel.js';
-import { rankOf, skill01 } from './captains.js';
+import { rankOf, skill01, totalXp } from './captains.js';
 import { foodDaysAboard } from './crew.js';
 import { magRank, magSkill, ambitionLabel } from './magistrate.js';
 
@@ -37,7 +37,9 @@ function shipLog(world, ship, day) {
 }
 
 // Display state (for art + panel) from the internal sim state.
-function displayState(s) {
+function displayState(ship) {
+  if (ship._sheltered) return 'docked'; // fleeing hull riding out a raider in a refuge → berthed like any docked ship
+  const s = ship.state;
   if (s === 'trading') return 'docked';
   if (s === 'outbound' || s === 'inbound') return 'sailing';
   return 'idle';
@@ -59,7 +61,7 @@ export function snapshotShips(world) {
   for (const s of world.ships) {
     out[s.id] = {
       x: s.x, y: s.y, heading: s.heading,
-      state: displayState(s.state),
+      state: displayState(s),
       type: s.type,
       pirate: !!s.pirate, // flying the black flag → distinct art + panel + map marker
       privateer: !!s.privateer, // a commissioned pirate-hunter → distinct art + panel + marker
@@ -94,15 +96,27 @@ export function snapshotShipsCold(world) {
       bounty: Math.round(s.bounty || 0), // gold on this (pirate's) head — shown in the panel/tip
       log: shipLog(world, s, day), // the intel this ship is carrying (its logbook) — for the panel's Log tab
       morale: round2(s.morale != null ? s.morale : 1),
+      hull: round2(s.hull != null ? s.hull : 1),   // structural integrity 0..1 (panel gauge + damaged art)
+      rig: round2(s.rig != null ? s.rig : 1),      // rigging condition 0..1 (panel gauge)
       foodDays: round1(foodDaysAboard(world, s)),
       act: s._act ? s._act.k : null,     // what it is DOING right now (blockade/hunt/assault/flee…) — panel activity line
       actId: s._act ? (s._act.id || null) : null, // the island/ship that action concerns (client resolves the name)
       revolt: !!s.uprising, // crew in open revolt (dead in the water) → highlighted on the map
+      adrift: !!s.adrift,   // blown off course & lost at sea (storm) → distress marker on the map
+      prey: s._prey || null,        // ship it hunts (pirate→merchant) / chases (privateer→pirate) → hunts overlay
+      siege: s._blockadeId || null, // island a pirate is blockading → hunts overlay
+      guard: s.privateer ? (s._guard || null) : null, // port a privateer protects → hunts overlay
       captain: s.captain ? {
-        name: s.captain.name, rank: rankOf(s.captain), xp: Math.round(s.captain.xp || 0),
-        skill: round2(skill01(s.captain, world.rules)),
+        name: s.captain.name, rank: rankOf(s.captain), xp: Math.round(totalXp(s.captain)),
+        skill: round2(skill01(s.captain, world.rules)), // overall (strongest facet)
+        skills: { // the three facets the panel gauges
+          sea: round2(skill01(s.captain, world.rules, 'sea')),
+          gun: round2(skill01(s.captain, world.rules, 'gun')),
+          cmd: round2(skill01(s.captain, world.rules, 'cmd')),
+        },
         personality: s.captain.personality, traits: s.captain.traits,
         portrait: s.captain.portrait,
+        voiceSeed: s.captain.voiceSeed, // opaque seed → the client picks this keeper's writing style for the Story tab
       } : null,
     };
   }
@@ -115,10 +129,28 @@ export function snapshotEconomy(world) {
   const spread = world.rules.SPREAD;
   const day = currentDay(world);
   const docked = {};
+  const fleet = new Map(); // per-home census {total,pirate,privateer} → the naval-strength overlay
+  let pirates = 0, privateers = 0;
   for (const s of world.ships) {
     if (s.state === 'trading' && s.goal) (docked[s.goal.partnerId] ||= []).push(s.id);
+    if (s.pirate) pirates++; else if (s.privateer) privateers++;
+    let f = fleet.get(s.homeId); if (!f) { f = { total: 0, pirate: 0, privateer: 0 }; fleet.set(s.homeId, f); }
+    f.total++; if (s.pirate) f.pirate++; else if (s.privateer) f.privateer++;
   }
+  // Embargo partners (severed trade) indexed per island from the global bloc state, so the client's
+  // "blocs" overlay can draw the severed-trade edges without a new global wire field.
+  const embargoBy = {};
+  if (world._blocState) {
+    for (const key in world._blocState) {
+      if (world._blocState[key] !== 'embargo') continue;
+      const i = key.indexOf('|'); const a = key.slice(0, i), b = key.slice(i + 1);
+      (embargoBy[a] ||= []).push(b); (embargoBy[b] ||= []).push(a);
+    }
+  }
+  const ZERO_FLEET = { total: 0, pirate: 0, privateer: 0 };
+  let havenCount = 0;
   const islands = world.islands.map((isl) => {
+    if (isl.haven) havenCount++;
     const buy = {}, sell = {}, stock = {};
     for (const res in isl.price) {
       const { bid, ask } = bidAsk(isl.price[res].mid, spread);
@@ -150,6 +182,10 @@ export function snapshotEconomy(world) {
       lawlessness: round2(isl.lawlessness || 0), // civil disorder 0..1 → panel/map cue (seed of havens)
       grievance: round2(isl.grievance || 0), // resentment from rebellions crushed by force → panel/map cue
       haven: isl.haven ? { strength: round2(isl.havenStrength || 0) } : null, // fallen to the black flag → map/panel
+      fleet: fleet.get(isl.id) || ZERO_FLEET, // {total,pirate,privateer} home fleet → naval-strength overlay
+      havenPressure: round1(isl._havenPressure || 0), // days sliding toward the black flag → "haven risk" overlay
+      unrest: round1(isl.unrest || 0), // days simmering below the rebel line → "rebel pressure" overlay
+      embargoes: embargoBy[isl.id] || [], // ports this island has severed trade with → blocs overlay
 
       contract: isl.contract ? { good: isl.contract.good, reward: Math.round(isl.contract.reward) } : null, // open WANTED posting
       magistrate: isl.magistrate ? {
@@ -157,13 +193,18 @@ export function snapshotEconomy(world) {
         skill: round2(magSkill(isl.magistrate, world.rules)),
         personality: isl.magistrate.personality, traits: isl.magistrate.traits,
         portrait: isl.magistrate.portrait,
+        voiceSeed: isl.magistrate.voiceSeed, // opaque seed → the client picks this ruler's writing style for the Story tab
         ambition: isl.magistrate.ambition ? { kind: isl.magistrate.ambition.kind, label: ambitionLabel(isl.magistrate), progress: round2(isl.magistrate.ambition.progress || 0) } : null,
       } : null,
     };
   });
   return {
     islands,
-    economy: { totalGold: Math.round(world.totals.gold), shipCount: world.ships.length },
+    economy: {
+      totalGold: Math.round(world.totals.gold), shipCount: world.ships.length,
+      people: Math.round((world.totals && world.totals.people) || 0), // total souls across the sea → almanac
+      pirates, privateers, havens: havenCount, // fleet-composition + fallen-ports summary → almanac header
+    },
     events: world.events.slice(-60), // recent news for the ticker + the client's per-entity chronicles
   };
 }

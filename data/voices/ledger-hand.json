@@ -1,0 +1,59 @@
+{
+  "id": "ledger-hand",
+  "name": "The Ledger Hand",
+  "persona": "A mercantile bookkeeper who treats the log as an account book. Precise, dry, cost-and-profit minded. Everything is an entry, a balance, a return on risk. Ship: 'we' (the venture). Island: a careful administrator, 'we'.",
+
+  "pronoun": {
+    "ship":   { "subject": "we", "first": "We" },
+    "island": { "subject": "we", "first": "We" }
+  },
+
+  "handover": {
+    "ship": {
+      "founder":   "Account opened. Master: {name}{rankc}. Vessel: a {home} {type}. All entries below in my hand.",
+      "successor": "The account passes to me, {name}{rankc}. Balances carried forward; the book continues.",
+      "mutiny":    "Command changed hands at a loss — the master struck from the roll, the vessel entrusted to me, {name}, untried. I will keep the reckoning honest.",
+      "pirate":    "The venture is reconstituted under the black flag. Master: {name}{rankc}. Henceforth all gains are taken, not traded.",
+      "prize":     "This hull is entered to our account as a prize. Master of record: {name}{rankc}. Her ledger continues under new ownership.",
+      "recovered": "Seized from the pirates and restored to the register. Master: {name}{rankc}. The vessel returns to lawful trade; the book is set right."
+    },
+    "island": {
+      "founder":   "I assume the administration of {place} and its ledgers. {name}{rankc}. Accounts to be kept in full.",
+      "overthrow": "A change of administration, forced. The prior officer struck from the record; the seal and the books are mine. {name}{rankc}.",
+      "successor": "The governance of {place} is transferred to me — {name}{rankc}. I keep the accounts from this entry."
+    }
+  },
+
+  "connectives": {
+    "same":   ["Same date, ", "Entered the same day: ", "Before close of day, "],
+    "days":   ["Days later, ", "Shortly after, ", "Next entry: "],
+    "week":   ["A week on, ", "The following week, "],
+    "season": ["A quarter on, ", "By the next season, "],
+    "year":   ["A year later, by the books, ", "Carried forward a year, "],
+    "long":   ["After a long interval, ", "Reopening the account after years, "]
+  },
+
+  "join": ["and ", "; further, ", "and, entered together, "],
+
+  "coda": {
+    "ship": {
+      "pirate":  "The venture runs still, outside the law and off the books{bounty}.",
+      "default": "The account remains open and in profit, out of {home}.",
+      "bounty":  ", a {bounty}g liability standing against my name"
+    },
+    "island": {
+      "haven":   "The books are shut. {place} keeps no lawful account; the black flag balances nothing.",
+      "default": "{place} remains solvent — {population} souls on the register, under my administration."
+    }
+  },
+
+  "quiet": {
+    "ship":   "Little to enter but steady returns — a quiet ledger, and a sound one.",
+    "island": "The accounts are unremarkable and balanced — trade in, trade out, the port in the black."
+  },
+
+  "kinds": {
+    "plunder": { "recur": { "class": "prize", "phrases": [", prize no. {ord} to our account", " — a further entry in the same column", ", as previously recorded"] } },
+    "raid":    { "recur": { "class": "sack",  "phrases": [", the {ord} port entered as a loss against its owners"] } }
+  }
+}

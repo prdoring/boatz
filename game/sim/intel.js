@@ -108,6 +108,15 @@ export function believedDanger(world, island, subjectId, day) {
   return (rec.danger || 0) * (1 - w);
 }
 
+/** Worst KNOWN danger along a planned route — the max believedDanger over its stops, as `home`
+ *  understands them on `day`. Unknown ports contribute 0 (a captain can't prepare for peril nobody
+ *  has spoken of), so this is how much fear a captain sails with. "Information travels by sea." */
+export function routePeril(world, home, stops, day) {
+  let d = 0;
+  for (const s of (stops || [])) d = Math.max(d, believedDanger(world, home, s.islandId, day));
+  return d;
+}
+
 /** Whether `island` BELIEVES `subjectId` has fallen to a pirate haven. A haven sighting is
  *  trusted until it goes stale (INTEL_HAVEN_FORGET days), after which the island discounts it —
  *  word that a port fell is old, and it may since have been redeemed. Unknown → false (a newly

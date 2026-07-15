@@ -8,16 +8,19 @@ import { bidAsk } from './pricing.js';
 import { executeStop } from './trade.js';
 import { maybeSink, shipDockDisease, logEvent, logEventThrottled } from './events.js';
 import { observeAndGossip, beliefMid, currentDay } from './beliefs.js';
-import { observeFacts, sightAtSea } from './intel.js';
+import { observeFacts, sightAtSea, routePeril } from './intel.js';
 import { noteDeparture, noteReturn } from './voyages.js';
 import { windMult, upwindness } from './wind.js';
-import { makeCaptain, skill01, awardVoyageXp, navProfile } from './captains.js';
+import { makeCaptain, skill01, awardVoyageXp, awardSeamanshipXp, navProfile, defensiveArmTarget, rankUp } from './captains.js';
 import { provisionCrew, deviationTarget } from './crew.js';
 import { shipName } from './naming.js';
 import { computeFleetByHome, fleetAt } from './fleet.js';
-import { setAct } from './piracy.js';
-import { steerAroundIslands } from './navigation.js';
-import { buildShipGrid, anyShipInRange, countShipsInRange, nearestIsland as gridNearestIsland } from './grid.js';
+import { setAct, combatStrength } from './piracy.js';
+import { steerAroundIslands, islandLandRadius } from './navigation.js';
+import { rigMult, repairAtPort, juryRig, stowRepairKit, inDistress, renderAid, spareAboard } from './repair.js';
+import { bumpRep } from './reputation.js';
+import { streamFloat } from './rng.js';
+import { buildShipGrid, anyShipInRange, countShipsInRange, eachShipInRange, nearestIsland as gridNearestIsland, nearestShip } from './grid.js';
 
 /** The build a port chooses for a new hull, by its situation: a threatened port arms with a
  *  fighting BRIG, a wealthy hub hauls volume in a GALLEON, and a modest port runs a cheap, fast
@@ -60,6 +63,8 @@ export function createShip(idNum, home, tuning, type = tuning.SHIP_DEFAULT_TYPE 
     unrest: 0,       // sim-days morale has sat below the mutiny line
     uprising: null,  // { until } while dead-in-the-water in revolt
     _upCd: 0,        // simTime before which a new uprising can't start
+    hull: 1,         // structural integrity 0..1 (repair.js) — combat HP + founder risk
+    rig: 1,          // rigging/sails condition 0..1 — multiplies effective speed
   };
 }
 
@@ -99,7 +104,7 @@ function planLegTo(world, ship, tx, ty) {
   const dx = tx - ship.x, dy = ty - ship.y;
   const legLen = Math.hypot(dx, dy);
   if (legLen < 1) return [{ x: tx, y: ty }];
-  const skill = skill01(ship.captain, t);
+  const skill = skill01(ship.captain, t, 'sea');
   const bearing = Math.atan2(dy, dx);
   if (skill >= t.TACK_MIN_SKILL && upwindness(world, bearing) >= t.TACK_THRESHOLD) {
     const mx = ship.x + dx * 0.5, my = ship.y + dy * 0.5;
@@ -131,10 +136,10 @@ function aimAtStop(world, ship) {
 function sail(world, ship, h) {
   const t = world.rules;
   sightAtSea(world, ship); // the captain sees the ports it passes firsthand — fresher than home's orders
-  const skill = skill01(ship.captain, t);
+  const skill = skill01(ship.captain, t, 'sea');
   const aim = steerAroundIslands(world, ship, ship.targetX, ship.targetY); // steer clear of land in the way
   const heading = Math.atan2(aim.y - ship.y, aim.x - ship.x);
-  const eff = (ship.speed || t.SHIP_SPEED) * windMult(world, heading, skill); // per-hull speed (sloop fast, galleon slow)
+  const eff = (ship.speed || t.SHIP_SPEED) * rigMult(ship, t) * windMult(world, heading, skill); // per-hull speed × rig condition × wind
   if (maybeSink(world, ship, eff * h)) return 'sunk';
   if (moveToward(ship, aim.x, aim.y, eff, h)) {
     if (aim.deflected) return 'sailing'; // reached only a way-round point, not the real target — press on
@@ -148,15 +153,58 @@ function sail(world, ship, h) {
   return 'sailing';
 }
 
-/** Crowd on sail and run for `island` (evading a pirate) — a panicked dash, no leg tracking. */
+/** Crowd on sail and run for `island` (evading a pirate) — a panicked dash, no leg tracking. On making the
+ *  harbour the ship DOCKS to shelter (`_sheltered`): the renderer berths her and she rides out the danger in
+ *  port (shelterOrFlee holds her there), instead of heaving-to off the wharf and darting back out the moment
+ *  the raider drifts off — the "fleeing ship bouncing around the port" bug. A shot rig can't outrun trouble. */
 function panicRun(world, ship, island, h) {
   const t = world.rules;
+  const harbour = islandLandRadius(island, t) + (t.SHIP_ISLAND_CLEARANCE || 0); // the wharf's edge — close enough to berth
+  if (Math.hypot(island.x - ship.x, island.y - ship.y) <= harbour) {
+    ship._sheltered = true; ship._shelterAt = island.id; ship._fleeing = false; // made port — DOCK and shelter
+    provisionCrew(world, island, ship); // safe in harbour — victual up
+    repairAtPort(world, island, ship);  // …and patch battle/storm damage from the yard
+    return 'fleeing';
+  }
   const aim = steerAroundIslands(world, ship, island.x, island.y); // even a panicked dash rounds land in the way
   const heading = Math.atan2(aim.y - ship.y, aim.x - ship.x);
-  const eff = (ship.speed || t.SHIP_SPEED) * t.PIRATE_PANIC_MULT * windMult(world, heading, skill01(ship.captain, t)); // crew rows for their lives (outrun the pirate)
+  const eff = (ship.speed || t.SHIP_SPEED) * rigMult(ship, t) * t.PIRATE_PANIC_MULT * windMult(world, heading, skill01(ship.captain, t, 'sea')); // crew rows for their lives (a shot rig can't outrun)
   if (maybeSink(world, ship, eff * h)) return 'sunk';
-  if (moveToward(ship, aim.x, aim.y, eff, h) && !aim.deflected) provisionCrew(world, island, ship); // reached safe harbour — victual up
+  moveToward(ship, aim.x, aim.y, eff, h);
   return 'fleeing';
+}
+
+/** Evade pirates: either RUN for a refuge, or — once DOCKED there (panicRun) — ride out the danger IN PORT
+ *  until the coast is clear for a sustained spell, THEN resume the voyage. Crucially a docked ship does NOT
+ *  dash to a fresh port each time a raider drifts past the disengage range, nor weigh anchor on the first
+ *  clear tick — that flip-flopping IS the bounce. A port is the safest place; she simply stays put under its
+ *  guns until the raider is gone for good. Returns 'sunk', true (sheltering/fleeing — the caller must NOT sail
+ *  the voyage this tick), or false (all clear — resume). */
+function shelterOrFlee(world, ship, h) {
+  const t = world.rules;
+  if (ship._sheltered) {
+    const port = world.islandsById.get(ship._shelterAt);
+    if (port) provisionCrew(world, port, ship); // kept victualled while snug in port (tops to target — a no-op once full)
+    // WHEN to slip back out is a judgement call, and captains differ. BOLDNESS sets how close a raider may
+    // still be when she chances it — the bold cut it fine, the cautious hold for a wide offing. SEAMANSHIP
+    // sets how fast she commits once it looks clear — a skilled hand reads the moment and goes, a green one
+    // dithers. So a smart, bold master slips out promptly and cleanly, while a dull-but-bold one is just as
+    // willing yet mistimes it — dawdling far longer before finally weighing anchor.
+    const skill = skill01(ship.captain, t, 'sea');
+    const b = (ship.captain && ship.captain.traits && ship.captain.traits.boldness);
+    const bold = b != null ? b : 0.5;
+    const clearRange = t.PIRATE_EVADE_RANGE * t.FLEE_DISENGAGE * (1.25 - 0.5 * bold); // bold slips out with a raider nearer
+    const dwell = (t.SHELTER_CLEAR_SECONDS || 15) * (1.35 - 0.7 * skill) * (1.05 - 0.15 * bold); // skill → commits fast
+    const nearRaider = port && anyShipInRange(world._pirateGrid, port.x, port.y, clearRange);
+    if (!port || nearRaider) { ship._shelterClear = 0; setAct(ship, 'shelter', ship._shelterAt); return true; } // raider still about — hold
+    ship._shelterClear = (ship._shelterClear || 0) + h; // looks clear — settle a spell (captain-scaled) before weighing anchor
+    if (ship._shelterClear < dwell) { setAct(ship, 'shelter', ship._shelterAt); return true; }
+    ship._sheltered = false; ship._shelterAt = null; ship._shelterClear = 0; // the coast is clear — resume the voyage
+    return false;
+  }
+  const refuge = fleeTarget(world, ship); // pirate near → run for the nearest safe port
+  if (refuge) { setAct(ship, 'flee', ship._fleeTo); return panicRun(world, ship, refuge, h) === 'sunk' ? 'sunk' : true; }
+  return false;
 }
 
 /** A skilled captain on a non-urgent run may HOLD in port for a strong headwind to shift —
@@ -165,7 +213,7 @@ function shouldWaitForWind(world, ship, home, v) {
   const t = world.rules;
   if (v.reason === 'food' || v.reason === 'scout') return false;
   if ((ship._waited || 0) >= t.WAIT_MAX_SECONDS) return false;
-  if (skill01(ship.captain, t) < t.WAIT_MIN_SKILL) return false;
+  if (skill01(ship.captain, t, 'sea') < t.WAIT_MIN_SKILL) return false;
   if (!navProfile(ship.captain, t).patient) return false; // a bold captain never dawdles for wind
   const stop = world.islandsById.get(v.stops[0].islandId);
   const heading = Math.atan2(stop.y - home.y, stop.x - home.x);
@@ -173,17 +221,20 @@ function shouldWaitForWind(world, ship, home, v) {
 }
 
 /** Arm a departing merchant from its home armoury — Weapons the island PRODUCED or bought (never
- *  free). A cautious captain (or one sailing pirate-infested waters) mounts more guns, which take
- *  hold slots away from trade cargo; a bold captain runs light and fat. Guns are spent in any
- *  fight (a Weapons sink), so ports must keep replenishing them — real, ongoing Weapons demand. */
+ *  free). The captain DECIDES the loadout (defensiveArmTarget): a baseline, more if cautious, and a
+ *  response to the KNOWN danger of the route sharpened by judgment — routeDanger blends what the home
+ *  has HEARD of the peril along the planned stops (believedDanger, no omniscience) with any raider
+ *  physically off the home port right now. Guns take hold slots from trade (a bold captain runs light
+ *  and fat) and are spent in any fight (a Weapons sink → ongoing demand). The home can only supply
+ *  what it stocks; the shortfall on a dangerous run is bought en route (goals.js planVoyage). */
 function armForDefence(world, home, ship) {
   const t = world.rules;
-  const bold = (ship.captain && ship.captain.traits && ship.captain.traits.boldness) || 0.5;
-  const near = countShipsInRange(world._pirateGrid, home.x, home.y, t.PIRATE_HUNT_RANGE);
-  const danger = Math.min(1, near / 2);
   const spec = t.SHIP_TYPES && t.SHIP_TYPES[ship.type];
   const wcap = spec ? spec.weaponCap : t.COMBAT_WEAPON_CAP; // a hull mounts only so many guns
-  const target = Math.min(wcap, t.ARM_WEAPONS_BASE + (1 - bold) * t.ARM_WEAPONS_CAUTION + danger * t.ARM_DANGER_BONUS);
+  const day = currentDay(world);
+  const nearHome = Math.min(1, countShipsInRange(world._pirateGrid, home.x, home.y, t.PIRATE_HUNT_RANGE) / 2);
+  const routeDanger = Math.max(nearHome, routePeril(world, home, ship.voyage && ship.voyage.stops, day));
+  const target = defensiveArmTarget(ship.captain, t, wcap, routeDanger);
   const need = target - (ship.cargo.Weapons || 0);
   if (need < 1) return;
   const space = Math.max(0, ship.capacity - cargoUnits(ship, t.GOLD_PER_CARGO_UNIT));
@@ -200,6 +251,8 @@ function loadForVoyage(world, home, ship) {
 
   provisionCrew(world, home, ship); // victual the crew first — food (and grog) before trade cargo
   armForDefence(world, home, ship); // then load guns from the home armoury (fewer hold slots for trade)
+  repairAtPort(world, home, ship);  // mend hull/rig from the home yard (Wood/Fiber) before sailing
+  snapshotAllies(world, home, ship); // carry home's alliances to sea (info-by-sea — his aid decisions run off this)
 
   for (const stop of v.stops) {
     for (const good in stop.sell) {
@@ -241,6 +294,8 @@ function loadForVoyage(world, home, ship) {
     const goldRoom = t.GOLD_PER_CARGO_UNIT > 0 ? room * t.GOLD_PER_CARGO_UNIT : Infinity;
     transfer(home, 'gold', ship.cargo, GOLD, Math.min(home.gold, cost * 1.2, goldRoom));
   }
+
+  stowRepairKit(world, home, ship); // a cautious captain fills any LEFTOVER hold with spare spars & canvas
 }
 
 /** Deposit everything the ship is carrying back home; a purchased Ship becomes a new
@@ -293,13 +348,29 @@ function fleeTarget(world, ship) {
   // Start fleeing at the evade range; once fleeing, only disengage when the raider is well beyond it.
   const detect = t.PIRATE_EVADE_RANGE * (engaged ? t.FLEE_DISENGAGE : 1);
   if (!anyShipInRange(world._pirateGrid, ship.x, ship.y, detect)) { ship._fleeing = false; ship._fleeTo = null; return null; }
+  // DECIDE — run the blockade, or duck into port? BOLDNESS is the risk appetite; a steady, seasoned hand
+  // (SEAMANSHIP) tips a borderline captain toward chancing it and a green one toward caution. An unarmed hull
+  // has no teeth to run a raider down, so it shelters. A captain who DOES make the run holds course — hysteretic,
+  // so she doesn't flicker between running and bolting — until a raider is nearly aboard; HOW near she lets it
+  // come scales with that same nerve (bold + skilled hold course longest), so a dull-but-bold master mistimes
+  // the run where a smart one threads it clean.
+  const skill = skill01(ship.captain, t, 'sea');
   const boldness = (ship.captain && ship.captain.traits && ship.captain.traits.boldness);
-  const bold = (boldness != null ? boldness : 0.5) >= t.MERCHANT_RUN_BLOCKADE_TRAIT;
+  const bnd = boldness != null ? boldness : 0.5;
   const armed = (ship.cargo.Weapons || 0) >= t.ARM_WEAPONS_BASE;
-  // The daring make the run — hold course — until a raider is nearly aboard (also hysteretic, so a bold
-  // captain doesn't flicker between running the blockade and bolting).
-  const runClear = t.PIRATE_COMBAT_RANGE * (engaged ? 3.5 : 2.5);
-  if (bold && armed && !anyShipInRange(world._pirateGrid, ship.x, ship.y, runClear)) { ship._fleeing = false; ship._fleeTo = null; return null; }
+  if (armed && (bnd + 0.25 * (skill - 0.5)) >= t.MERCHANT_RUN_BLOCKADE_TRAIT) {
+    // A trader is no warship: she only holds her course past a raider she can genuinely STAND UP to. Outgunned
+    // (the usual case — merchants are never the stronger), even a bold captain FLEES, letting her stern guns
+    // shoot away the pursuer's rig to cover the run (defensive fire, resolved when the chase closes to gun-range)
+    // rather than standing to be worn down and boarded. So arming buys a covered retreat, not a licence to slug.
+    const raider = nearestShip(world._pirateGrid, ship.x, ship.y, null, detect);
+    const canStand = !raider || combatStrength(world, ship) >= combatStrength(world, raider) * (t.MERCHANT_STAND_ODDS || 0.8);
+    if (canStand) {
+      const grit = 0.6 * bnd + 0.4 * skill; // steadier nerve → hold the run until the raider is closer
+      const runClear = t.PIRATE_COMBAT_RANGE * (engaged ? 3.5 : 2.5) * (1.35 - 0.6 * grit);
+      if (!anyShipInRange(world._pirateGrid, ship.x, ship.y, runClear)) { ship._fleeing = false; ship._fleeTo = null; return null; }
+    }
+  }
   ship._fleeing = true;
   // Sticky refuge: choose ONE safe bolt-hole when the flight BEGINS and hold it until the raider is
   // clear (which resets _fleeTo). Re-choosing the "nearest safe port" every tick was the bug behind the
@@ -329,7 +400,7 @@ function redirectResupply(world, ship, island) {
  *  holds in its logbook, so it's the captain's own fresher knowledge, not the home's. */
 function rerouteFromFallen(world, ship) {
   const t = world.rules;
-  if (skill01(ship.captain, t) < (t.CAPTAIN_REROUTE_MIN_SKILL || 0.35)) return false;
+  if (skill01(ship.captain, t, 'sea') < (t.CAPTAIN_REROUTE_MIN_SKILL || 0.35)) return false;
   const v = ship.voyage;
   const stop = v.stops[v.index];
   const rec = ship.intel && ship.intel[stop.islandId];
@@ -349,6 +420,7 @@ function updateShip(world, ship, h) {
   const home = world.islandsById.get(ship.homeId);
   const v = ship.voyage;
   if (ship.uprising) return; // crew in revolt — dead in the water until crew.js resolves it
+  if (ship.adrift) { driftLost(world, ship, h); return; } // blown off course — wanders until bearings return
   switch (ship.state) {
     case 'idle':
       if (v && v.stops.length) {
@@ -357,7 +429,9 @@ function updateShip(world, ship, h) {
         // by one. A bold captain runs for it anyway, and a survival FOOD run always sails (the crew must
         // eat, blockade or no). This resolves on its own once the pirate is driven off or moves on.
         const boldness = (ship.captain && ship.captain.traits && ship.captain.traits.boldness);
-        const boldCap = (boldness != null ? boldness : 0.5) >= t.MERCHANT_RUN_BLOCKADE_TRAIT;
+        // A seasoned hand (skill) tips a borderline captain toward chancing the run out; a green one toward
+        // riding it out in harbour — the same nerve-plus-judgement that governs a flight at sea.
+        const boldCap = ((boldness != null ? boldness : 0.5) + 0.25 * (skill01(ship.captain, t, 'sea') - 0.5)) >= t.MERCHANT_RUN_BLOCKADE_TRAIT;
         if (!boldCap && v.reason !== 'food' && home
             && anyShipInRange(world._pirateGrid, home.x, home.y, t.PIRATE_EVADE_RANGE)) {
           setAct(ship, 'shelter', home.id); break; // riding out a blockade in harbour
@@ -371,10 +445,13 @@ function updateShip(world, ship, h) {
       } else setAct(ship, 'idle', ship.homeId); // lying at anchor, awaiting orders
       break;
     case 'outbound': {
-      const flee = fleeTarget(world, ship); // pirate near → sprint for the nearest port
-      if (flee) { setAct(ship, 'flee', ship._fleeTo); if (panicRun(world, ship, flee, h) === 'sunk') return; break; }
+      const ev = shelterOrFlee(world, ship, h); // run from a raider / ride it out DOCKED in a refuge until clear
+      if (ev === 'sunk') return;
+      if (ev) break; // fleeing or sheltering in port — hold the voyage this tick
       const dev = deviationTarget(world, ship); // a worried captain runs for the nearest larder
       if (dev) { setAct(ship, 'resupply', dev.id); redirectResupply(world, ship, dev); break; }
+      const help = aidTarget(world, ship); // an ally in distress nearby → heave-to and render aid (mercy valve)
+      if (help) { setAct(ship, 'aid', help.id); if (renderAidRun(world, ship, help, h) === 'sunk') return; break; }
       if (rerouteFromFallen(world, ship)) break; // a capable captain skips a port he KNOWS has fallen
       setAct(ship, 'sailTo', v.stops[v.index] ? v.stops[v.index].islandId : ship.homeId);
       const r = sail(world, ship, h);
@@ -400,6 +477,7 @@ function updateShip(world, ship, h) {
           observeAndGossip(world, island, ship);  // the ship reads this port's prices + trades rumor
           observeFacts(world, island, ship);      // …and its live facts (danger/haven/food), reporting its logbook
           provisionCrew(world, island, ship);     // top up the crew's stores at every port
+          repairAtPort(world, island, ship);      // …and mend battle/storm damage from the yard (buys Wood/Fiber)
         }
         v.index++;
         if (v.index < v.stops.length) { aimAtStop(world, ship); ship.state = 'outbound'; }
@@ -407,19 +485,34 @@ function updateShip(world, ship, h) {
       }
       break;
     case 'inbound': {
-      const flee = fleeTarget(world, ship);
-      if (flee) { setAct(ship, 'flee', ship._fleeTo); if (panicRun(world, ship, flee, h) === 'sunk') return; break; }
+      const ev = shelterOrFlee(world, ship, h); // run from a raider / ride it out DOCKED in a refuge until clear
+      if (ev === 'sunk') return;
+      if (ev) break; // fleeing or sheltering in port — hold the voyage this tick
+      const help = aidTarget(world, ship); // even homeward-bound, an ally in distress is answered
+      if (help) { setAct(ship, 'aid', help.id); if (renderAidRun(world, ship, help, h) === 'sunk') return; break; }
       setAct(ship, 'home', home ? home.id : null);
       const r = sail(world, ship, h);
       if (r === 'sunk') return; // lost at sea
       if (r === 'arrived') {
         unloadHome(world, home, ship);
+        repairAtPort(world, home, ship);                // battered home — mend from the home yard
         observeAndGossip(world, home, ship);            // the ship reports everything it saw back home
         observeFacts(world, home, ship);                // …including all the facts it gathered abroad
+        applyAidDeeds(world, home, ship);               // …and reports any rescues rendered — the goodwill lands now
         noteReturn(home, ship);                         // safely home — clear it from the ledger
         awardVoyageXp(ship.captain, t, v.stops.length); // the captain earns experience for the run
         ship.infected = false; // crew rotates / quarantines on returning home
         home._runs++;
+        // ── Quiet-life BEATS (tier:'log') — a trader's Story tab otherwise stays empty until it fights ──
+        const rankedUp = rankUp(ship.captain); // did this run raise the captain's rank?
+        if (rankedUp) logEvent(world, 'promotion', `Capt. ${ship.captain.name} of ${ship.name || 'a ship'} was raised to ${rankedUp}, out of ${home.name}.`,
+          { shipId: ship.id, islandId: home.id, tier: (rankedUp === 'Master' || rankedUp === 'Legendary') ? 'news' : 'log' });
+        ship._voyages = (ship._voyages || 0) + 1;
+        if (ship._voyages === 1) {
+          logEvent(world, 'maiden', `${ship.name || 'A new ship'} completed her maiden voyage, home to ${home.name}.`, { shipId: ship.id, islandId: home.id, tier: 'log' });
+        } else if ((t.SHIP_VOYAGE_MILESTONES || []).includes(ship._voyages)) {
+          logEvent(world, 'voyages', `${ship.name || 'A ship'} has now made ${ship._voyages} voyages out of ${home.name}.`, { shipId: ship.id, islandId: home.id, tier: 'log' });
+        }
         ship.voyage = null;
         ship.leg = null;
         ship.state = 'idle';
@@ -429,6 +522,134 @@ function updateShip(world, ship, h) {
   }
 }
 
+/** Snapshot HOME's alliances aboard at departure — the captain carries this to sea and judges whom to aid
+ *  from it (info by sea; no live rep read mid-ocean). Refreshed each time he sails from home. */
+function snapshotAllies(world, home, ship) {
+  const t = world.rules;
+  ship._allies = {}; ship._embargoes = {};
+  if (!home || !home.rep) return;
+  for (const id in home.rep) {
+    const r = home.rep[id];
+    if (r >= t.REP_ALLY_AID_MIN) ship._allies[id] = 1;
+    else if (r <= t.REP_EMBARGO_THRESHOLD) ship._embargoes[id] = 1;
+  }
+}
+
+/** The nearest ship in DISTRESS this captain would heave-to for: a FLEETMATE (same home, always) or a home
+ *  he CARRIES as an ally (never one he carries as embargoed) — judged off his carried knowledge, not live
+ *  rep. Gated by capacity (he must have SPARE goods to give), a trait-scaled divert distance (the generous
+ *  go farther, the greedy grudge it), and — for a cautious captain — local danger (pirate waters suppress
+ *  mercy). Returns null if there's no one he can, or will, help. */
+function aidTarget(world, ship) {
+  const t = world.rules;
+  const grid = world._distressGrid;
+  if (!grid || world.simTime < (ship._rescueCd || 0)) return null; // resting after a rescue → press on
+  const goods = t.REPAIR_GOODS || { hull: 'Wood', rig: 'Fiber' };
+  const foodKeep = (t.CREW_FOOD_PER_DAY || 1) * (t.PROVISION_DAYS || 1);
+  const hasSpare = spareAboard(ship, goods.rig, t.RESCUE_KEEP_FIBER) >= 1
+    || spareAboard(ship, goods.hull, t.RESCUE_KEEP_WOOD) >= 1
+    || spareAboard(ship, 'Food', foodKeep) >= 1;
+  if (!hasSpare) return null; // a tapped-out friend genuinely can't help
+  const tr = (ship.captain && ship.captain.traits) || {};
+  const greed = tr.greed != null ? tr.greed : 0.5;
+  const bold = tr.boldness != null ? tr.boldness : 0.5;
+  const divert = (t.RESCUE_DIVERT_MAX || 700) * Math.max(0.4, Math.min(1.4, 1 + (0.55 - greed)));
+  const cautious = bold < 0.45;
+  let best = null, bestD = Infinity;
+  eachShipInRange(grid, ship.x, ship.y, t.RESCUE_RANGE, (v) => {
+    if (v === ship || v._sunk) return;
+    const d = Math.hypot(v.x - ship.x, v.y - ship.y);
+    if (d > divert || d >= bestD) return;
+    if (v.homeId !== ship.homeId) { // a fleetmate is always answered; otherwise consult carried knowledge
+      if (ship._embargoes && ship._embargoes[v.homeId]) return;
+      if (!(ship._allies && ship._allies[v.homeId])) return;
+    }
+    if (cautious) { const near = gridNearestIsland(world, v.x, v.y); if (near && (near.danger || 0) > (t.RESCUE_DANGER_MAX || 0.45)) return; }
+    best = v; bestD = d;
+  });
+  return best;
+}
+
+/** Close on a stricken ship and, once alongside, render aid — then rest a while before the next rescue and
+ *  resume the voyage. Returns 'sunk' if the helper founders on the way (it still sails real waters). */
+function renderAidRun(world, helper, victim, h) {
+  const t = world.rules;
+  if (Math.hypot(victim.x - helper.x, victim.y - helper.y) <= (t.RESCUE_DOCK_RANGE || 120)) {
+    renderAid(world, helper, victim);
+    helper._rescueCd = world.simTime + (t.RESCUE_COOLDOWN_DAYS || 3) * t.SIM_DAY_SECONDS;
+    return 'aided';
+  }
+  const aim = steerAroundIslands(world, helper, victim.x, victim.y);
+  const heading = Math.atan2(aim.y - helper.y, aim.x - helper.x);
+  const eff = (helper.speed || t.SHIP_SPEED) * rigMult(helper, t) * windMult(world, heading, skill01(helper.captain, t, 'sea'));
+  if (maybeSink(world, helper, eff * h)) return 'sunk';
+  moveToward(helper, aim.x, aim.y, eff, h);
+  return 'aiding';
+}
+
+/** Report rescues rendered abroad once the helper is safely HOME: the goodwill (bumpRep) lands now, at the
+ *  quay — never mid-ocean — so an alliance forged by a rescue propagates by sea like any other news. */
+function applyAidDeeds(world, home, ship) {
+  if (!ship._aidDeeds || !home) return;
+  for (const d of ship._aidDeeds) if (d.otherHome && d.otherHome !== home.id) bumpRep(world, home.id, d.otherHome, world.rules.REP_AID_GAIN);
+  ship._aidDeeds = null;
+}
+
+const TAU = Math.PI * 2;
+/** Stable per-ship hash (FNV-1a over the id) for a deterministic drift heading — no Math.random. */
+function idHash(id) {
+  let x = 2166136261; const s = String(id);
+  for (let i = 0; i < s.length; i++) { x ^= s.charCodeAt(i); x = Math.imul(x, 16777619) >>> 0; }
+  return x >>> 0;
+}
+
+/** Re-plan a ship's course after it regains its bearings: an outbound ship makes for its next stop; any
+ *  other (inbound, or a voyage already run out) turns for home. */
+function regainBearings(world, ship) {
+  const v = ship.voyage;
+  const home = world.islandsById.get(ship.homeId);
+  if (ship.state === 'outbound' && v && v.stops && v.index < v.stops.length) aimAtStop(world, ship);
+  else if (home) { startLeg(world, ship, home.x, home.y); ship.state = 'inbound'; }
+}
+
+/** A ship blown off course (ship.adrift) wanders a drifting heading, making NO real progress toward its
+ *  destination — still eating its stores, off the trade lanes, and easy prey — while the captain fights to
+ *  regain his bearings. A seamanlike hand jury-rigs storm damage from stores aboard meanwhile. Each day
+ *  he attempts a fix: LOST_RECOVER_BASE + seamanship (+ a bonus if land is in sight); on success the ship
+ *  clears `adrift`, re-plans its voyage, and the captain earns hard-won seamanship. A long time lost is its
+ *  own peril — the crew starves and the wallowing hull founders more readily (events.js maybeSink). */
+function driftLost(world, ship, h) {
+  const t = world.rules;
+  setAct(ship, 'adrift', null);
+  sightAtSea(world, ship);        // the captain still reads any coast he drifts past — his best hope of a fix
+  juryRig(world, ship, h);        // and the crew patches what damage they can from the hold
+  const sea = skill01(ship.captain, t, 'sea');
+  const day = currentDay(world);
+  if (ship._adriftDay !== day) {  // one attempt to find the bearings per day
+    ship._adriftDay = day;
+    const land = gridNearestIsland(world, ship.x, ship.y);
+    const sighted = land && Math.hypot(land.x - ship.x, land.y - ship.y) <= t.SIGHT_RANGE_AT_SEA;
+    const p = (t.LOST_RECOVER_BASE || 0) + sea + (sighted ? (t.LOST_SIGHT_BONUS || 0) : 0);
+    if (streamFloat(world, 'weather') < p) {
+      ship.adrift = null;
+      awardSeamanshipXp(ship.captain, t.XP_LOST_RECOVER || 0);
+      regainBearings(world, ship);
+      const who = ship.captain ? ` under Capt. ${ship.captain.name}` : '';
+      logEvent(world, 'bearings', `${ship.name || 'A ship'}${who} regained her bearings and resumed course.`, { x: ship.x, y: ship.y, shipId: ship.id });
+      return;
+    }
+  }
+  // Still lost — drift on a deterministic heading that shifts by the day (seeded by id + day), rounded past
+  // any land so it doesn't beach, at a slow wallowing pace. No progress toward the real destination.
+  const ang = ((idHash(ship.id) ^ Math.imul(day + 1, 2654435761)) >>> 0) / 4294967296 * TAU;
+  const far = t.SIGHT_RANGE_AT_SEA || 700;
+  const aim = steerAroundIslands(world, ship, ship.x + Math.cos(ang) * far, ship.y + Math.sin(ang) * far);
+  const heading = Math.atan2(aim.y - ship.y, aim.x - ship.x);
+  const eff = (ship.speed || t.SHIP_SPEED) * rigMult(ship, t) * (t.LOST_DRIFT_MULT || 0.5) * windMult(world, heading, sea);
+  if (maybeSink(world, ship, eff * h)) return; // maybeSink marks _sunk; the ship system removes it
+  moveToward(ship, aim.x, aim.y, eff, h);
+}
+
 /** The ship SIM system. Removes any vessels that foundered this step. */
 export function ship(world, h) {
   computeFleetByHome(world); // fresh per-home census for maybeSink's last-ship guard (O(S), was O(S²))
@@ -436,6 +657,9 @@ export function ship(world, h) {
   // so one O(P) grid replaces the per-merchant full-fleet pirate scans in fleeTarget/armForDefence
   // (the O(S²) wall). Stored on the world so the deep-nested voyage machine can read it.
   world._pirateGrid = buildShipGrid(world, world.ships.filter((s) => s.pirate && !s._sunk));
+  // Ships in DISTRESS (dismasted / adrift) are few — one small grid lets a passing ally spot and aid them
+  // (aidTarget), the sea's mercy valve. Merchants only: pirates/privateers ride their own storms.
+  world._distressGrid = buildShipGrid(world, world.ships.filter((s) => !s._sunk && !s.pirate && !s.privateer && inDistress(s, world.rules)));
   let sunk = false;
   for (const s of world.ships) {
     if (s.pirate || s.privateer) continue; // driven by piracy / antipiracy, not merchant logic

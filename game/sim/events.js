@@ -19,6 +19,13 @@ import { fleetAt } from './fleet.js';
 
 const CROPS = new Set(['Grain', 'Meat', 'Fiber', 'Wood']); // organic → can blight
 
+/** Is a port currently in TROUBLE (for the long-peace beat)? Any active affliction, unrest, or feared
+ *  waters counts — a calm port is one free of all of them. */
+function isTroubled(isl, t) {
+  return !!(isl.blight || isl.plague || isl._famine || isl.rebellion || isl.haven
+    || (isl.danger || 0) > 0.3 || (isl.lawlessness || 0) > 0.5);
+}
+
 export function logEvent(world, kind, text, extra = {}) {
   const day = Math.floor(world.simTime / world.rules.SIM_DAY_SECONDS) + 1;
   world._evSeq = (world._evSeq || 0) + 1; // monotonic id so the client can dedupe + build per-entity chronicles
@@ -76,9 +83,15 @@ export function maybeSink(world, ship, distance) {
   // replacement, so it would be stranded (can't import food) forever. (O(1) census read —
   // the movement systems rebuild world.fleetByHome at their start; see fleet.js.)
   if (fleetAt(world, ship.homeId).total <= 1) return false;
-  if (streamFloat(world, 'sink') >= t.SINK_PER_1000 * distance / 1000) return false;
+  // A battered hull founders far more readily (repair.js hullRisk, inlined here to avoid an import cycle);
+  // an ADRIFT ship — off the lanes, no one to help, wallowing — more readily still (LOST_FOUNDER_MULT).
+  const leak = (1 + (t.HULL_LEAK_RISK || 0) * (1 - (ship.hull != null ? ship.hull : 1)))
+    * (ship.adrift ? (t.LOST_FOUNDER_MULT || 1) : 1);
+  if (streamFloat(world, 'sink') >= t.SINK_PER_1000 * distance / 1000 * leak) return false;
   const home = world.islandsById.get(ship.homeId);
-  logEvent(world, 'wreck', `${ship.name || 'A merchant ship'} foundered and sank${home ? ' — a ' + home.name + ' vessel' : ''}.`, { x: ship.x, y: ship.y });
+  // shipId tags the wreck onto the ship's OWN chronicle, so its tale records how it ended (the ship is
+  // then removed, but its durable per-ship history survives in the DB).
+  logEvent(world, 'wreck', `${ship.name || 'A merchant ship'} foundered and sank${home ? ' — a ' + home.name + ' vessel' : ''}.`, { x: ship.x, y: ship.y, shipId: ship.id });
   ship._sunk = true; // cargo (goods + coin + migrants) goes down with it
   return true;
 }
@@ -118,6 +131,34 @@ export function events(world) {
       logEvent(world, 'boom', `${isl.name} is booming — a thriving port`, { islandId: isl.id });
     } else if (isl.civ < t.BOOM_CIV - 0.15 && isl._boomed) {
       isl._boomed = false;
+    }
+
+    // ── Quiet-life BEATS (tier:'log') — fill a stable port's Story tab without touching the news crawl ──
+    // GOLDEN AGE — prosperity (civ) held above the bar for a sustained spell. Rarer than a boom.
+    if (isl.civ >= t.GOLDEN_CIV) {
+      if (isl._goldenSince == null) isl._goldenSince = day;
+      else if (!isl._goldenAge && day - isl._goldenSince >= t.GOLDEN_DAYS) {
+        isl._goldenAge = true;
+        logEvent(world, 'goldenage', `${isl.name} enters a golden age — its wharves crowded and its coffers full.`, { islandId: isl.id, tier: 'news' });
+      }
+    } else if (isl.civ < t.GOLDEN_CIV - 0.1) { isl._goldenSince = null; isl._goldenAge = false; }
+
+    // POPULATION MILESTONE — logged once per tier on an UPWARD crossing (monotonic; a later dip won't re-fire).
+    const tiers = t.POP_MILESTONES || [];
+    let pt = isl._popTier || 0;
+    while (pt < tiers.length && isl.population >= tiers[pt]) {
+      logEvent(world, 'popmilestone', `${isl.name}'s people passed ${tiers[pt].toLocaleString('en-US')} souls.`, { islandId: isl.id, tier: 'log' });
+      pt++;
+    }
+    isl._popTier = pt;
+
+    // LONG PEACE — a port goes a long stretch untroubled. `_peaceSince` tracks the last troubled day, so
+    // `day - _peaceSince` is days of calm; a fresh trouble resets it (and re-arms the beat).
+    if (isTroubled(isl, t)) { isl._peaceSince = day; isl._longPeace = false; }
+    else if (isl._peaceSince == null) { isl._peaceSince = day; }
+    else if (!isl._longPeace && day - isl._peaceSince >= t.PEACE_DAYS) {
+      isl._longPeace = true;
+      logEvent(world, 'longpeace', `${isl.name} has known a long spell of peace and steady trade.`, { islandId: isl.id, tier: 'log' });
     }
   }
 

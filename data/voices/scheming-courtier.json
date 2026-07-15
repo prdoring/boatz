@@ -1,0 +1,60 @@
+{
+  "id": "scheming-courtier",
+  "name": "The Scheming Courtier",
+  "persona": "A silky, political ruler who sees the world as factions, favours, leverage, and appearances. Insinuating and indirect, never quite saying the ruthless thing plainly. Island: 'I'. Ship: the same sly register, 'I'.",
+
+  "pronoun": {
+    "ship":   { "subject": "I", "first": "I" },
+    "island": { "subject": "I", "first": "I" }
+  },
+
+  "handover": {
+    "ship": {
+      "founder":   "This book, like so much else, has found its way into my keeping. I am {name}{rankc}; this {home} {type} is mine to guide — gently, of course, and always for the best.",
+      "successor": "The log passes to me, as these things do, once the right words are said in the right ears. I am {name}{rankc}; her account continues under my care.",
+      "mutiny":    "The old master fell out of favour with the crew — sadly, and rather finally — and the book was pressed on me before I could demur. I am {name}, new to it, and learning quickly whom to trust.",
+      "pirate":    "Certain arrangements with the law have lapsed, let us say, and the black flag suits our purposes now. I am {name}{rankc}; I keep this log, and my own counsel.",
+      "prize":     "Her master saw reason, in the end, and struck to me — a wiser course than the alternative. I am {name}{rankc}; the hull is mine, and her log goes on in a friendlier hand.",
+      "recovered": "A hunter relieved us of certain embarrassments and returned this hull to honest colours, with me to smooth things over. I am {name}{rankc}; the past is best not dwelt upon."
+    },
+    "island": {
+      "founder":   "The governance of {place} has been settled upon me, to the satisfaction of all who matter. I am {name}{rankc}; I shall tend its interests as though they were my own, which of course they now are.",
+      "overthrow": "The old ruler lost the affection of the crowd, quite suddenly, and the seal changed hands before the dust had settled. I am {name}{rankc}; I merely stood where the tide set me, and {place} is mine to steward.",
+      "successor": "The rule of {place} comes to me by the usual quiet agreement of the usual quiet parties. I am {name}{rankc}; I keep its chronicle, and I note who was helpful."
+    }
+  },
+
+  "connectives": {
+    "same":   ["That same day, and not by chance, ", "Before the day was out, ", "That very evening, "],
+    "days":   ["A few days after, ", "Soon enough, ", "When the moment suited, "],
+    "week":   ["A week on, ", "The following week, once matters had settled, "],
+    "season": ["A season later, ", "In due course, ", "When the season had turned, "],
+    "year":   ["A year on, ", "A year later, as arranged, "],
+    "long":   ["After a long and telling silence, ", "When the years had done their quiet work, "]
+  },
+
+  "join": ["and ", "; and, naturally, ", "and, in the same breath, "],
+
+  "coda": {
+    "ship": {
+      "pirate":  "I keep to the lanes still, under colours it would be impolite to name{bounty}.",
+      "default": "She sails on under my care, out of {home}, her affairs in good order and better hands.",
+      "bounty":  ", a flattering {bounty}g offered for my inconvenience"
+    },
+    "island": {
+      "haven":   "The black flag flies over {place} now — an outcome I regret, and did not, strictly speaking, prevent.",
+      "default": "{place} prospers under my hand — {population} souls, content, and none the wiser."
+    }
+  },
+
+  "quiet": {
+    "ship":   "Little worth recording — calm waters, and quiet is so often the mark of things going precisely to plan.",
+    "island": "Little of note, which is exactly as I would have it; a contented port asks so few questions."
+  },
+
+  "kinds": {
+    "plunder": { "recur": { "class": "prize", "phrases": [", the {ord} such acquisition, handled discreetly", " — as certain prior arrangements had gone", ", to no one's great surprise but the owner's"] } },
+    "fended":  { "recur": { "class": "stand", "phrases": [" — we have discouraged such visitors before", ", as those who tried before would attest, could they"] } },
+    "raid":    { "recur": { "class": "sack",  "phrases": [", the {ord} town persuaded to reconsider its loyalties"] } }
+  }
+}

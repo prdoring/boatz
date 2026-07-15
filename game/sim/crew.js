@@ -13,7 +13,7 @@
 
 import { GOLD, transfer, clamp } from './resources.js';
 import { bidAsk } from './pricing.js';
-import { skill01, makeCaptain } from './captains.js';
+import { skill01, makeCaptain, rankOf, regimeData } from './captains.js';
 import { logEvent } from './events.js';
 import { streamFloat } from './rng.js';
 import { turnPirate, canTurnPirate } from './piracy.js';
@@ -42,15 +42,15 @@ export function initCrew(ship, rules) {
 // A skilled captain runs a tighter ship — the crew eats/drinks a bit less.
 function foodRate(world, ship) {
   const r = world.rules;
-  return r.CREW_FOOD_PER_DAY * (1 - skill01(ship.captain, r) * r.CONSUME_SKILL_CUT);
+  return r.CREW_FOOD_PER_DAY * (1 - skill01(ship.captain, r, 'cmd') * r.CONSUME_SKILL_CUT);
 }
 function aleRate(world, ship) {
   const r = world.rules;
-  return r.CREW_ALE_PER_DAY * (1 - skill01(ship.captain, r) * r.CONSUME_SKILL_CUT);
+  return r.CREW_ALE_PER_DAY * (1 - skill01(ship.captain, r, 'cmd') * r.CONSUME_SKILL_CUT);
 }
 function aleBoost(world, ship) {
   const r = world.rules;
-  return r.MORALE_ALE_PER_DAY * (1 + skill01(ship.captain, r) * r.ALE_SKILL_BOOST);
+  return r.MORALE_ALE_PER_DAY * (1 + skill01(ship.captain, r, 'cmd') * r.ALE_SKILL_BOOST);
 }
 
 /** Days of crew food currently aboard, at this crew's eating rate. */
@@ -64,7 +64,7 @@ export function foodDaysAboard(world, ship) {
 function provisionDays(world, ship) {
   const r = world.rules;
   const bold = (ship.captain && ship.captain.traits && ship.captain.traits.boldness) || 0.5;
-  return Math.max(0.6, r.PROVISION_DAYS + skill01(ship.captain, r) * r.PROVISION_SKILL_DAYS - (bold - 0.5) * 1.4);
+  return Math.max(0.6, r.PROVISION_DAYS + skill01(ship.captain, r, 'cmd') * r.PROVISION_SKILL_DAYS - (bold - 0.5) * 1.4);
 }
 
 /** Top up the crew's Food (and a little Ale) from `island` — the captain victualling the ship.
@@ -140,12 +140,12 @@ export function crew(world, h) {
     // Sea fatigue: even a fed crew wearies on a long haul and pines for port — a steady drag a
     // seasoned captain (and a cask of grog) keeps at bay. Shore leave at home resets it. This is
     // the always-present pressure that makes provisioning + morale an ongoing job, not a one-off.
-    dm -= r.MORALE_SEA_DRAG * (1 - skill01(ship.captain, r) * r.SEA_DRAG_SKILL);
+    dm -= r.MORALE_SEA_DRAG * (1 - skill01(ship.captain, r, 'cmd') * r.SEA_DRAG_SKILL);
     ship.morale = clamp(ship.morale + dm * dDay, 0, 1);
 
     // 3) STARVATION — a crew with no food for too long is lost with the ship.
     if (ship.hunger >= r.STARVE_DAYS) {
-      logEvent(world, 'starve', `${ship.name || 'A merchant crew'} starved at sea under Capt. ${ship.captain ? ship.captain.name : '—'}, lost with all hands.`, { x: ship.x, y: ship.y });
+      logEvent(world, 'starve', `${ship.name || 'A merchant crew'} starved at sea under Capt. ${ship.captain ? ship.captain.name : '—'}, lost with all hands.`, { x: ship.x, y: ship.y, shipId: ship.id });
       ship._sunk = true; lost = true; continue;
     }
 
@@ -153,7 +153,7 @@ export function crew(world, h) {
     //    privateer crew is state-paid (its wages bought its loyalty for the commission).
     if (ship.pirate || ship.privateer) continue;
     if (ship.morale < r.MUTINY_MORALE) ship.unrest += dDay; else ship.unrest = Math.max(0, ship.unrest - dDay * 1.5);
-    const grace = r.MUTINY_GRACE_DAYS + skill01(ship.captain, r) * r.MUTINY_GRACE_SKILL;
+    const grace = r.MUTINY_GRACE_DAYS + skill01(ship.captain, r, 'cmd') * r.MUTINY_GRACE_SKILL;
     if (!ship.uprising && world.simTime >= (ship._upCd || 0) && ship.unrest >= grace) {
       ship.uprising = { until: world.simTime + r.UPRISING_STALL_SEC };
       const who = ship.captain ? `Capt. ${ship.captain.name}` : 'the captain';
@@ -171,7 +171,7 @@ function resolveUprising(world, ship) {
   const vessel = ship.name || 'a merchant ship';
   const grievance = crewGrievance(ship);
   const name = ship.captain ? ship.captain.name : 'the captain';
-  const pQuell = Math.min(0.95, r.QUELL_BASE + skill01(ship.captain, r) * r.QUELL_SKILL);
+  const pQuell = Math.min(0.95, r.QUELL_BASE + skill01(ship.captain, r, 'cmd') * r.QUELL_SKILL);
 
   if (streamFloat(world, 'mutiny') < pQuell) {
     logEvent(world, 'quell', `Aboard ${vessel}, the crew rose up with ${grievance} — but Capt. ${name} faced them down and held command.`, at);
@@ -189,8 +189,11 @@ function resolveUprising(world, ship) {
       // on a spawn/removal, NOT a homeId change), so a later defection or development build this same tick
       // reads a fresh count and can't overshoot MAX_SHIPS_PER_ISLAND.
     } else {
-      logEvent(world, 'mutiny', `Mutiny aboard ${vessel}! The crew, ${grievance}, cast out Capt. ${name} — a green hand now commands.`, at);
-      ship.captain = makeCaptain(world); // a fresh novice takes command
+      const prev = ship.captain ? { name: ship.captain.name, voiceSeed: ship.captain.voiceSeed, rank: rankOf(ship.captain) } : null;
+      const green = makeCaptain(world); // a fresh novice takes command
+      logEvent(world, 'mutiny', `Mutiny aboard ${vessel}! The crew, ${grievance}, cast out Capt. ${name} — a green hand now commands.`,
+        { ...at, data: regimeData(prev, { name: green.name, voiceSeed: green.voiceSeed, rank: rankOf(green) }, 'mutiny') });
+      ship.captain = green;
     }
   }
   // Order (of a sort) restored; the food crisis is NOT — abandon the old plan and run for the
@@ -226,7 +229,7 @@ function defectionTarget(world, ship) {
 export function deviationTarget(world, ship) {
   const r = world.rules;
   if (!ship.voyage || ship.voyage.reason === 'resupply' || ship.voyage.reason === 'food') return null;
-  const worryDays = r.WORRY_FOOD_DAYS + skill01(ship.captain, r) * r.WORRY_FOOD_SKILL;
+  const worryDays = r.WORRY_FOOD_DAYS + skill01(ship.captain, r, 'cmd') * r.WORRY_FOOD_SKILL;
   if (foodDaysAboard(world, ship) > worryDays && ship.morale > 0.4) return null;
   const nextId = ship.voyage.stops[ship.voyage.index] ? ship.voyage.stops[ship.voyage.index].islandId : null;
   return nearestIsland(world, ship.x, ship.y, (p) =>

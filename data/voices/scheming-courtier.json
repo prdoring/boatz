@@ -4,7 +4,7 @@
   "persona": "A silky, political ruler who sees the world as factions, favours, leverage, and appearances. Insinuating and indirect, never quite saying the ruthless thing plainly. Island: 'I'. Ship: the same sly register, 'I'.",
 
   "pronoun": {
-    "ship":   { "subject": "I", "first": "I" },
+    "ship":   { "subject": "we", "first": "We" },
     "island": { "subject": "I", "first": "I" }
   },
 
@@ -13,7 +13,7 @@
       "founder":   "This book, like so much else, has found its way into my keeping. I am {name}{rankc}; this {home} {type} is mine to guide — gently, of course, and always for the best.",
       "successor": "The log passes to me, as these things do, once the right words are said in the right ears. I am {name}{rankc}; her account continues under my care.",
       "mutiny":    "The old master fell out of favour with the crew — sadly, and rather finally — and the book was pressed on me before I could demur. I am {name}, new to it, and learning quickly whom to trust.",
-      "pirate":    "Certain arrangements with the law have lapsed, let us say, and the black flag suits our purposes now. I am {name}{rankc}; I keep this log, and my own counsel.",
+      "rogue":     "Certain arrangements with the law have lapsed, let us say, and the black flag suits our purposes now. I am {name}{rankc}; I keep this log, and my own counsel.",
       "prize":     "Her master saw reason, in the end, and struck to me — a wiser course than the alternative. I am {name}{rankc}; the hull is mine, and her log goes on in a friendlier hand.",
       "recovered": "A hunter relieved us of certain embarrassments and returned this hull to honest colours, with me to smooth things over. I am {name}{rankc}; the past is best not dwelt upon."
     },
@@ -53,8 +53,52 @@
   },
 
   "kinds": {
-    "plunder": { "recur": { "class": "prize", "phrases": [", the {ord} such acquisition, handled discreetly", " — as certain prior arrangements had gone", ", to no one's great surprise but the owner's"] } },
-    "fended":  { "recur": { "class": "stand", "phrases": [" — we have discouraged such visitors before", ", as those who tried before would attest, could they"] } },
+    "plunder": {
+      "recur": { "class": "prize", "phrases": [", the {ord} such acquisition, handled discreetly", " — as certain prior arrangements had gone", ", to no one's great surprise but the owner's"] },
+      "say": [
+        "{we} prevailed upon {foe} to part with {goods} bales and {gold}g — a small tax on her passage, cheerfully collected — and sent her on, unharmed and enlightened",
+        "{foe} proved wonderfully reasonable once {we} made {our} interest plain, surrendering {goods} crates and {gold}g, and {we} let her keep the hull as a courtesy",
+        "{we} relieved {foe} of {goods} casks and {gold}g she plainly could not manage, and returned her to {foeHome} lighter of purse and heavier of grievance",
+        "{we} came to an understanding with {foe} — {goods} chests and {gold}g changed hands, entirely to {our} advantage — and parted, if not friends, then at least acquainted",
+        "{foe} yielded {goods} bales and {gold}g with only a token protest, which {we} chose, graciously, to overlook, before letting her limp away",
+        "{we} persuaded {foe} that {goods} crates and {gold}g were a modest price for {our} continued goodwill, and released her to reflect on the bargain",
+        "{we} took from {foe} what discretion allowed — {goods} casks and {gold}g — and left her hull intact, that she might carry the story, not the cargo"
+      ]
+    },
+    "sunk": {
+      "say": [
+        "{we} found {foe} disinclined to negotiate, and so arranged that she trouble the lanes no further — she and her cargo now rest where neither can testify",
+        "{foe} declined every reasonable overture, and {we} were obliged, most regretfully, to see her to the bottom, freight and all",
+        "{we} concluded {our} business with {foe} rather more permanently than intended; the sea keeps her secrets, and now her hold",
+        "{we} removed {foe} from the board entirely — a pity about the cargo, but some accounts are better closed than collected",
+        "{foe} would not be reasoned with, and {we} do so dislike a loose end — she went down whole, and took her manifest with her",
+        "{we} saw {foe} settled beneath the waves, where questions of ownership become delightfully academic",
+        "{foe} chose defiance over discretion, and {we} let the sea correct the error — nothing was recovered, which suits {us} well enough"
+      ]
+    },
+    "fended": {
+      "recur": { "class": "stand", "phrases": [" — we have discouraged such visitors before", ", as those who tried before would attest, could they"] },
+      "say": [
+        "{foe} approached with unfriendly intent, and {we} regretfully persuaded her to reconsider — she is reconsidering still, at some depth",
+        "{we} received {foe}'s advances with more powder than she anticipated, and the misunderstanding was resolved to {our} entire satisfaction",
+        "{foe} mistook {us} for a soft acquaintance — {we} corrected the impression, and she has not corrected it back",
+        "{we} found {foe}'s ambitions inconvenient, and saw them, along with her, quietly submerged",
+        "{foe} came to relieve {us} of {our} property, and {we} relieved her of her buoyancy instead — an equitable exchange",
+        "{we} declined {foe}'s attentions rather firmly, and she withdrew, downward, and did not return",
+        "{foe} presumed too much upon {our} good nature — {we} disabused her of it at the waterline, and the sea took the matter from there"
+      ]
+    },
+    "hunted": {
+      "say": [
+        "{we} attended at last to {foe}, whose activities had grown tiresome to certain influential friends, and arranged her permanent retirement",
+        "{foe} had made herself a nuisance to the right people — {we} obliged them, and the lanes are quieter, and {our} standing the better for it",
+        "{we} ran {foe} to ground with the appropriate discretion and saw her ended; some favours are best repaid in the currency of missing wolves",
+        "{foe} was owed a reckoning by parties {we} would rather cultivate than cross, and {we} settled the debt on their behalf",
+        "{we} concluded the matter of {foe} where the water is deepest — a service to commerce, and not incidentally to {our} own reputation",
+        "{foe} will trouble the honest trade no longer, and {we} shall take care that the right ears learn whose hand it was",
+        "{we} pursued {foe} to her end with quiet thoroughness, and noted, as ever, who was grateful"
+      ]
+    },
     "raid":    { "recur": { "class": "sack",  "phrases": [", the {ord} town persuaded to reconsider its loyalties"] } }
   }
 }

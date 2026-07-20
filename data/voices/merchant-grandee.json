@@ -4,7 +4,7 @@
   "persona": "A pompous, status-obsessed trading magnate who confuses the log with a monument to himself. Preens over reputation, investors, contracts, and the family name; holds profit to be honor and honor to be profit. Ship: the master merchant, 'I'. Island: a self-crowned magnate, the royal 'we'.",
 
   "pronoun": {
-    "ship":   { "subject": "I",  "first": "I"  },
+    "ship":   { "subject": "we",  "first": "We"  },
     "island": { "subject": "we", "first": "We" }
   },
 
@@ -13,7 +13,7 @@
       "founder":   "Let it be recorded, in a hand befitting the occasion, that I — {name}{rankc}, of no small standing — now command this {home} {type}, and intend to make her name synonymous with my own.",
       "successor": "The stewardship of this fine venture passes into my keeping. I am {name}{rankc}, and I shall carry her accounts, and her reputation, to heights the last hand never dreamt of.",
       "mutiny":    "A regrettable, undignified affair: the crew disposed of their master and thrust the book upon me, {name}, a person of no rank as yet. I shall rise regardless; men of my quality invariably do.",
-      "pirate":    "Let the timid name it piracy; I name it enterprise unshackled. I am {name}{rankc}, and from this day I answer to no charter but my own ambition.",
+      "rogue":     "Let the timid name it piracy; I name it enterprise unshackled. I am {name}{rankc}, and from this day I answer to no charter but my own ambition.",
       "prize":     "She struck her colours and acknowledged her betters. I am {name}{rankc}; this hull is now an asset of my house, and her ledger a further chapter in my rising fortune.",
       "recovered": "A hunter of some competence has restored this vessel to lawful hands — namely, mine. I am {name}{rankc}, and I shall polish away every stain the brigands left upon her good name."
     },
@@ -53,9 +53,57 @@
   },
 
   "kinds": {
-    "plunder": { "recur": { "class": "prize", "phrases": [", my {ord} acquisition of note", " — another asset entered to my house", ", as my reputation warrants"] } },
+    "plunder": {
+      "recur": { "class": "prize", "phrases": [", my {ord} acquisition of note", " — another asset entered to my house", ", as my reputation warrants"] },
+      "say": [
+        "{we} relieved {foe} of {goods} bales and {gold}g — a transaction she was in no position to decline, and my ledger the handsomer for it",
+        "{foe} proved a poor negotiator; {we} took {goods} crates and {gold}g off her decks and left the wretch her hull as a courtesy",
+        "{we} came alongside {foe} and appropriated {goods} casks and a tidy {gold}g — one does not let such an asset simply pass",
+        "{we} lightened {foe} of {goods} chests and {gold}g, and let the stripped thing crawl home to advertise my reach",
+        "{foe} carried cargo far above her station; {we} corrected the injustice with {goods} bales and {gold}g into my own hold",
+        "{we} boarded {foe} at leisure, entered {goods} crates and {gold}g to my house, and dismissed her with the disdain she had earned",
+        "{we} added {goods} casks and {gold}g from {foe} to a fortune already the envy of the lanes",
+        "{foe} yielded {goods} chests and {gold}g to my people, and I permitted her the indignity of limping away"
+      ]
+    },
+    "sunk": {
+      "say": [
+        "{we} put {foe} under the waves with all her cargo — a regrettable waste of good merchandise, though a fine advertisement of my resolve",
+        "{foe} chose to fight rather than trade, and {we} obliged her with a grave at the bottom of the sea",
+        "{we} broke {foe} apart and watched her sink, her ledger and her insolence drowned together",
+        "{we} sent {foe} to the deep — no prize in it, alas, but a lesson worth more than her hold to my standing",
+        "{foe} would not strike to her betters, so {we} sank her outright and let the fishes appraise her cargo",
+        "{we} holed {foe} below the line and she went down entire, a total loss that only the vulgar would mourn",
+        "{we} consigned {foe} and every crate aboard her to the seabed — a costly display, but my name commands such displays",
+        "{foe} defied me to the last and {we} answered by sending her under, cargo and all, beyond any man's ledger"
+      ]
+    },
     "raid":    { "recur": { "class": "sack",  "phrases": [", the {ord} port to feel the reach of my enterprise", ", another market corrected by force of arms"] } },
-    "fended":  { "recur": { "class": "stand", "phrases": [" — men of my standing are not so easily robbed", ", my colours undiminished"] } },
-    "hunted":  { "recur": { "class": "hunt",  "phrases": [", the {ord} brigand brought to account by my own hand"] } }
+    "fended":  {
+      "recur": { "class": "stand", "phrases": [" — men of my standing are not so easily robbed", ", my colours undiminished"] },
+      "say": [
+        "{foe} mistook my house for easy prey; {we} shattered her and sent her down, and my colours never so much as trembled",
+        "{we} met {foe}'s impudence with grape and iron and put the brigand under — men of my standing are not robbed",
+        "{foe} closed upon {us} expecting plunder and found powder; {we} sank the ruffian and returned to my accounts",
+        "{we} beat off {foe} and sent her to the bottom — a trifling interruption to a most profitable voyage",
+        "{foe} dared lay a hand to my cargo, and {we} answered by cutting her to pieces and drowning the remains",
+        "{we} repelled {foe} with a broadside befitting my dignity and watched the wretch founder",
+        "{foe} learned, too late, that my hull bites back; {we} sank her and logged the matter as beneath concern",
+        "{we} scattered {foe}'s boarders and holed her clean through — the sea took what remained of her ambition"
+      ]
+    },
+    "hunted":  {
+      "recur": { "class": "hunt",  "phrases": [", the {ord} brigand brought to account by my own hand"] },
+      "say": [
+        "{we} ran {foe} to ground and put an end to her — the lanes are the cleaner, and my repute the brighter, for it",
+        "{foe} had plagued honest commerce long enough; {we} hunted her down and finished her myself",
+        "{we} cornered {foe} at last and sent the brigand under, a service to trade that I shall not let go unmentioned",
+        "{foe} fled and {we} pursued, and {we} cut the wretch down — such vermin are bad for business, and business is my creed",
+        "{we} overhauled {foe} and destroyed her outright, adding a hunter's laurel to a merchant's fortune",
+        "{foe} thought herself beyond reach; {we} proved otherwise and left her scattered on the tide",
+        "{we} brought {foe} to a reckoning her sort had long deserved, and the whole coast will hear it was my doing",
+        "{we} put {foe} beneath the water and counted it money well spent — a threat to my lanes is a threat to my name"
+      ]
+    }
   }
 }

@@ -1,4 +1,4 @@
-// Bottom-center clock cluster: [⏸/▶] [1×] [3×] [10×]  Day N · HH:MM. Decoupled from
+// Bottom-center clock cluster: [⏸/▶] [0.5×] [1×] [3×] [10×] [20×]  Day N · HH:MM. Decoupled from
 // the socket — it takes injected onSetSpeed/onTogglePause callbacks + a getClock reader,
 // so it's transport-agnostic and trivially stubbed in shots. Buttons light from the
 // AUTHORITATIVE clock in the latest snapshot (a dropped command simply doesn't light);
@@ -8,7 +8,7 @@ import { Widget, Button } from './UIStack.js';
 import { PALETTE } from '../config.js';
 import { plate, font } from './theme.js';
 
-const BW = 46, BH = 34, GAP = 8, CLOCK_W = 150, LABEL_GAP = 14;
+const BW = 50, BH = 34, GAP = 8, CLOCK_W = 150, LABEL_GAP = 14;
 
 export class SimControls extends Widget {
   constructor({ onSetSpeed, onTogglePause, getClock, speeds = [1, 3, 10] }) {
@@ -23,7 +23,7 @@ export class SimControls extends Widget {
     this.speedBtns = speeds.map((s) => new Button({
       label: s + '×',
       onClick: () => onSetSpeed(s),
-      isActive: () => !this.getClock().paused && this.getClock().speed === s,
+      isActive: () => this.getClock().speed === s,
     }));
     this.buttons = [this.pauseBtn, ...this.speedBtns];
   }

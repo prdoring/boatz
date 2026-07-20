@@ -4,7 +4,7 @@
   "persona": "A captain who seized the ship by mutiny and cannot silence his conscience. Self-justifying, forever glancing over his shoulder, remorse warring with defiance, haunted by the master he deposed. Uses 'I'.",
 
   "pronoun": {
-    "ship":   { "subject": "I", "first": "I" },
+    "ship":   { "subject": "we", "first": "We" },
     "island": { "subject": "I", "first": "I" }
   },
 
@@ -13,7 +13,7 @@
       "founder":   "I set the first words down in this book, and my hand is steady enough — steady, and let no man say otherwise. I am {name}{rankc}, and this {home} {type} is mine, honestly mine, come by clean.",
       "successor": "The book comes to me by fair passage — I want that written plain, that it came to me clean and over no man's body. I am {name}{rankc}; her account goes on under my hand.",
       "mutiny":    "It is done. We put the old master over the side, and the lads pressed this book into my hands before his place was cold. I am {name}. He had it coming — I have told myself so a hundred times, and I will tell myself so again tonight, and every night. I keep the log now; God keep the rest.",
-      "pirate":    "So we are pirates now, and I the one who spoke the word. I am {name}{rankc}. I'll not pretend my hand held still when the black went up — but it is up, and there is no hauling it down again, and no use wishing.",
+      "rogue":     "So we are pirates now, and I the one who spoke the word. I am {name}{rankc}. I'll not pretend my hand held still when the black went up — but it is up, and there is no hauling it down again, and no use wishing.",
       "prize":     "She struck to us and I stepped over her rail the victor. I am {name}{rankc}. Her old master watched me lift his book from his own cabin, and I would not meet his eye. Her log runs under me now, whatever his looks say of it.",
       "recovered": "A hunter ran the black flag down, and I am set to bring this hull home honest. I am {name}{rankc}. Strange work, mending what men of my stripe once broke — I will do it, and say little, and hope it counts for something."
     },
@@ -53,8 +53,56 @@
   },
 
   "kinds": {
-    "plunder": { "recur": { "class": "prize", "phrases": [", another taking I will one day answer for", " — I have done this before and slept after, mostly", ", one more to a count I try hard not to keep"] } },
-    "fended":  { "recur": { "class": "stand", "phrases": [" — I have wriggled clear of worse", ", and lived to feel poorly about it after"] } },
-    "hunted":  { "recur": { "class": "hunt",  "phrases": [", another wolf run down — and I know that fear from the far side of it"] } }
+    "plunder": {
+      "recur": { "class": "prize", "phrases": [", another taking I will one day answer for", " — I have done this before and slept after, mostly", ", one more to a count I try hard not to keep"] },
+      "say": [
+        "{we} took {foe} — {goods} bales and {gold}g into the hold — and told {us} it was only cargo, only coin, nothing that bleeds",
+        "{we} stripped {foe} of {goods} crates and {gold}g, and her master watched {us} do it with a look {we}'ll not soon forget",
+        "{foe} yielded, and {we} carried off {goods} casks and {gold}g, and let her go — small mercy, and {we} clung to it like it made {us} clean",
+        "{we} boarded {foe} and took {goods} chests and {gold}g, and {our} hands were steady, and {we} hate that they were steady",
+        "{we} lightened {foe} by {goods} bales and {gold}g and left her the hull to limp home on — more than was left {us}, once",
+        "{foe} came off poorer by {goods} crates and {gold}g, and {we} the richer, and {we} lay awake reckoning who had paid the more",
+        "{we} took what {foe} carried — {goods} casks and {gold}g — the way {we} take most things now, quick, and not looking too long at it",
+        "{we} had {goods} chests and {gold}g out of {foe} before she struck, and {we}'ll answer for every coin of it one day, {we} do not doubt"
+      ]
+    },
+    "sunk": {
+      "say": [
+        "{we} fought {foe} until she filled and went down, and watched her go, and thought of another man {we} sent under once",
+        "{foe} would not strike, and so {we} sank her whole, cargo and crew's hopes and all, and told {us} she chose it",
+        "{we} put {foe} under and took nothing, and somehow the taking-nothing sat worse than any plunder ever did",
+        "{foe} went down before {our} guns with all she owned, and the sea closed over it quiet, the way things close over",
+        "{we} broke {foe} apart and let her sink, and stood there after longer than a captain ought, watching the water go still",
+        "{foe} chose the deep over the yielding, and {we} gave it her, and {we} have given that same thing before and not slept for it",
+        "{we} sent {foe} down whole and unransomed, and there was no profit in it, only the old familiar weight",
+        "{we} sank {foe} where she fought, and her cargo went with her, and {we} felt almost glad there was nothing to carry home and count"
+      ]
+    },
+    "fended": {
+      "recur": { "class": "stand", "phrases": [" — I have wriggled clear of worse", ", and lived to feel poorly about it after"] },
+      "say": [
+        "{foe} came at {us} for easy prey, and {we} sank her — and God help {us}, {we} knew that hunger of hers from the far side of it",
+        "{we} beat {foe} off and put her under, and took no pleasure in it, only the cold relief of still being afloat",
+        "{foe} raised her black flag at {us}, and {we} answered it hard — one rogue drowning {us} being one too many for {our} conscience already",
+        "{we} broke {foe}'s attack and sent her down, and thought: there but for a turn of the wind go {we}",
+        "{foe} thought {us} easy meat, and she was wrong, and she paid the wrong out at the bottom of the sea",
+        "{we} stood {foe} off and sank her, and felt the old sick echo of a deck taken by force, only this time {we} was the one holding it",
+        "{foe} would have had {our} ship and {our} throat both, and {we} would give neither, and so she sank instead of {us}",
+        "{we} fought {foe} clear and put her under, and there was no glory in it, nor did {we} look for any"
+      ]
+    },
+    "hunted": {
+      "recur": { "class": "hunt",  "phrases": [", another wolf run down — and I know that fear from the far side of it"] },
+      "say": [
+        "{we} ran {foe} down and finished her, and {we} know the fear she felt at the end, for it was once {our} own",
+        "{we} hunted {foe} to her ruin, and told {us} it was justice, and mostly {we} believed it",
+        "{foe} fled from {us} the way {we} have fled from other men, and {we} caught her, and {we} did not enjoy the catching",
+        "{we} chased {foe} out of {foeHome} and sank her — strange work, hunting rogues, for a man who turned rogue himself once",
+        "{foe} had earned her end a dozen times over, and still {we} was quiet a long while after {we} gave it her",
+        "{we} put {foe} under at the last of a long chase, one more wolf gone, and {we} try not to count how near {we} came to being one",
+        "{foe} was a thief and a killer, and {we} ran her to ground, and if that squares any part of {our} own account {we}'ll take it",
+        "{we} destroyed {foe} where she ran, and stood the crew a drink after, and drank alone with the old thoughts"
+      ]
+    }
   }
 }

@@ -4,7 +4,7 @@
   "persona": "A swaggering, self-aggrandizing rover who believes the whole sea should learn his name and tremble at it. Grand gestures, theatrical contempt for the timid, a legend he is forever polishing. Chiefly 'I', sometimes 'we' for the crew.",
 
   "pronoun": {
-    "ship":   { "subject": "I", "first": "I" },
+    "ship":   { "subject": "we", "first": "We" },
     "island": { "subject": "I", "first": "I" }
   },
 
@@ -13,7 +13,7 @@
       "founder":   "Let the sea take note: I am {name}{rankc}, master of this {home} {type}, and before I am done every port to the horizon will speak my name in a whisper.",
       "successor": "The book comes at last to a hand worthy of it — mine. I am {name}{rankc}, and this {type} will do grander things under me than her timid past ever dreamed.",
       "mutiny":    "The crew flung the old fool to the fishes and crowned me with his book. I am {name}, untested yet — but mark me, they chose well, and the sea will soon agree.",
-      "pirate":    "We have run the black flag to the masthead, and I — {name}{rankc} — mean to make it the most dreaded rag on the water. Let the fat merchants tremble; I am coming for the lot of them!",
+      "rogue":     "We have run the black flag to the masthead, and I — {name}{rankc} — mean to make it the most dreaded rag on the water. Let the fat merchants tremble; I am coming for the lot of them!",
       "prize":     "Sword in hand and boot on her deck, I took her — she is mine! I am {name}{rankc}, and this hull carries my glory now in place of her cargo.",
       "recovered": "I ran the black-flag vermin to ground and prised this hull from their fingers myself. I am {name}{rankc} — remember it — and I hand her back to honest trade with a conqueror's grace."
     },
@@ -53,9 +53,53 @@
   },
 
   "kinds": {
-    "plunder": { "recur": { "class": "prize", "phrases": [", the {ord} prize to bow to my name", " — as if there were ever any doubt", ", another jewel for my legend"] } },
+    "plunder": {
+      "recur": { "class": "prize", "phrases": [", the {ord} prize to bow to my name", " — as if there were ever any doubt", ", another jewel for my legend"] },
+      "say": [
+        "{we} bore down on {foe} and struck her colours with a single broadside — {goods} bales and {gold}g swelling {our} hold while she crawled off to tell the tale",
+        "{foe} learned what every hull learns in the end — {we} lifted {goods} crates and {gold}g from her belly and let the beggared shell run for her miserable life",
+        "{we} came alongside {foe} like thunder given a name and carried off {goods} chests and {gold}g before her captain could find his knees",
+        "{we} plucked {goods} casks and {gold}g from {foe} as easily as fruit off a low branch — another fat merchant humbled by the sound of {our} guns",
+        "{foe} out of {foeHome} thought her flag would save her; {we} took {goods} bales and {gold}g and sent the naked wreck home to warn the rest",
+        "{we} swept across {foe}'s deck sword-first, emptied her of {goods} crates and {gold}g, and left her afloat only so the world might hear who did it",
+        "{we} relieved {foe} of {goods} chests and {gold}g without breaking a sweat — let them add this one to the legend they already whisper"
+      ]
+    },
+    "sunk": {
+      "say": [
+        "{we} hammered {foe} broadside on broadside until the sea closed over her and her cargo with her — a fittingly grand end at {our} hands",
+        "{foe} chose to fight {us} rather than yield, and {we} obliged her with a grave",
+        "{we} raked {foe} stem to stern and watched her go down proud and empty — no loot, but oh, what a sight for the ballad",
+        "{we} opened {foe}'s hull to the ocean and let the deep swallow every plank — the sea keeps my scorecard now",
+        "{foe} came out of {foeHome} to challenge {us}, and {we} put her under so thoroughly the gulls forgot she ever floated",
+        "{we} sent {foe} to the bottom with all she carried and stood on {our} own deck to salute the bubbles",
+        "{we} broke {foe} apart beneath {us} — a lesser captain might mourn the lost cargo, but {we} only savour the reckoning"
+      ]
+    },
     "raid":    { "recur": { "class": "sack",  "phrases": [", the {ord} town to learn my name in fire", " — they will frighten their children with me"] } },
-    "fended":  { "recur": { "class": "stand", "phrases": [" — as though wolves could lay a tooth on me", ", and I scarce troubled to reload"] } },
-    "hunted":  { "recur": { "class": "hunt",  "phrases": [", the {ord} would-be hero I have humbled", " — one more name for my long and famous tally"] } }
+    "fended":  {
+      "recur": { "class": "stand", "phrases": [" — as though wolves could lay a tooth on me", ", and I scarce troubled to reload"] },
+      "say": [
+        "{foe} swept in on {us} certain of an easy purse, and {we} blew her wolfish grin clean off the water",
+        "{we} met {foe}'s boarding with grape and fury and left the raider sinking where she thought to feast",
+        "{foe} mistook {us} for helpless prey — {we} corrected the error with a broadside she did not survive",
+        "{we} turned {foe}'s ambush into her funeral and never so much as spilt {our} wine over it",
+        "{foe} came howling out of {foeHome} for {our} cargo and found {us} teeth-first — down she went",
+        "{we} let {foe} close enough to regret it, then shattered her rig and hull and watched the sea take the scraps",
+        "{foe} tried {us}, of all the captains on the water — {we} sent her under for the impertinence"
+      ]
+    },
+    "hunted":  {
+      "recur": { "class": "hunt",  "phrases": [", the {ord} would-be hero I have humbled", " — one more name for my long and famous tally"] },
+      "say": [
+        "{we} ran {foe} down at the edge of her own hunting grounds and cut the black flag from her mast with {our} own hand",
+        "{foe} had terrorised the lanes long enough; {we} caught her, cracked her open, and gave the sea a cleaner name",
+        "{we} chased {foe} until she could run no further, then sent the vermin down where she stood",
+        "{we} put an end to {foe} and her whole wretched trade — one more wolf humbled by {our} name",
+        "{foe} fled {us} across half the chart and drowned all the same — they never do learn",
+        "{we} hunted {foe} to her last gasp and left the lanes the safer for it — the whole sea is welcome",
+        "{we} cornered {foe} out of {foeHome} and blasted her under, another would-be terror on my long tally"
+      ]
+    }
   }
 }

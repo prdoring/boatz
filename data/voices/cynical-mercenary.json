@@ -4,7 +4,7 @@
   "persona": "A weary, transactional sell-sword of the sea. Everything reduces to coin, odds, and staying alive; no illusions, and no loyalty that is not paid for. Flat, hard-bitten, sardonic. Ship: 'I'. Island: a hired administrator who would sell the seal at the right price, 'I'.",
 
   "pronoun": {
-    "ship":   { "subject": "I", "first": "I" },
+    "ship":   { "subject": "we", "first": "We" },
     "island": { "subject": "I", "first": "I" }
   },
 
@@ -13,7 +13,7 @@
       "founder":   "New contract, new book. {name}{rankc}. This {home} {type} is mine to run so long as it pays. I will keep the log; paper is cheaper than trust.",
       "successor": "The log is mine now, {name}{rankc}. Same as any job — I do the work, I take the coin, I do not ask what the last hand died of.",
       "mutiny":    "The crew settled up with the old master over the side and put the book in my hands. {name}. I did not ask for it. But a berth is a berth, and I will draw the wage.",
-      "pirate":    "Honest trade stopped paying, so it is the black flag now. {name}{rankc}. Same work, better margins, nobody to answer to. It suits me.",
+      "rogue":     "Honest trade stopped paying, so it is the black flag now. {name}{rankc}. Same work, better margins, nobody to answer to. It suits me.",
       "prize":     "She struck. I took her. {name}{rankc}. She is worth more under me than she ever was under him — that is the whole of it.",
       "recovered": "A hunter paid to clear these waters ran us down, and for once I was on the right side of the guns. {name}{rankc}. I will sail her home for the fee and not a mile further."
     },
@@ -53,9 +53,53 @@
   },
 
   "kinds": {
-    "plunder": { "recur": { "class": "prize", "phrases": [", my {ord} prize and none of it sentimental", " — I have boarded enough of these", ", coin is coin"] } },
-    "sunk":    { "recur": { "class": "prize", "phrases": [", another one sent down, no bonus for it"] } },
-    "fended":  { "recur": { "class": "stand", "phrases": [" — I have been shot at by worse and cheaper", ", and still standing to collect"] } },
-    "hunted":  { "recur": { "class": "hunt",  "phrases": [", the {ord} raider run down on someone else's coin"] } }
+    "plunder": {
+      "recur": { "class": "prize", "phrases": [", my {ord} prize and none of it sentimental", " — I have boarded enough of these", ", coin is coin"] },
+      "say": [
+        "{we} ran {foe} down, took {goods} bales and {gold}g off her, and let the hull go — cargo does not fight back, which is how I like it",
+        "{foe} struck fast, so {we} lifted {goods} crates and {gold}g and sent her on — no sense sinking a payday",
+        "{we} boarded {foe}, counted out {goods} chests and {gold}g, and left her the water to float home on",
+        "{we} stripped {goods} casks and {gold}g from {foe} — clean job, nobody dead on {our} side, that is the whole of the win",
+        "{foe} out of {foeHome} gave up {goods} bales and {gold}g without a real fight, which suits {us} — I am not paid to bleed",
+        "{we} took {goods} crates and {gold}g from {foe} and cut her loose; a dead merchant tells no other merchant where the coin is",
+        "{we} relieved {foe} of {goods} chests and {gold}g, tallied it, and moved on — coin is coin"
+      ]
+    },
+    "sunk":    {
+      "recur": { "class": "prize", "phrases": [", another one sent down, no bonus for it"] },
+      "say": [
+        "{we} put {foe} under after she chose the hard way — no cargo out of it, just powder spent",
+        "{foe} would not strike, so {we} sank her; a lost payday, but I am still breathing",
+        "{we} sent {foe} to the bottom, her hold with her — nothing to show for it but a quieter sea",
+        "{foe} came at {us} instead of yielding, and {we} obliged her; sinking her paid nothing, but it cost nothing worse",
+        "{we} holed {foe} and watched her go down — no prize, no profit, chalk it up and reload",
+        "{foe} out of {foeHome} fought when she should have run, and {we} closed the account the cheap way",
+        "{we} broke {foe} apart and let her sink — some jobs only pay in survival, and this was one"
+      ]
+    },
+    "fended":  {
+      "recur": { "class": "stand", "phrases": [" — I have been shot at by worse and cheaper", ", and still standing to collect"] },
+      "say": [
+        "{foe} came at {us} for the cargo and {we} shot her under instead — cheaper than paying ransom",
+        "{we} beat {foe} off and sank her; keeping the hold cost less than losing it, so I count it a good trade",
+        "{foe} figured {us} for easy money and figured wrong — {we} put her down and kept the freight",
+        "{we} met {foe}'s boarding with grape and cut the odds in {our} favour — she sank, I did not",
+        "{foe} out of {foeHome} wanted what {we} carried; {we} gave her lead instead and watched her founder",
+        "{we} fended {foe} off the only way that sticks — under the waterline — and delivered the cargo all the same",
+        "{foe} tried {us} and paid for it; {we} came out with the freight and a whole skin, which is the whole point"
+      ]
+    },
+    "hunted":  {
+      "recur": { "class": "hunt",  "phrases": [", the {ord} raider run down on someone else's coin"] },
+      "say": [
+        "{we} ran {foe} down on the bounty and collected — the coin was the reason, the sinking was just the invoice",
+        "{foe} had a price on her, so {we} caught her and cashed it — nothing personal in it",
+        "{we} hunted {foe} to ground and put her under; someone was paying to see it done, so it got done",
+        "{foe} ran from {us} a long while and drowned anyway — the fee was the same either way",
+        "{we} destroyed {foe} off {foeHome} and pocketed the bounty; one wolf down, one wage in",
+        "{foe} thought she could outrun a paid hunter — {we} corrected her and clipped the reward",
+        "{we} finished {foe} on another man's coin — cheap satisfaction, but the kind that pays"
+      ]
+    }
   }
 }

@@ -13,7 +13,7 @@
       "founder":   "Now, here's the way of it: this book is mine to keep, and I'm {name}{rankc}. She's a {home} {type}, and as my grandmother used to say, a ship well minded minds you back — so I mean to mind her.",
       "successor": "Well now, the book has come round to my hand, {name}{rankc}, the way a story passes mouth to mouth of a winter's night. I'll take up the telling where the last teller left it.",
       "mutiny":    "The crew put the old master over the rail, bless us, and pressed this book on me. I'm {name}, green as spring grass — but a green hand grips the tightest, so they tell it, and I'll do right by her.",
-      "pirate":    "So we've gone and turned our coats to the black flag, and there's no gilding it. I'm {name}{rankc}, and I'll set it down honest, for a lie told to a logbook is a lie told to your own self.",
+      "rogue":     "So we've gone and turned our coats to the black flag, and there's no gilding it. I'm {name}{rankc}, and I'll set it down honest, for a lie told to a logbook is a lie told to your own self.",
       "prize":     "She struck her colours to us, fair and square, and now, would you believe it, her book is mine. I'm {name}{rankc}, and I'll carry on her tale under my own flag, the way the winner always does.",
       "recovered": "A hunter ran the black-flag rogues to ground and handed this weary hull back to honest folk. I'm {name}{rankc}, come to walk her home to fair trade — for even a strayed dog finds its own hearth, they say."
     },
@@ -53,9 +53,57 @@
   },
 
   "kinds": {
-    "plunder": { "recur": { "class": "prize", "phrases": [", the {ord} such prize, and each one a story", " — and not the first, as you'll have gathered", ", the way it always seems to go with us"] } },
+    "plunder": {
+      "recur": { "class": "prize", "phrases": [", the {ord} such prize, and each one a story", " — and not the first, as you'll have gathered", ", the way it always seems to go with us"] },
+      "say": [
+        "{we} came up on {foe} slow and friendly-like, and left her a good sight lighter — {goods} bales and {gold}g the better for the calling",
+        "{we} laid {foe} aboard and helped {us} to {goods} crates and {gold}g, and as {our} grandmother used to say, a full hold forgives a heavy conscience",
+        "{foe} never saw {us} coming till {we} were over her rail, and off {we} went with {goods} casks and {gold}g and a wave goodbye",
+        "{we} talked {foe}'s master out of {goods} chests and {gold}g at the point of a cutlass — the most persuasive tongue there is, folk say",
+        "{we} stripped {foe} down to her boards, {goods} bales and {gold}g into the hold, and sent the poor hulk limping home with a story to tell",
+        "{foe} rode fat and low out of {foeHome}, and {we} eased {goods} crates and {gold}g off her the way you'd ease an apple off a branch",
+        "{we} boarded {foe} bold as brass and carried away {goods} casks and {gold}g, and weren't {we} the toast of the fo'c'sle that night",
+        "{we} took {goods} chests and {gold}g out of {foe} and let her go — no sense sinking a cow that'll milk again, {our} gran always said"
+      ]
+    },
+    "sunk": {
+      "say": [
+        "{we} traded broadsides with {foe} till she up and went under, cargo and all, and there's an end nobody profited from",
+        "{foe} wouldn't strike for love nor money, so down she went, and all her goods with her to feed the fishes",
+        "{we} hammered {foe} till the water came in over her rail, and she slid under slow, the way a sad tale ends",
+        "{foe} fought {us} hard and paid hard for it — she went to the bottom whole, and not a bale of her ever saw a port",
+        "{we} sent {foe} down where she stood and fought, and the sea took what {we} could not, which was near everything",
+        "{foe} chose the deep over the white flag, and the deep don't argue — under she rolled, and that was that",
+        "{we} put {foe} under of an evening, and it was no merry sight, all that good cargo drowning",
+        "{we} broke {foe} apart and watched her go, and as {our} gran would say, the sea keeps what the sea claims"
+      ]
+    },
     "raid":    { "recur": { "class": "sack",  "phrases": [", the {ord} proud town we've put to the torch"] } },
-    "fended":  { "recur": { "class": "stand", "phrases": [" — and we've shaken off worse than that, believe me", ", the way we always seem to wriggle free"] } },
-    "hunted":  { "recur": { "class": "hunt",  "phrases": [", the {ord} wolf we've run to ground, and folk still tell of it"] } }
+    "fended": {
+      "recur": { "class": "stand", "phrases": [" — and we've shaken off worse than that, believe me", ", the way we always seem to wriggle free"] },
+      "say": [
+        "{foe} came at {us} thinking easy pickings, and didn't {we} surprise her — down she went for her cheek",
+        "{we} weren't the lamb {foe} took {us} for, and {we} proved it, iron and all, till she rolled under",
+        "{foe} reckoned to rob {us} and found {us} with {our} teeth bared — she went to the bottom wishing she'd picked another road",
+        "{we} shook {foe} off and then some — sent her under, and let that be a tale told to the next rogue that tries {us}",
+        "{foe} raised her black flag at {us} bold as you please, and {we} hauled it down for her, clear to the seabed",
+        "{we} gave {foe} a warmer welcome than she looked for, and she cooled off quick, right down under the waves",
+        "{foe} thought a trader's got cargo and no fight in him, and she learned different, and she learned it wet",
+        "{we} stood {foe} off and put her down, and folk in port still buy {us} a drink for the telling of it"
+      ]
+    },
+    "hunted": {
+      "recur": { "class": "hunt",  "phrases": [", the {ord} wolf we've run to ground, and folk still tell of it"] },
+      "say": [
+        "{we} ran {foe} to ground at long last and sent her under — one less wolf howling on the water",
+        "{we} chased {foe} clear out of {foeHome} and finished her, and there's a whole sea sleeping easier for it",
+        "{foe} had robbed one boat too many, and {we} brought her the bill — and paid it for her, too, at the bottom",
+        "{we} hunted {foe} three days and a night, and caught her at the end of it, and down she went for all her running",
+        "{foe} ran like the guilty do, and {we} ran faster, and the sea got the last word",
+        "{we} caught {foe} red-handed at her thieving and put a stop to it for good and all",
+        "{we} tracked {foe} to her hidey-hole, drew her out, and sank her, and the merchants cheered when the word came round",
+        "{foe} was a name to frighten children with, and now she's a name for a story that ends the way it ought"
+      ]
+    }
   }
 }

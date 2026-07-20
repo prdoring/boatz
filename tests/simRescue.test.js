@@ -23,6 +23,19 @@ test('renderAid: a helper patches a dismasted ally’s rig from its SPARE canvas
   assert.ok(helper.cargo.Fiber < fib0, 'from the helper’s spare canvas');
 });
 
+test('a prolonged rescue of the SAME ship is logged once, not on every pass', () => {
+  const w = makeWorld(); w.simTime = 0;
+  const helper = boat({ cargo: { Gold: 0, People: 0, Fiber: 99, Wood: 99, Food: 999 } });
+  const victim = boat({ id: 'v', homeId: 'other', rig: 0.05, hull: 0.3, cargo: { Gold: 0, People: 0, Food: 0 } });
+  renderAid(w, helper, victim);
+  renderAid(w, helper, victim);
+  renderAid(w, helper, victim);
+  assert.equal(w.events.filter((e) => e.kind === 'rescue').length, 1, 'aiding the same stricken ship pass after pass is ONE deed in the log');
+  const other = boat({ id: 'v2', homeId: 'other', rig: 0.05, hull: 0.3, cargo: { Gold: 0, People: 0, Food: 0 } });
+  renderAid(w, helper, other);
+  assert.equal(w.events.filter((e) => e.kind === 'rescue').length, 2, 'a different ship in distress is a fresh story');
+});
+
 test('a sea-rescue does NOT change reputation on the spot — the deed is only recorded aboard to report home', () => {
   const w = makeWorld(); w.simTime = 0;
   const hHome = w.islands[0], vHome = w.islands[1];

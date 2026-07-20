@@ -33,24 +33,25 @@ export const STORY_CATEGORIES = [
   { key: 'doom',  label: 'Doom' },
 ];
 
-// Per-kind display colour (shared by the news crawl + history browser; mirrors InfoPanel's table).
+// Per-kind display colour. DARKENED for legibility on cream parchment (hues preserved; the old
+// pastel values were tuned for a dark panel). Single source: InfoPanel + news crawl + Almanac.
 export const EVENT_COLOR = {
-  blight: '#ec8a3a', plague: '#c072e0', wreck: '#8fb6c6', recover: '#8ee6a0',
-  mutiny: '#ff5b4a', defect: '#e0863a', quell: '#8ee6a0', unrest: '#e0b24a', starve: '#c0503a',
-  launch: '#6fd0e0', migrate: '#f2b8d0', famine: '#d98a3a', boom: '#ffd166', ally: '#8ee6a0', rival: '#e0863a',
-  rebellion: '#ff5b30', overthrow: '#ff7b4a', quellReb: '#8ee6a0',
-  pirate: '#ff5b4a', plunder: '#e0503a', fended: '#8ee6a0', raid: '#ff7b4a', raidfail: '#8ee6a0',
-  bounty: '#ffd166', privateer: '#6fa8d8', hunted: '#8ee6a0', hunterlost: '#e0863a', standdown: '#8fb6c6',
-  aid: '#7fe0b0', rescue: '#7fe0b0', betray: '#ff5b30', embargo: '#e0863a',
-  contract: '#e8c15a', contractdone: '#8ee6a0',
-  storm: '#9fb2cc', stormloss: '#8fb6c6', season: '#c8b3ff', adrift: '#8fb6c6', bearings: '#8ee6a0',
-  ambition: '#e8c15a', overreach: '#e0863a',
-  haven: '#b0242e', redeemed: '#8ee6a0', assault: '#e0a24a', battery: '#ffb04a',
-  lost: '#8fb6c6', shun: '#e0863a', reroute: '#6fd0e0',
-  brokeoff: '#8fb6c6', sunk: '#b0242e', refit: '#8ee6a0', refitshort: '#e0863a',
-  prize: '#c58a3a', recovered: '#8ee6a0',
-  maiden: '#6fd0e0', voyages: '#6fd0e0', goldenage: '#ffd166', popmilestone: '#7fd0e0', longpeace: '#8ee6a0',
-  promotion: '#9db8ff', neworder: '#c8b3ff',
+  blight: '#b5601e', plague: '#8a3ca5', wreck: '#566b78', recover: '#2f7d45',
+  mutiny: '#b23a2e', defect: '#b5601e', quell: '#2f7d45', unrest: '#9a6b1f', starve: '#a2382a',
+  launch: '#1f7f8c', migrate: '#a83f6e', famine: '#a8601a', boom: '#9a7d16', ally: '#2f7d45', rival: '#b5601e',
+  rebellion: '#b0342a', overthrow: '#b8442a', quellReb: '#2f7d45',
+  pirate: '#b23a2e', plunder: '#a83828', fended: '#2f7d45', raid: '#b8442a', raidfail: '#2f7d45',
+  bounty: '#9a7d16', privateer: '#3a6ea5', hunted: '#2f7d45', hunterlost: '#b5601e', standdown: '#566b78',
+  aid: '#2d8060', rescue: '#2d8060', betray: '#b0342a', embargo: '#b5601e',
+  contract: '#97781a', contractdone: '#2f7d45',
+  storm: '#4a5a78', stormloss: '#566b78', season: '#5f47a0', adrift: '#566b78', bearings: '#2f7d45',
+  ambition: '#97781a', overreach: '#b5601e',
+  haven: '#9a2028', redeemed: '#2f7d45', assault: '#b06a1a', battery: '#b5731a',
+  lost: '#566b78', shun: '#b5601e', reroute: '#1f7f8c',
+  brokeoff: '#566b78', sunk: '#9a2028', refit: '#2f7d45', refitshort: '#b5601e',
+  prize: '#96601e', recovered: '#2f7d45',
+  maiden: '#1f7f8c', voyages: '#1f7f8c', goldenage: '#9a7d16', popmilestone: '#1f7f8c', longpeace: '#2f7d45',
+  promotion: '#3a5f9a', neworder: '#5f47a0',
 };
 
 export function categoryOf(kind) { return EVENT_CATEGORY[kind] || 'other'; }

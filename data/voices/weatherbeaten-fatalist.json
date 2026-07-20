@@ -13,7 +13,7 @@
       "founder":   "Here begins a reckoning the sea will close in its own hour. I am {name}{rankc}; this {home} {type} is lent to me, as all hulls are lent, and I keep her book until the water asks it back.",
       "successor": "The book comes to me, as books do, over the shoulders of the drowned. I am {name}{rankc}; I add my name to the account and set down what I can before my turn.",
       "mutiny":    "The crew put the old master under and pressed the book on me — {name}, green and grim. The sea keeps its own accounts; I do no more than write them.",
-      "pirate":    "We have done with honest trade. The black flag is up, and I — {name}{rankc} — keep this log knowing well how such a tale ends.",
+      "rogue":     "We have done with honest trade. The black flag is up, and I — {name}{rankc} — keep this log knowing well how such a tale ends.",
       "prize":     "She struck to us; what floats today goes under some other day. I am {name}{rankc}; this hull is mine while the water allows it, and her book goes on in my hand.",
       "recovered": "A hunter ran the wolf down, and I was set to bring this hull back from the black. I am {name}{rankc}. She is saved for now. Nothing is saved for long."
     },
@@ -53,9 +53,53 @@
   },
 
   "kinds": {
-    "plunder": { "recur": { "class": "prize", "phrases": [", one more the water will want back", ", as it has gone before", " — nothing new under this grey sky"] } },
-    "sunk":    { "recur": { "class": "prize", "phrases": [", another given to the cold below"] } },
-    "fended":  { "recur": { "class": "stand", "phrases": [" — we have cheated the sea before", ", though the reckoning only waits"] } },
-    "hunted":  { "recur": { "class": "hunt",  "phrases": [", one more wolf gone under, as I will go under in my turn"] } }
+    "plunder": {
+      "say": [
+        "{we} took {foe} on the open water — {goods} bales and {gold}g into the hold, all of it borrowed from the sea for a while",
+        "{foe} gave up {goods} crates and {gold}g to us, and {we} let the stripped hull go, for the water will have her soon enough",
+        "{we} ran {foe} down and lifted {goods} casks and {gold}g from her — coin the sea only lets us hold a season",
+        "{foe} carried well, and {we} eased {goods} chests and {gold}g out of her before the grey closed in again",
+        "{we} bled {foe} of {goods} bales and {gold}g and turned her loose to limp toward whatever end waits her",
+        "{we} boarded {foe} in a dead swell and took {goods} crates and {gold}g, knowing it is all on loan",
+        "{foe} rode low when {we} were done — {goods} casks and {gold}g gone from her, and nothing gained that lasts"
+      ],
+      "recur": { "class": "prize", "phrases": [", one more the water will want back", ", as it has gone before", " — nothing new under this grey sky"] }
+    },
+    "sunk": {
+      "say": [
+        "{we} held {foe} under the guns till she filled and went down, her cargo swallowed with her, as ours will be one day",
+        "{foe} settled slow and went under, and {we} took nothing — the sea keeps what it drowns",
+        "{we} put {foe} on the bottom, and there is no loot to be had from a grave",
+        "{foe} rolled and sank whole, and {we} watched, for that is the end of every hull in its time",
+        "{we} hammered {foe} till the water took her, cargo and all, down where the accounts are settled",
+        "{foe} went under bows-first, and {we} let her go without regret — the sea only claimed its own",
+        "{we} sank {foe} cold, and the grey closed over her as it closes over all of us in the end"
+      ],
+      "recur": { "class": "prize", "phrases": [", another given to the cold below"] }
+    },
+    "fended": {
+      "say": [
+        "{foe} came at us for easy prey, and {we} shot her under — we have cheated the sea before, and paid for it after",
+        "{we} stood {foe} off and sent her down, though the reckoning only waits its hour",
+        "{foe} closed thinking us weak, and {we} put her under the cold instead",
+        "{we} broke {foe} at the waterline and watched her go, spared this once, as none are spared for long",
+        "{foe} meant to take us, and {we} took her first — a small win against a patient sea",
+        "{we} fought {foe} off and drowned her, and set the ledger square for another day",
+        "{foe} chose us and chose wrong, and {we} sent her down to the same cold that waits us all"
+      ],
+      "recur": { "class": "stand", "phrases": [" — we have cheated the sea before", ", though the reckoning only waits"] }
+    },
+    "hunted": {
+      "say": [
+        "{we} ran {foe} to ground at last and cut her down — one more wolf gone under, as I will go under in my turn",
+        "{foe} had haunted the lanes long enough, and {we} gave her to the deep that takes everything",
+        "{we} chased {foe} till she could run no more, then sank her cold and even",
+        "{foe} flew the black flag, and {we} put both flag and hull beneath the grey",
+        "{we} caught {foe} in a failing wind and finished her, though it changes nothing the sea has already planned",
+        "{foe} was a hunter of honest men, and {we} made her the prey — the water keeps no favourites",
+        "{we} brought {foe} down at the last, and the sea closed over her as it will one day close over me"
+      ],
+      "recur": { "class": "hunt",  "phrases": [", one more wolf gone under, as I will go under in my turn"] }
+    }
   }
 }

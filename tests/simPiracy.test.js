@@ -6,10 +6,91 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld } from './helpers/simWorld.js';
 import {
-  combatStrength, weaponsAboard, pirateCount, canTurnPirate, turnPirate, piracy,
+  combatStrength, weaponsAboard, pirateCount, canTurnPirate, turnPirate, maybeTurnRogue, piracy,
 } from '/game/sim/piracy.js';
+import { hardenToPirate } from '/game/sim/captains.js';
 import { snapshotShipsCold } from '/game/sim/snapshot.js';
 import { GOLD } from '/game/sim/resources.js';
+
+const anyMerchant = (w) => w.ships.find((s) => !s.pirate && !s.privateer) || w.ships[0];
+
+test('hardenToPirate keeps a captain’s identity but leans him bold + greedy + blooded', () => {
+  const c = { name: 'Meek Merchant', voiceSeed: 42, traits: { boldness: 0.2, wanderlust: 0.5, greed: 0.1 }, xp: { sea: 0, gun: 0, cmd: 0 } };
+  hardenToPirate(c);
+  assert.equal(c.name, 'Meek Merchant', 'same name'); assert.equal(c.voiceSeed, 42, 'same hand in the log');
+  assert.ok(c.traits.boldness >= 0.7 && c.traits.greed >= 0.6, 'harder now — bold and greedy');
+  assert.ok(c.xp.gun >= 180, 'blooded enough to fight');
+});
+
+test('a seeded raider ({fresh}) takes a NEW master and records no honest predecessor', () => {
+  const w = makeWorld();
+  const ship = anyMerchant(w);
+  const cap0 = ship.captain;
+  turnPirate(w, ship, { fresh: true });
+  assert.ok(ship.pirate, 'the black flag is up');
+  const ev = w.events.filter((e) => e.kind === 'pirate').pop();
+  assert.equal(ev.data.regime.cause, 'pirate', 'a fresh raider is a seizure, not a captain-led turn');
+  assert.equal(ev.data.regime.from, null, 'no prior keeper recorded');
+  assert.notEqual(ship.captain, cap0, 'a new, fearsome master commands');
+});
+
+test('a mutiny that turns pirate ({overthrow}) casts out the old captain for a new master', () => {
+  const w = makeWorld();
+  const ship = anyMerchant(w);
+  const name0 = ship.captain.name;
+  turnPirate(w, ship, { overthrow: true });
+  const ev = w.events.filter((e) => e.kind === 'pirate').pop();
+  assert.equal(ev.data.regime.cause, 'pirate');
+  assert.equal(ev.data.regime.from.name, name0, 'the ousted captain is the outgoing keeper');
+  assert.match(ev.text, /cast out Capt\. /, 'the log names the captain thrown over');
+});
+
+test('a bold, greedy merchant captain may raise the black flag of his OWN accord', () => {
+  const w = makeWorld();
+  w.rules = { ...w.rules, ROGUE_TEMPT_BASE: 2, ROGUE_TEMPT_MAX: 1, PIRATE_MAX_FRAC: 1 }; // force the temptation to land + room in the seas
+  const ship = anyMerchant(w);
+  const cap0 = ship.captain;
+  cap0.traits = { boldness: 0.95, greed: 0.95, wanderlust: 0.5 }; ship.morale = 0.7; ship._temptCd = 0;
+  assert.ok(maybeTurnRogue(w, ship), 'the temptation fired');
+  assert.ok(ship.pirate, 'she flies the black flag — no mutiny, no haven');
+  const reg = w.events.filter((e) => e.kind === 'pirate').pop().data.regime;
+  if (reg.cause === 'rogue') assert.equal(ship.captain, cap0, 'a captain who leads keeps command and his hand');
+  else assert.equal(reg.cause, 'pirate', 'else the crew took the chance to throw him over');
+});
+
+test('an easygoing or timid captain is never tempted to piracy', () => {
+  const w = makeWorld();
+  w.rules = { ...w.rules, ROGUE_TEMPT_BASE: 2, ROGUE_TEMPT_MAX: 1, PIRATE_MAX_FRAC: 1 };
+  const ship = anyMerchant(w);
+  ship.captain.traits = { boldness: 0.2, greed: 0.2, wanderlust: 0.5 }; ship.morale = 0.7; ship._temptCd = 0;
+  assert.equal(maybeTurnRogue(w, ship), false, 'below the boldness/greed bar → no lure to the black flag');
+  assert.ok(!ship.pirate);
+});
+
+test('a crew below the mutiny line MUTINIES rather than following the captain rogue', () => {
+  const w = makeWorld();
+  w.rules = { ...w.rules, ROGUE_TEMPT_BASE: 2, ROGUE_TEMPT_MAX: 1, PIRATE_MAX_FRAC: 1 };
+  const ship = anyMerchant(w);
+  ship.captain.traits = { boldness: 0.95, greed: 0.95, wanderlust: 0.5 };
+  ship.morale = (w.rules.MUTINY_MORALE || 0.3) - 0.05; ship._temptCd = 0;
+  assert.equal(maybeTurnRogue(w, ship), false, 'a rebellious crew revolts; it does not follow him to piracy');
+});
+
+test('an organic turn is self-consistent: a KEPT captain is ROGUE, a REPLACED one is a seizure', () => {
+  const w = makeWorld();
+  const ship = anyMerchant(w);
+  const cap0 = ship.captain;
+  turnPirate(w, ship); // organic — the stat roll decides who commands
+  const reg = w.events.filter((e) => e.kind === 'pirate').pop().data.regime;
+  if (reg.cause === 'rogue') {
+    assert.equal(ship.captain, cap0, 'a captain who LED his crew keeps his name and hand');
+    assert.ok(cap0.traits.boldness >= 0.7 && cap0.traits.greed >= 0.6, 'hardened into a raider');
+    assert.equal(reg.from.voiceSeed, reg.to.voiceSeed, 'from == to — the same person, before and after');
+  } else {
+    assert.equal(reg.cause, 'pirate', 'otherwise a new master seized her');
+    assert.notEqual(ship.captain, cap0, 'a changed hand');
+  }
+});
 
 test('combat strength rises with guns, skill, morale — and a pirate fights harder', () => {
   const w = makeWorld();

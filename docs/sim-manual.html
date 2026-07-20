@@ -269,7 +269,7 @@ flowchart TB
       <tr><td class="actorcell">Populace</td><td>every substep</td><td>eat, grow/starve, migrate, rebel</td><td>population, civ score</td></tr>
       <tr><td class="actorcell">Merchant Captain</td><td>when ship idle</td><td>plan the whole voyage basket (food→aid→exports→migration→scout)</td><td>ship.voyage, cargo plan</td></tr>
       <tr><td class="actorcell">Ship</td><td>every substep</td><td>sail, steer round land, dock, flee, shelter, tack</td><td>x/y/heading, state, hull, rig</td></tr>
-      <tr><td class="actorcell">Crew</td><td>every substep at sea</td><td>eat, hold or break morale, mutiny / desert / turn pirate</td><td>morale, hunger, unrest, uprising</td></tr>
+      <tr><td class="actorcell">Crew</td><td>every substep at sea</td><td>eat, hold or break morale, mutiny / desert / turn pirate (captain-led or crew cast-out)</td><td>morale, hunger, unrest, uprising</td></tr>
       <tr><td class="actorcell">Pirate Captain</td><td>every substep</td><td>hunt, blockade, raid, defend a haven, resupply, flee</td><td>_prey, _blockadeId, position, combat</td></tr>
       <tr><td class="actorcell">Privateer</td><td>every substep</td><td>hunt pirates, patrol, besiege havens, resupply</td><td>_prey, _guard, position, combat</td></tr>
       <tr><td class="actorcell">Shore battery</td><td>every 12 s</td><td>shell the nearest pirate (port) or besieger (haven)</td><td>target hull/rig/guns</td></tr>
@@ -512,7 +512,7 @@ flowchart TB
 <section id="crew">
   <h2><span class="roman">VIII.</span>The Crew — morale &amp; mutiny</h2>
   <div class="decides"><b>Decides:</b> whether a crew keeps working, deserts to another port, or raises the black flag. Gated at every step by the captain's Command.</div>
-  <p>Crews eat food and drink ale (a master's crew eats less and cheers harder). At sea, morale eases toward a steady ~0.6, dragged by sea-fatigue and — decisively — by an empty larder. A <b>fed crew mathematically never mutinies</b>: steady-state morale sits well above the <code>0.3</code> mutiny line. Trouble only begins when food runs out <span class="ref">crew.js:130-144</span>.</p>
+  <p>Crews eat food and drink ale (a master's crew eats less and cheers harder). At sea, morale eases toward a steady ~0.6, dragged by sea-fatigue and — decisively — by an empty larder. A <b>fed crew mathematically never mutinies</b>: steady-state morale sits well above the <code>0.3</code> mutiny line. Trouble only begins when food runs out <span class="ref">crew.js:130-144</span>. <b>Two exits end at the black flag:</b> a defeated mutiny may install a <em>new</em> pirate master (stat-driven — likelier the hungrier the crew and the more lawless its home port <span class="ref">crew.js:178-186</span>), while — quite apart from any crisis — a bold, greedy captain of a still-loyal crew may hoist it <em>himself</em> and lead them over (<code>maybeTurnRogue</code>, weighed each substep for candidates above the mutiny line; see Fig.&nbsp;IXa) <span class="ref">piracy.js:117-136</span>.</p>
 
   <div class="chart">
 <pre class="mermaid" id="fig8">
@@ -530,9 +530,10 @@ flowchart TB
   UPR --> RES{"quell odds = 0.4 + Command·0.42"}
   RES -->|quell| HOLD["Captain holds — morale reset 0.7,&lt;br/&gt;redirect to resupply"]:::good
   RES -->|"lose → roll"| OUT{"outcome"}
-  OUT -->|"0.30"| PIRATE["Turn PIRATE (if under 8% cap)"]:::trap
+  OUT -->|"stat: 0.3 + hunger + home lawlessness"| PIRATE["Turn PIRATE — crew take a NEW master&lt;br/&gt;(seized · if under 8% cap)"]:::trap
   OUT -->|"0.50"| DEFECT["Desert — re-home to another port"]
   OUT -->|else| NEWCAP["New novice captain; morale reset,&lt;br/&gt;redirect to resupply (crisis deferred)"]
+  MO -. "bold+greedy captain, per-substep" .-> SELFROGUE{{"self-turn: raise the black flag himself&lt;br/&gt;(ROGUE — keeps command, see Fig. IXa)"}}:::trap
   classDef actor fill:#123c3f,stroke:#4fcdd4,color:#d6faf9,stroke-width:1.4px;
   classDef issue fill:#3b1a22,stroke:#e0645a,color:#ffdad4,stroke-width:1.3px;
   classDef trap fill:#352c14,stroke:#e0a94a,color:#ffe9c2;
@@ -549,7 +550,23 @@ flowchart TB
 <section id="pirate">
   <h2><span class="roman">IX.</span>The Pirate — the hunt</h2>
   <div class="decides"><b>Decides:</b> a pirate's every move via a strict priority ladder, coloured by a fearsome captain's traits and sharpened by hunger.</div>
-  <p>Any hull can raise the black flag — via mutiny, a haven's forge, a genesis seed, or capture as a prize — always gated by <code>canTurnPirate</code>, which caps pirates at <code>8%</code> of the fleet <span class="ref">piracy.js:99-115</span>. A pirate then runs the ladder below every substep. Hunger is the master dial: a hungry pirate never rests, uses full hunting range even mid-blockade, and drops its greedy captain's minimum-prize bar to zero.</p>
+  <p>Any hull can raise the black flag — a <b>seeded</b> raider, a <b>haven's forge</b>, a <b>prize</b> capture, a <b>mutiny</b> that turns rogue, a fallen haven's <b>home fleet</b>, or an honest <b>captain's own turn</b> to piracy (<code>maybeTurnRogue</code>, weighed each substep for a genuinely bold + greedy master) — always gated by <code>canTurnPirate</code>, which caps pirates at <code>8%</code> of the fleet <span class="ref">piracy.js:99-115</span>. How she came to it decides <em>who commands</em>: the crew either keep their captain as their pirate leader (a <b>rogue</b> turn — he's hardened bold+greedy but keeps his name, portrait, and log-voice, an unbroken fall from honest trade) or throw him over for a fresh, fearsome master (a <b>seizure</b>). A <em>seeded/built</em> raider and a <em>mutiny</em> are always a new master; an <em>organic</em> turn rolls lead-vs-cast-out from the captain's boldness + greed + crew morale — so the self-turn, born of that same boldness+greed, comes up <em>rogue</em> almost always <span class="ref">piracy.js:104-171</span>. A pirate then runs the ladder below every substep. Hunger is the master dial: a hungry pirate never rests, uses full hunting range even mid-blockade, and drops its greedy captain's minimum-prize bar to zero.</p>
+
+  <div class="chart">
+<pre class="mermaid" id="fig9a">
+%%{init:{'theme':'base','themeVariables':{'fontSize':'14px','primaryColor':'#15303a','primaryTextColor':'#e7eff1','primaryBorderColor':'#3c6f7c','lineColor':'#5f8a97','clusterBkg':'#0e2029','clusterBorder':'#295059','edgeLabelBackground':'#0e2029'}}}%%
+flowchart TB
+  T["A hull turns pirate&lt;br/&gt;(gated by the 8% fleet cap)"]:::actor --> Q{"how did she come to it ?"}
+  Q -->|"seeded raider · haven-built · mutiny cast-out"| SEIZED
+  Q -->|"organic: a captain's own turn (maybeTurnRogue)&lt;br/&gt;or a fallen haven's home crew"| ROLL{"pLead roll&lt;br/&gt;boldness + greed + crew morale"}
+  ROLL -->|"he leads"| ROGUE["ROGUE — cause 'rogue'&lt;br/&gt;the SAME captain, hardened bold+greedy+blooded&lt;br/&gt;keeps name · portrait · voiceSeed → the log stays his hand"]:::good
+  ROLL -->|"crew throw him over"| SEIZED["SEIZED — cause 'pirate'&lt;br/&gt;a new fearsome master (makePirateCaptain)&lt;br/&gt;→ the log changes hands"]:::trap
+  classDef actor fill:#123c3f,stroke:#4fcdd4,color:#d6faf9,stroke-width:1.4px;
+  classDef trap fill:#352c14,stroke:#e0a94a,color:#ffe9c2;
+  classDef good fill:#173226,stroke:#63b98a,color:#cdeed9;
+</pre>
+  </div>
+  <p class="chart-cap">Fig. IXa — raising the black flag: who commands, and why the same captain sometimes keeps the log (the rogue/seized split that drives the first-person Story voice).</p>
 
   <div class="chart">
 <pre class="mermaid" id="fig9">
@@ -676,7 +693,7 @@ flowchart LR
   </div>
   <p class="chart-cap">Fig. XII — fall → entrench → redeem. The build cap fights the global pirate budget.</p>
 
-  <div class="note crit"><span class="tag">Cap conflict · high</span><p><b>Two pirate caps that don't know about each other.</b> Haven <em>builds</em> are allowed up to <code>20%</code> of the fleet, but every <em>other</em> pirate source (mutiny, rogue-floor refill, prize capture) is capped at <code>8%</code> by <code>canTurnPirate</code>. Once haven-built pirates fill ≥8%, all the character-rich sources silently stop — a couple of busy havens can monopolise the entire pirate budget, and the mutineers/rogues the design wants can't spawn <span class="ref">havens.js:133 · piracy.js:100</span>.</p></div>
+  <div class="note crit"><span class="tag">Cap conflict · high</span><p><b>Two pirate caps that don't know about each other.</b> Haven <em>builds</em> are allowed up to <code>20%</code> of the fleet, but every <em>other</em> pirate source (mutiny, rogue-floor refill, prize capture) is capped at <code>8%</code> by <code>canTurnPirate</code>. Once haven-built pirates fill ≥8%, all the character-rich sources silently stop — a couple of busy havens can monopolise the entire pirate budget, and the mutineers and captain-led <em>rogue</em> turns (mutiny→pirate, the haven-fall crew, and <code>maybeTurnRogue</code>) the design leans on for its Story-tab drama can't spawn <span class="ref">havens.js:133 · piracy.js:100</span>.</p></div>
 </section>
 
 <!-- ============ 13. DIPLOMACY ============ -->

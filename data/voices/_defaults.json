@@ -8,51 +8,201 @@
 
   "handover": {
     "ship": {
-      "founder":   "Here begins my keeping of this log. I am {name}{rankc}, and this {home} {type} answers to me now.",
-      "successor": "The log passes into my hand. I am {name}{rankc}; her account goes on under me.",
-      "mutiny":    "The crew put the old master over the side and pressed the book on me. I am {name}, green to command, and set down what I can.",
-      "pirate":    "No more honest trade. The black flag is up, and I — {name}{rankc} — keep this log in my own hand now.",
-      "prize":     "She struck to us. I am {name}{rankc}; this hull sails under my flag now, and her log continues at the point of a cutlass.",
-      "recovered": "A hunter ran us down and the black flag came down with him. I am {name}{rankc}, set to bring this hull back to honest trade — and to keep her book."
+      "founder":   [
+        "Here begins my keeping of this log. I am {name}{rankc}, and this {home} {type} answers to me now.",
+        "The book is mine to keep from today. I am {name}{rankc}, master of this {home} {type}, and I mean to fill her pages honestly.",
+        "A new hand opens this log — mine. I am {name}{rankc}; this {home} {type} and her account are both in my charge.",
+        "I take up the keeping of this book. I am {name}{rankc}, and every voyage of this {home} {type} will be set down here under my hand.",
+        "So begins my command, and my keeping of her log. I am {name}{rankc}, and this {home} {type} sails under me now.",
+        "The pen and the wheel both come to me this day. I am {name}{rankc}, and I'll keep this {home} {type}'s book as faithfully as I keep her course."
+      ],
+      "successor": [
+        "The log passes into my hand. I am {name}{rankc}; her account goes on under me.",
+        "Her book comes to me now. I am {name}{rankc}, and I take up the tale where the last hand left it.",
+        "Command has changed, and the log with it. I am {name}{rankc}; I keep her chronicle from here.",
+        "I take up this book after another. I am {name}{rankc}, and her story goes on under my keeping.",
+        "The keeping of this log falls to me. I am {name}{rankc}; what came before I leave as it stands, and set down what comes next.",
+        "A fresh hand on the pen — mine. I am {name}{rankc}, and I mean to serve her as well as those before me."
+      ],
+      "mutiny":    [
+        "The crew put the old master over the side and pressed the book on me. I am {name}, green to command, and set down what I can.",
+        "They cast the captain out and made me keep this log in his place. I am {name}, new to the wheel, and doing my best by her.",
+        "The old master is gone, thrown over by his own crew, and the book is mine now. I am {name}, untried, and learning fast.",
+        "Mutiny put me here, pen in hand and hardly ready for it. I am {name}, and I'll keep her log as steady as I am able.",
+        "The men would not have the old captain, and it fell to me to take up his book. I am {name}, green enough, but hers to keep.",
+        "The crew rose, the master fell, and the log came to me. I am {name}, new-made and none too sure — but I'll write her true."
+      ],
+      "rogue":     [
+        "So ends my honest trade. I have run the black flag up with my own hands, and this crew has followed me to it — no more lawful cargoes, only what the sword will take.",
+        "I have done with fair dealing. The black flag flies from my own masthead now, by my own choosing, and this crew stands with me.",
+        "Let the ledgers rot. I raised the black flag myself, and my crew cheered it up the mast — we take what we please from here.",
+        "No more honest freight for me. I turned this ship to the black flag with my own hand, and there is no turning her back.",
+        "I chose the black flag, and I'll not pretend otherwise. My crew chose it with me, and this log goes on as a rover's from today.",
+        "The honest trade never paid what I was owed, so I took the black flag for myself. This crew is mine, this ship is mine, and what we take is ours."
+      ],
+      "pirate":    [
+        "The old master is gone — put ashore, or over the side. I am {name}{rankc}, and this hull answers to my black flag now; her honest days are done.",
+        "This ship has a new master, and it is me. I am {name}{rankc}; her old captain kept honest books — I keep a different kind entirely.",
+        "Her lawful master would not see reason, so we saw him off. I am {name}{rankc}, and the flag above her is black from this day.",
+        "A new hand takes up this book — mine. I am {name}{rankc}, and I did not come by this ship through honest trade.",
+        "The trader who kept this log is finished with her. I am {name}{rankc}, her master now, and there'll be no more talk of manifests and fair dealing.",
+        "She changed hands at the point of a cutlass, and the hand is mine. I am {name}{rankc}; the black flag suits her better than her old colours ever did.",
+        "They gave me the ship and the book both, whether they meant to or no. I am {name}{rankc}, and this hull sails under my black flag now.",
+        "I took command the only way worth taking it. I am {name}{rankc} — her past owner has no further say in where she sails, nor under what flag."
+      ],
+      "prize":     [
+        "She struck to us. I am {name}{rankc}; this hull sails under my flag now, and her log continues at the point of a cutlass.",
+        "We took her fair, in a hard fight. I am {name}{rankc}, her master now, and her book is mine to keep.",
+        "Her colours came down and ours went up. I am {name}{rankc}; this prize is mine, and I take up her log where her old captain dropped it.",
+        "She yielded, and I claimed her. I am {name}{rankc}, and this hull answers to my black flag from the moment she struck.",
+        "A prize, and a fine one. I am {name}{rankc}; I put a crew aboard and the book in my own pocket, and on she sails under me.",
+        "We boarded her and she was ours. I am {name}{rankc}, and her honest days ended the hour I stepped onto her deck."
+      ],
+      "recovered": [
+        "A hunter ran us down and the black flag came down with him. I am {name}{rankc}, set to bring this hull back to honest trade — and to keep her book.",
+        "The rovers who held her are beaten, and she is a lawful ship again. I am {name}{rankc}, and I mean to scrub the black flag out of her log.",
+        "I took her back from the pirates who had made her theirs. I am {name}{rankc}, and she will run honest cargoes under me from now on.",
+        "The black flag is struck and she is mine to redeem. I am {name}{rankc}, and I will see her name good again.",
+        "We ran the raiders off her and I took command. I am {name}{rankc}, come to bring this hull home to honest trade.",
+        "She is clear of the black flag at last, and the keeping of her falls to me. I am {name}{rankc}, and her honest chapter starts here."
+      ]
     },
     "island": {
-      "founder":   "I take up the governance of {place}, and this record with it. I am {name}{rankc}.",
-      "overthrow": "The mob pulled down the old ruler, and the seal has come to me. I am {name}{rankc}; {place} is mine to govern now.",
-      "successor": "The rule of {place} passes to me — {name}{rankc}. I keep its chronicle from here."
+      "founder":   [
+        "I take up the governance of {place}, and this record with it. I am {name}{rankc}.",
+        "The rule of {place} is mine now, and its chronicle too. I am {name}{rankc}, and I mean to keep both well.",
+        "I set my hand to the governance of {place} this day. I am {name}{rankc}; what befalls this port, I will set down here.",
+        "{place} comes into my charge, book and seal alike. I am {name}{rankc}.",
+        "The keeping of {place} and its ledger both fall to me. I am {name}{rankc}, and I take them up gladly.",
+        "I am {name}{rankc}, and from today the governance of {place} — and the writing of its record — is mine."
+      ],
+      "overthrow": [
+        "The mob pulled down the old ruler, and the seal has come to me. I am {name}{rankc}; {place} is mine to govern now.",
+        "The streets rose, the old ruler fell, and {place} is mine. I am {name}{rankc}, and I take up its chronicle with its seal.",
+        "They cast out the one who ruled before me, and the port is in my hand now. I am {name}{rankc}, keeper of {place} and its book.",
+        "{place} threw down its ruler, and the governance came to me. I am {name}{rankc}, and I will write its record from here.",
+        "The old order is finished and {place} answers to me. I am {name}{rankc}, come to power on the shoulders of a mob.",
+        "The rising put the seal of {place} in my hand. I am {name}{rankc}, and I keep its chronicle now, for better or worse."
+      ],
+      "successor": [
+        "The rule of {place} passes to me — {name}{rankc}. I keep its chronicle from here.",
+        "{place} comes into my keeping after another. I am {name}{rankc}, and its record goes on under me.",
+        "The seal of {place} is mine now. I am {name}{rankc}, and I take up its book where the last hand set it down.",
+        "Governance of {place} falls to me in turn. I am {name}{rankc}; I keep faith with what came before and set down what comes next.",
+        "I take up {place} and its ledger both. I am {name}{rankc}, its ruler and its recorder now.",
+        "The care of {place} passes to my hand. I am {name}{rankc}, and I mean to serve it as well as any before me."
+      ]
     }
   },
 
   "join": ["and then ", "; then ", "and, in the same breath, ", "and "],
 
   "kinds": {
-    "plunder":   { "recur": { "class": "prize", "phrases": [", my {ord} such prize", " — not the first I have taken", ", as I have done before"] } },
-    "sunk":      { "recur": { "class": "prize", "phrases": [", another I have sent to the bottom"] } },
+    "plunder":   {
+      "recur": { "class": "prize", "phrases": [", my {ord} such prize", " — not the first I have taken", ", as I have done before"] },
+      "say": [
+        "{we} ran {foe} down and battered her colours from the mast — {goods} bales of cargo and {gold}g into {our} hold before {we} let the hulk limp away",
+        "{foe} out of {foeHome} put up a poor fight; {we} stripped {goods} bales and {gold}g from her belly and left her the wind to sob into",
+        "a fat purse — {we} took {goods} crates of cargo and {gold}g off {foe} and sent her on, lighter and wiser",
+        "{we} came alongside {foe} and took what pleased {us}: {goods} bales of goods, {gold}g in coin, and her crew glad to keep their skins",
+        "hard pounding, and then {foe} struck to {us} — {goods} bales of cargo and {gold}g the richer, {we} bore away",
+        "{we} put a shot through {foe}'s rigging and boarded her at leisure — {goods} bales and {gold}g for {our} trouble",
+        "{foe} was slow and {we} were hungry; {goods} bales of cargo and {gold}g changed hands at the cutlass' point",
+        "{we} took {foe} without losing a man — {goods} bales of cargo, {gold}g, and a fine day's work"
+      ]
+    },
+    "sunk":      {
+      "recur": { "class": "prize", "phrases": [", another I have sent to the bottom"] },
+      "say": [
+        "{we} hammered {foe} until she filled and went down, her cargo swallowed with her",
+        "no prize this day — {we} pounded {foe} beneath the waves and watched the sea close over her",
+        "{foe} would not strike, so {we} sent her to the bottom, hold and all",
+        "{we} raked {foe} from stem to stern; she slipped under before {we} could take a thing",
+        "the guns did their work — {foe} broke apart and sank, and {we} left the deep to have her",
+        "{foe} chose the seabed over {our} flag, and {we} obliged her"
+      ]
+    },
     "raid":      { "recur": { "class": "sack",  "phrases": [", the {ord} port I have put to the torch", ", another town I have sacked"] } },
-    "fended":    { "recur": { "class": "stand", "phrases": [" — I have shaken off wolves before", ", not for the first time"] } },
-    "hunted":    { "recur": { "class": "hunt",  "phrases": [", the {ord} raider I have run down", " — another wolf I have sent under"] } }
+    "fended":    {
+      "recur": { "class": "stand", "phrases": [" — I have shaken off wolves before", ", not for the first time"] },
+      "say": [
+        "{foe} came at {us} thinking easy pickings — {we} shot her to splinters and sent her under",
+        "a black-flag hull, {foe}, ran down on {us}; {our} gunners were ready and put her beneath the waves",
+        "{we} would not be taken — {we} raked {foe} till she burned and slid under, and sailed on unbowed",
+        "{foe} misjudged {us}; {our} broadside opened her up and the sea did the rest",
+        "they thought {us} a lamb — {we} gave {foe} iron enough to founder her, and kept {our} cargo whole",
+        "{we} traded fire with {foe} and won it; she went down and {we} held {our} course"
+      ]
+    },
+    "hunted":    {
+      "recur": { "class": "hunt",  "phrases": [", the {ord} raider I have run down", " — another wolf I have sent under"] },
+      "say": [
+        "{we} ran {foe} to ground at last and cut her down — one less wolf on the lanes",
+        "the raider {foe} had troubled these waters too long; {we} caught her and sent her under",
+        "{we} chased {foe} through the swell and broke her — the sea is the safer for it",
+        "{foe} ran, but not far enough; {we} raked her to a wreck and let her sink",
+        "{we} hunted {foe} down and gave her no quarter — a pirate's due, paid in full",
+        "{we} closed on {foe} and stove her in, and her black flag went down with her"
+      ]
+    }
   },
 
   "crossref": {
     "ship": [
-      " — the same wolf that took the {foeName}",
-      ", the {ord} {foeHome} hull to strike to me"
+      ", the {ord} {foeHome} hull to strike to me",
+      " — another bottom out of {foeHome} for the tally",
+      ", and not the first {foeHome} crew to rue my flag"
     ]
   },
 
   "coda": {
     "ship": {
-      "pirate":  "I rove the lanes yet{bounty}.",
-      "default": "I keep her at sea still, out of {home}.",
+      "pirate":  [
+        "I rove the lanes yet{bounty}.",
+        "I sail on under the black flag still{bounty}, and take what the sea offers.",
+        "She is a rover to this day, and I her master{bounty}.",
+        "The black flag flies over her still{bounty}, and I mean to keep it there.",
+        "I haunt the trade lanes yet{bounty}, and the honest hulls give me a wide berth."
+      ],
+      "default": [
+        "I keep her at sea still, out of {home}.",
+        "She runs her cargoes yet, out of {home}, and I keep her book.",
+        "We sail on out of {home}, honest and busy, and there is little more to tell.",
+        "She is at sea still, {home} her home port, and her log goes on.",
+        "I have her yet, out of {home}, and mean to keep her there a long while."
+      ],
       "bounty":  ", {bounty}g upon my head"
     },
     "island": {
-      "haven":   "It flies the black flag now — a den of cutthroats, and no lawful hand keeps this book.",
-      "default": "The port endures under my hand — {population} souls."
+      "haven":   [
+        "It flies the black flag now — a den of cutthroats, and no lawful hand keeps this book.",
+        "The port is a pirate haven now, and no honest ruler writes here.",
+        "Cutthroats hold {place} today, and its lawful record ends where the black flag began.",
+        "{place} is given over to the black flag — a nest of rovers, and no seal but theirs.",
+        "The wharves of {place} answer to pirates now, and there is none left to keep an honest ledger."
+      ],
+      "default": [
+        "The port endures under my hand — {population} souls.",
+        "{place} holds steady under me, {population} souls in my keeping.",
+        "We go on, {population} souls, and the ledger stays calm.",
+        "{place} endures — {population} souls, and trade enough to keep them.",
+        "The port stands under my hand yet — {population} souls, and steady enough to keep."
+      ]
     }
   },
 
   "quiet": {
-    "ship":   "Little enough to set down — a quiet life on the trade lanes, and I glad of it.",
-    "island": "Little troubles this port; trade comes and goes, and I keep a calm ledger."
+    "ship":   [
+      "Little enough to set down — a quiet life on the trade lanes, and I glad of it.",
+      "Not much for the book this while — fair winds, full holds, and no trouble worth the ink.",
+      "A calm stretch, and little to record. We trade, we sail, and the sea leaves us be.",
+      "Quiet pages these — honest work and easy water, which suits me well enough."
+    ],
+    "island": [
+      "Little troubles this port; trade comes and goes, and I keep a calm ledger.",
+      "A quiet spell for the port — ships in, ships out, and nothing to alarm the book.",
+      "The wharves are calm and the ledger calmer. Little happens worth the setting down.",
+      "Trade runs steady and the peace holds; there is not much here to write."
+    ]
   }
 }

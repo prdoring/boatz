@@ -13,7 +13,7 @@
       "founder":   "Let this page remember me: I am {name}{rankc}, and this {home} {type} — this creature of canvas and salt — is mine to love and to lose.",
       "successor": "The book comes to my hands like a gull to a mast. I am {name}{rankc}; her story flows on, and I the poor pen of it.",
       "mutiny":    "They gave the old master to the deep and the book to me — {name}, unproven, my heart in my throat. The sea will teach me her sorrows soon enough.",
-      "pirate":    "We have wed the black flag, and I — {name}{rankc} — set down our vows in salt. Honest waters weep for us; let them.",
+      "rogue":     "We have wed the black flag, and I — {name}{rankc} — set down our vows in salt. Honest waters weep for us; let them.",
       "prize":     "She yielded to us as the tide yields to the moon. I am {name}{rankc}, and I write her fate in my own dark hand.",
       "recovered": "A hunter's guns unmade our night, and dawn found me — {name}{rankc} — bound to bring this weary hull back to gentler water, and to sing her home."
     },
@@ -53,8 +53,52 @@
   },
 
   "kinds": {
-    "plunder": { "recur": { "class": "prize", "phrases": [", the {ord} heart we have broken", " — not the first the sea has fed us", ", as the tide has taught us"] } },
-    "sunk":    { "recur": { "class": "prize", "phrases": [", another given to the green dark"] } },
-    "fended":  { "recur": { "class": "stand", "phrases": [" — we have outrun the wolves before", ", and lived to write of it again"] } }
+    "plunder": {
+      "recur": { "class": "prize", "phrases": [", the {ord} heart we have broken", " — not the first the sea has fed us", ", as the tide has taught us"] },
+      "say": [
+        "{we} drew alongside {foe} like a lover to a window, and took from her {goods} bales and {gold}g before setting her adrift, lighter and lonelier",
+        "{we} unstitched {foe}'s colours from her mast and gathered {goods} crates and {gold}g into {our} hold, then let the poor stripped thing wander off into the dusk",
+        "{foe} bled her riches into {our} arms — {goods} casks and {gold}g — and {we} left her the mercy of the horizon",
+        "{we} laid hands on {foe} as the tide lays hands on the shore, and carried away {goods} chests and {gold}g while she wept at her own emptiness",
+        "{we} bore down on {foe} out of {foeHome}'s memory, took {goods} bales and {gold}g for {our} trouble, and let her limp home a ghost of herself",
+        "{we} kissed {foe}'s flank with grapnel and hunger, lifted {goods} crates and {gold}g from her heart, and gave her back to the sea half-alive",
+        "{foe} gave up {goods} casks and {gold}g to {our} reaching hands, and {we} watched her drift away, unmasted of her pride"
+      ]
+    },
+    "sunk": {
+      "recur": { "class": "prize", "phrases": [", another given to the green dark"] },
+      "say": [
+        "{we} opened {foe}'s side to the sea until she drank her fill and lay down in the green dark, her cargo cradled to the bottom",
+        "{we} sang {foe} down through cannon and smoke, and the water closed over her like a held breath finally let go",
+        "{foe} filled and foundered under {our} guns, and the sea took her whole — freight, timber, and all her small brave lights",
+        "{we} broke {foe}'s back on the anvil of the swell, and she went under without a prize to show for it, only foam",
+        "{we} gave {foe} to the grave that has no headstone, and her riches sank with her, ungathered and unmourned",
+        "{foe} slid beneath the waves while {we} watched, and the sea kept everything she carried, as the sea always does",
+        "{we} hammered {foe} until the ocean walked in through her wounds, and down she went, a whole world drowning quietly"
+      ]
+    },
+    "fended": {
+      "recur": { "class": "stand", "phrases": [" — we have outrun the wolves before", ", and lived to write of it again"] },
+      "say": [
+        "{foe} came for {us} like a wolf for a lamb, and found instead a thing with teeth — {we} shot her down into the cold",
+        "{we} met {foe}'s greed with fire, and sent the raider under before she could learn {our} name",
+        "{foe} thought {us} easy sorrow — {we} turned {our} guns on her and gave her a grave for her presumption",
+        "{we} stood {our} ground against {foe} when flight was gone, and it was she, not {us}, who kept her rendezvous with the deep",
+        "{foe} closed on {us} hungry, and {we} answered with iron until the sea swallowed her hunger and her hull alike",
+        "{we} would not be the evening's prize — {we} tore {foe} open at the waterline and watched the dark take her",
+        "{foe} reached for {us} out of the murk, and {we} broke that reaching hand, and she sank with her ambition unfed"
+      ]
+    },
+    "hunted": {
+      "say": [
+        "{we} ran {foe} to the edge of the chart at last and put her under — one grief less upon the honest water",
+        "{we} chased {foe} through her own black legend and ended it, and the lanes breathed easier for her drowning",
+        "{foe} had haunted these waters like a wound that would not close — {we} closed it, and let the sea have the wolf",
+        "{we} cornered {foe} where the wind died, and gave the pirate the one thing she had dealt so freely: the deep",
+        "{we} hunted {foe} down the long grey miles and sank her, and somewhere a widow may sleep the sounder for it",
+        "{foe} fled {us} as guilt flees the dawn, and {we} caught her, and sent her black flag down to the green silence",
+        "{we} unmade {foe} at last, that terror of the trade routes, and the horizon looked the cleaner for her going"
+      ]
+    }
   }
 }

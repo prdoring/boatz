@@ -12,7 +12,7 @@
 import { streamFloat } from './rng.js';
 import { transfer, cargoUnits, GOLD, PEOPLE } from './resources.js';
 import { logEvent, logEventThrottled, maybeSink } from './events.js';
-import { makePirateCaptain, skill01, awardCombatXp, rankOf, regimeData } from './captains.js';
+import { makePirateCaptain, hardenToPirate, skill01, awardCombatXp, rankOf, regimeData } from './captains.js';
 import { windMult } from './wind.js';
 import { rigMult, damageHull, damageRig } from './repair.js';
 import { markDanger, postBounty, payBounty } from './bounty.js';
@@ -100,18 +100,72 @@ export function canTurnPirate(world) {
   return pirateCount(world) < Math.max(1, world.ships.length * world.rules.PIRATE_MAX_FRAC);
 }
 
-/** Raise the black flag: this ship becomes a pirate under a fresh, fearsome captain. */
-export function turnPirate(world, ship) {
+/** Raise the black flag. WHO commands under it depends on how she came to it:
+ *   • the SITTING captain leads his own crew into piracy (kept, hardened — a continuous fall from trade,
+ *     his hand still in the log; cause 'rogue'), OR
+ *   • the crew throw him over for a NEW, fearsome pirate master (cause 'pirate').
+ *  A bold, greedy captain with a still-loyal crew tends to LEAD; a timid one, or a mutinous/desperate
+ *  crew, gets cast out. `opts.overthrow` (a mutiny that turned pirate) forces the new master; `opts.fresh`
+ *  (a seeded or haven-built raider, no honest past) does too and records no prior keeper. */
+export function turnPirate(world, ship, opts = {}) {
+  const t = world.rules;
   const prev = ship.captain ? { name: ship.captain.name, voiceSeed: ship.captain.voiceSeed, rank: rankOf(ship.captain) } : null;
+  let lead = false;
+  if (!opts.overthrow && !opts.fresh && ship.captain) {
+    const tr = ship.captain.traits || {};
+    const bold = tr.boldness != null ? tr.boldness : 0.5;
+    const greed = tr.greed != null ? tr.greed : 0.5;
+    const morale = ship.morale != null ? ship.morale : (t.MORALE_STEADY || 0.7);
+    const pLead = Math.max(0.05, Math.min(0.92,
+      t.ROGUE_LEAD_BASE + t.ROGUE_LEAD_BOLD * (bold - 0.5) + t.ROGUE_LEAD_GREED * (greed - 0.5) + t.ROGUE_LEAD_MORALE * (morale - 0.5)));
+    lead = streamFloat(world, 'mutiny') < pLead;
+  }
   ship.pirate = true;
-  ship.captain = makePirateCaptain(world);
+  if (lead) hardenToPirate(ship.captain);        // the same man, harder — keeps name/voiceSeed
+  else ship.captain = makePirateCaptain(world);   // a new, fearsome master takes command
   ship.morale = 0.85; ship.unrest = 0; ship.uprising = null; ship.hunger = 0;
   ship.voyage = null; ship.leg = null; ship.legIdx = 0;
   ship._prey = null; ship._plunder = 0; ship._raidCd = 0;
   ship.state = 'outbound'; // displays as 'sailing'; the piracy system drives it
   const home = world.islandsById.get(ship.homeId);
-  logEvent(world, 'pirate', `Black flag! The crew of ${ship.name || 'a ship'} turned pirate under Capt. ${ship.captain.name}${home ? ` — a ${home.name} vessel gone rogue` : ''}.`,
-    { x: ship.x, y: ship.y, shipId: ship.id, data: regimeData(prev, { name: ship.captain.name, voiceSeed: ship.captain.voiceSeed, rank: rankOf(ship.captain) }, 'pirate') });
+  const tag = home ? ` — a ${home.name} vessel gone rogue` : '';
+  const vessel = ship.name || 'a ship';
+  const text = lead
+    ? `Black flag! Capt. ${ship.captain.name} led the crew of ${vessel} into piracy${tag}.`
+    : prev
+      ? `Black flag! The crew of ${vessel} cast out Capt. ${prev.name} and rose under Capt. ${ship.captain.name}${tag}.`
+      : `Black flag! ${vessel[0] === vessel[0].toUpperCase() ? vessel : 'A raider, ' + vessel + ','} hoists the black flag under Capt. ${ship.captain.name}${tag}.`;
+  logEvent(world, 'pirate', text,
+    { x: ship.x, y: ship.y, shipId: ship.id,
+      data: regimeData(opts.fresh ? null : prev, { name: ship.captain.name, voiceSeed: ship.captain.voiceSeed, rank: rankOf(ship.captain) }, lead ? 'rogue' : 'pirate') });
+}
+
+/** A bold, greedy merchant captain may raise the black flag of his OWN accord — no mutiny, no fallen
+ *  haven, just ambition, emboldened by lawless waters or a restless crew. The classic fall of an honest
+ *  master, and the main wellspring of 'rogue' turns (he keeps command, so the log stays in his hand).
+ *  Rare and self-limiting: gated to genuinely bold+greedy captains, throttled per ship, capped by the
+ *  fleet fraction. Draws from its own 'temptation' RNG stream so it perturbs no other system. The organic
+ *  turnPirate then decides lead-vs-overthrow — and since he's bold+greedy, it comes up 'rogue' nearly
+ *  always. Returns true if she turned. */
+export function maybeTurnRogue(world, ship) {
+  const t = world.rules;
+  if (ship.pirate || ship.privateer || !ship.captain || ship.uprising) return false;
+  if (world.simTime < (ship._temptCd || 0)) return false;
+  ship._temptCd = world.simTime + (t.ROGUE_TEMPT_COOLDOWN_DAYS || 4) * t.SIM_DAY_SECONDS; // weigh it now and then, not every substep
+  const tr = ship.captain.traits || {};
+  const bold = tr.boldness != null ? tr.boldness : 0.5;
+  const greed = tr.greed != null ? tr.greed : 0.5;
+  if (bold < (t.ROGUE_TEMPT_BOLD_MIN || 0.6) || greed < (t.ROGUE_TEMPT_GREED_MIN || 0.6)) return false; // only the boldest+greediest tempt
+  if (ship.morale != null && ship.morale < (t.MUTINY_MORALE || 0.3)) return false; // a rebellious crew MUTINIES; it doesn't follow him rogue
+  if (!canTurnPirate(world)) return false; // the seas won't bear another rogue
+  const home = world.islandsById.get(ship.homeId);
+  const lawless = home ? (home.lawlessness || 0) : 0;
+  const disaffection = Math.max(0, (t.MORALE_STEADY || 0.7) - (ship.morale != null ? ship.morale : 0.7));
+  const drive = Math.max(0, bold - 0.5) + Math.max(0, greed - 0.5); // 0..0.8 — rises with both, not too steep
+  const p = Math.min(t.ROGUE_TEMPT_MAX || 0.35,
+    (t.ROGUE_TEMPT_BASE || 0) * drive * (1 + (t.ROGUE_TEMPT_LAWLESS || 0) * lawless + (t.ROGUE_TEMPT_MORALE || 0) * disaffection));
+  if (streamFloat(world, 'temptation') < p) { turnPirate(world, ship); return true; }
+  return false;
 }
 
 /** SIM system: drive every pirate — hunt and fight prey, run from a hunter, blockade a port, or make
@@ -454,7 +508,7 @@ function boardPrize(world, pirate, victim) {
   postBounty(world, pirate, victim.homeId, 'plunder'); // the robbed ship's home wants blood
   if (tryTakePrize(world, pirate, victim)) return;     // she changes flag — a consort, not a wreck
   const scuttle = streamFloat(world, 'combat') < (t.PIRATE_SINK_ON_LOSS || 0.06);
-  logEvent(world, 'plunder', `${pirate.name} battered ${victim.name || 'a merchant'} into striking her colours — Capt. ${pirate.captain.name} took ${loot.goods} cargo and ${loot.gold}g${scuttle ? ', then scuttled her.' : '; she limped away stripped.'}`, { x: victim.x, y: victim.y, shipId: pirate.id, data: foeData(world, victim) });
+  logEvent(world, 'plunder', `${pirate.name} battered ${victim.name || 'a merchant'} into striking her colours — Capt. ${pirate.captain.name} took ${loot.goods} cargo and ${loot.gold}g${scuttle ? ', then scuttled her.' : '; she limped away stripped.'}`, { x: victim.x, y: victim.y, shipId: pirate.id, data: { ...foeData(world, victim), goods: loot.goods, gold: loot.gold, scuttle } });
   if (scuttle) { victim._sunk = true; return; }
   victim.morale = Math.max(0, (victim.morale != null ? victim.morale : 0.5) - 0.2);
   const home = world.islandsById.get(victim.homeId);
@@ -484,7 +538,7 @@ function resolveCombat(world, pirate, victim) {
     awardCombatXp(victim.captain, t.XP_PER_DEFENSE); // the crew learned to fight
     victim.morale = Math.min(1, (victim.morale != null ? victim.morale : 0.5) + 0.1);
     const paid = payBounty(world, pirate, victim.homeId);
-    logEvent(world, 'fended', `${victim.name || 'A merchant'} shot ${pirate.name} to pieces and sent her under — Capt. ${victim.captain ? victim.captain.name : 'the master'}'s guns won the day${paid ? ` (${paid}g bounty claimed)` : ''}.`, { x: victim.x, y: victim.y, shipId: victim.id });
+    logEvent(world, 'fended', `${victim.name || 'A merchant'} shot ${pirate.name} to pieces and sent her under — Capt. ${victim.captain ? victim.captain.name : 'the master'}'s guns won the day${paid ? ` (${paid}g bounty claimed)` : ''}.`, { x: victim.x, y: victim.y, shipId: victim.id, data: foeData(world, pirate) });
     return true;
   }
   if (strikes(world, victim)) { boardPrize(world, pirate, victim); return false; }

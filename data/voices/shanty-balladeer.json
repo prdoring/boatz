@@ -13,7 +13,7 @@
       "founder":   "Sing it out, lads — a new book and a new hand! I am {name}{rankc}, and this {home} {type} is ours to sail. Heave-ho, and away we go!",
       "successor": "The log's passed down the line, and I'll take up the tune. I am {name}{rankc}; her song rolls on, and away we go!",
       "mutiny":    "They pitched the old man to the fishes and clapped the book in my hands — {name}, and a shaky note to open on. Still, heave-ho: the chorus wants a voice, and mine will serve.",
-      "pirate":    "No more honest verses for us! The black flag's aloft, and I — {name}{rankc} — will sing the wicked ones. Yo-ho, and away we go!",
+      "rogue":     "No more honest verses for us! The black flag's aloft, and I — {name}{rankc} — will sing the wicked ones. Yo-ho, and away we go!",
       "prize":     "She struck, and oh, we gave a roar! I am {name}{rankc}; this hull is ours now, and her log takes up our chorus. Heave-ho!",
       "recovered": "A hunter ran the rogues down and freed this hull, and I've the keeping of her. I am {name}{rankc} — a new verse, an honest one, and away we go!"
     },
@@ -53,9 +53,53 @@
   },
 
   "kinds": {
-    "plunder": { "recur": { "class": "prize", "phrases": [", the {ord} prize in our chorus", " — heave-ho, and not the last", ", sing hey, as before"] } },
-    "sunk":    { "recur": { "class": "prize", "phrases": [", another gone down to a watery tune"] } },
+    "plunder": {
+      "recur": { "class": "prize", "phrases": [", the {ord} prize in our chorus", " — heave-ho, and not the last", ", sing hey, as before"] },
+      "say": [
+        "{we} hauled down {foe}'s colours with a heave and a ho, and off with {goods} bales and {gold}g — sing hey — then let her drift away",
+        "{foe} struck her flag and {we} gave a roar — {goods} crates and {gold}g in the hold, yo-ho, and away she limped",
+        "{we} boarded {foe} to a rollicking tune, lifted {goods} casks and {gold}g clean away, and waved her off with a chorus",
+        "{we} ran {foe} down, sing hey, and stripped her of {goods} chests and {gold}g before setting her loose to spread the song",
+        "{foe} gave up {goods} bales and {gold}g to {our} merry crew, heave-ho, and sailed off lighter than she came",
+        "{we} came alongside {foe} with a whoop and a shanty, took {goods} crates and {gold}g for the chorus, and let the poor girl go",
+        "{we} plundered {foe} of {goods} casks and {gold}g to a stamping tune, and sent her home with only her story to sing"
+      ]
+    },
+    "sunk": {
+      "recur": { "class": "prize", "phrases": [", another gone down to a watery tune"] },
+      "say": [
+        "{we} sang {foe} down beneath the waves, yo-ho, and the sea took her cargo for its own dark chorus",
+        "{foe} went under to the boom of {our} guns, heave-ho, and not a crate came up to tell of it",
+        "{we} pounded {foe} till she filled and sank, sing hey, and down went her song for good",
+        "{we} gave {foe} to the deep with a roaring verse, and the waves closed over her, cargo and all",
+        "{foe} filled and foundered while {we} sang her requiem, yo-ho, and the loot went down to the fishes",
+        "{we} broke {foe} at the waterline to a thundering beat, and she slipped away below, no prize, only foam",
+        "{we} sent {foe} to a watery grave with a heave and a ho, and the sea kept every last barrel of her"
+      ]
+    },
     "raid":    { "recur": { "class": "sack",  "phrases": [", the {ord} port to hear our roaring song"] } },
-    "fended":  { "recur": { "class": "stand", "phrases": [" — we've danced clear of wolves before", ", and lived to sing another round"] } }
+    "fended": {
+      "recur": { "class": "stand", "phrases": [" — we've danced clear of wolves before", ", and lived to sing another round"] },
+      "say": [
+        "{foe} came at {us} for an easy song — heave-ho — and {we} sank the rogue before she found the tune",
+        "{we} met {foe}'s guns with a roaring broadside, sing hey, and down she went, still learning the words",
+        "{foe} thought {us} soft pickings, yo-ho, but {we} shot her under and sang on",
+        "{we} stood {our} ground and gave {foe} a chorus of iron, and it was she that sank, not {us}",
+        "{foe} reached for {our} hold with wicked intent — {we} answered heave-ho with hot shot and sent her down",
+        "{we} would not be any raider's prize, sing hey, so {we} broke {foe} open and watched her go under",
+        "{foe} closed on {us} bold as brass, but {we} put her beneath the waves, and struck up a livelier tune"
+      ]
+    },
+    "hunted": {
+      "say": [
+        "{we} chased {foe} down the wind with a yo-ho and a will, and sank the wolf — one less to prowl the lanes",
+        "{foe} ran from {our} song but {we} ran the faster, heave-ho, and put her black flag under for good",
+        "{we} hunted {foe} to the world's grey edge, sing hey, and gave the pirate her watery due",
+        "{we} cornered {foe} where the wind died down, yo-ho, and ended her roving with a roaring shot",
+        "{foe} had plagued the honest lanes too long — {we} caught her, heave-ho, and sent her singing to the deep",
+        "{we} ran {foe} to ground at last and sank her flag and all, and the sea lanes hummed a happier tune",
+        "{we} put {foe} beneath the waves with a stamp and a shout, and cleared the water for kinder songs"
+      ]
+    }
   }
 }

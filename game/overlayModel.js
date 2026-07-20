@@ -23,36 +23,41 @@ function buildEdges(spec, islands, shipsById, islandsById) {
 
 export class OverlayModel {
   constructor() {
-    this.stats = null;    // active SCALAR: { min,p50,max,mean,count,lo,hi, leaderboard }
-    this.edges = null;    // active EDGES: positioned edge array
+    this.stats = null;    // active SCALAR overlay: { min,p50,max,mean,count,lo,hi, leaderboard }
+    this.edges = null;    // active LINKS overlay: positioned edge array
     this.trouble = null;  // world tallies (recomputed whenever islands are present)
-    this._key = null;
+    this._sk = null;      // last synced scalar-overlay key
+    this._ek = null;      // last synced links-overlay key
     this._t = -1e9;
     this._n = -1;
   }
 
-  /** Recompute (throttled) the derived data for the active `spec`. Cheap to call every frame:
-   *  it early-returns unless the metric changed, the island count changed, or the throttle
-   *  window elapsed. Safe with a null/off spec (clears stats/edges, still tallies trouble). */
-  sync(islands, spec, shipsById, islandsById, now) {
+  /** Recompute (throttled) the derived data for the two INDEPENDENT active layers — a scalar
+   *  overlay (`scalarSpec`) and an edges/links overlay (`edgesSpec`), either of which may be an
+   *  `off` spec. Cheap to call every frame: early-returns unless a layer key changed, the island
+   *  count changed, or the throttle window elapsed. `stats`/`edges` are each cleared when their
+   *  layer is off, so the two never clobber each other and can both paint at once. */
+  sync(islands, scalarSpec, edgesSpec, shipsById, islandsById, now) {
     if (!islands) return;
-    const key = spec ? spec.key : 'off';
-    const stale = key !== this._key || islands.length !== this._n || (now - this._t) >= THROTTLE_MS;
+    const sk = scalarSpec && scalarSpec.kind === 'scalar' ? scalarSpec.key : 'off';
+    const ek = edgesSpec && edgesSpec.kind === 'edges' ? edgesSpec.key : 'off';
+    const stale = sk !== this._sk || ek !== this._ek || islands.length !== this._n || (now - this._t) >= THROTTLE_MS;
     if (!stale) return;
-    this._key = key; this._t = now; this._n = islands.length;
+    this._sk = sk; this._ek = ek; this._t = now; this._n = islands.length;
 
     this.trouble = troubleCounts(islands);
 
-    if (spec && spec.kind === 'scalar') {
-      const s = aggregate(islands, spec);
-      s.leaderboard = leaderboard(islands, spec, LEADER_N);
+    if (scalarSpec && scalarSpec.kind === 'scalar') {
+      const s = aggregate(islands, scalarSpec);
+      s.leaderboard = leaderboard(islands, scalarSpec, LEADER_N);
       this.stats = s;
-      this.edges = null;
-    } else if (spec && spec.kind === 'edges') {
-      this.stats = null;
-      this.edges = buildEdges(spec, islands, shipsById, islandsById);
     } else {
       this.stats = null;
+    }
+
+    if (edgesSpec && edgesSpec.kind === 'edges') {
+      this.edges = buildEdges(edgesSpec, islands, shipsById, islandsById);
+    } else {
       this.edges = null;
     }
   }

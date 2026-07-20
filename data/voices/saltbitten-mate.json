@@ -13,7 +13,7 @@
       "founder":   "This book is mine now. {name}{rankc}. She's a {home} {type} and she answers to me. I'll keep it plain.",
       "successor": "New hand on the log. {name}{rankc}. I'll set down what happens and not dress it up.",
       "mutiny":    "The old man's gone over the side and the lads handed me the book. {name}. I don't know the half of it yet, but I'll learn her.",
-      "pirate":    "No more honest work. Flag's black and the book's mine. {name}{rankc}. Say what you like about it.",
+      "rogue":     "No more honest work. Flag's black and the book's mine. {name}{rankc}. Say what you like about it.",
       "prize":     "She struck to us and I took her. {name}{rankc}. Her log's mine to fill now.",
       "recovered": "A hunter caught us cold and that was that. {name}{rankc}. My job's to bring her home clean and keep the book."
     },
@@ -53,7 +53,51 @@
   },
 
   "kinds": {
-    "plunder": { "recur": { "class": "prize", "phrases": [", my {ord} prize", " — done it before", ", same as ever"] } },
-    "hunted":  { "recur": { "class": "hunt",  "phrases": [", {ord} wolf I've put under"] } }
+    "plunder": {
+      "recur": { "class": "prize", "phrases": [", my {ord} prize", " — done it before", ", same as ever"] },
+      "say": [
+        "{we} ran {foe} down, took {goods} bales and {gold}g off her, and let her go — she wasn't worth the powder to finish",
+        "{we} boarded {foe}, cleaned out {goods} crates and {gold}g, and cut her loose to limp home and tell the tale",
+        "{foe} struck quick — {goods} casks and {gold}g into {our} hold, and no blood spilled worth mentioning",
+        "{we} took what {foe} was carrying — {goods} chests and {gold}g — and left her the rest, which was mostly water",
+        "{we} came up on {foe} and helped {us} to {goods} bales and {gold}g, then waved her off",
+        "{foe} gave up {goods} crates and {gold}g without much fuss — sensible of her",
+        "{we} stripped {foe} of {goods} casks and {gold}g and sent her on, lighter and wiser"
+      ]
+    },
+    "sunk": {
+      "say": [
+        "{we} put enough holes in {foe} that she gave up and went down — cargo and all, nothing saved",
+        "{we} sank {foe} clean — whatever she carried is fish food now",
+        "{foe} wouldn't strike, so {we} kept firing till the sea took her — her own fault",
+        "{we} hammered {foe} at the waterline and watched her slide under, hold full, no prize for {us}",
+        "{we} traded shot with {foe} till she filled and sank — the goods went down with her, worse luck",
+        "{foe} went under {our} guns before she could yield, and took every crate with her",
+        "{we} broke {foe} up and sent her down — no boarding, no loot, just a dead ship and a quiet sea"
+      ]
+    },
+    "fended": {
+      "say": [
+        "{foe} came at {us} looking for an easy day — {we} gave her powder instead, and down she went",
+        "{we} weren't the soft mark {foe} took {us} for — {we} shot her under and carried on",
+        "{foe} tried to board {us} and {we} sank her for it — should've picked a slower ship",
+        "{we} stood off {foe} with everything {we} had, and it was her that ended up on the bottom",
+        "{foe} thought {us} cargo — turned out {we} bite, and she learned it too late",
+        "{we} put {foe} down when she came for {us}, and lost nothing but a morning and some shot",
+        "{foe} closed to take {us}, and {we} closed to bury her — she went first"
+      ]
+    },
+    "hunted": {
+      "recur": { "class": "hunt",  "phrases": [", {ord} wolf I've put under"] },
+      "say": [
+        "{we} ran {foe} down at last and sank her — one less wolf on the lanes, and good riddance",
+        "{we} chased {foe} halfway to nowhere and put her under — took long enough",
+        "{foe} had it coming a long while — {we} caught her and gave it to her",
+        "{we} cornered {foe} and finished the job — no prize wanted, just her gone",
+        "{foe} won't be robbing anyone else — {we} saw to that, personal",
+        "{we} tracked {foe} down and sank her flag and all, and slept fine after",
+        "{we} put {foe} on the bottom where she belonged — the lanes are the cleaner for it"
+      ]
+    }
   }
 }

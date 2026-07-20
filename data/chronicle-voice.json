@@ -27,6 +27,17 @@
 
   "ordinals": ["", "first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth", "tenth"],
 
+  "_collapse_doc": "Repetitive 'status' deeds the sim emits over and over (a refit that keeps coming up short, voyage-count milestones, patrol commissions, aid given, shore batteries) would otherwise fill a keeper's log with the same sentence dozens of times. The composer collapses a maximal run of CONSECUTIVE same-kind entries to a single beat: 'last' keeps the most recent (latest milestone); 'toil' keeps it too but may note the recurrence once ('… time and again') from the `repeated` pool. Deeds with their own variety (plunder/raids/hunts, handled by recur+say) are never listed here.",
+  "collapse": {
+    "voyages": "last", "refit": "last", "refitshort": "toil", "rescue": "last",
+    "aid": "last", "battery": "toil", "reroute": "toil", "shun": "toil",
+    "migrate": "last", "standdown": "last", "privateer": "last", "assault": "toil",
+    "quellReb": "toil", "longpeace": "last", "contract": "last", "contractdone": "last",
+    "overreach": "toil", "ambition": "last", "famine": "last", "recover": "last",
+    "neworder": "last", "goldenage": "last", "redeemed": "last"
+  },
+  "repeated": [" — and so it went, time and again", " — and not for the last time", " — as happened more than once", " — the same tale, over and over"],
+
   "pronoun": {
     "ship":   { "subject": "she", "elide": true },
     "island": { "subject": "the port", "elide": true }

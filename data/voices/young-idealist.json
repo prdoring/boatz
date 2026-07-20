@@ -13,7 +13,7 @@
       "founder":   "My own command at last — I can scarce believe my fortune! I am {name}{rankc}, and this {home} {type} is mine to make worthy. God grant I prove equal to her.",
       "successor": "The log is placed in my hands and my heart leaps at the trust of it. I am {name}{rankc}; I mean to carry her name on as bravely as any who kept it before me.",
       "mutiny":    "The men cast the old master down and pressed this book upon me, though I am hardly ready for it. I am {name}, young and unproven — but I will be worthy of them, come what may.",
-      "pirate":    "God forgive us — we have hauled up the black flag. I am {name}{rankc}, and I tell myself there is honour in it yet, though my heart is heavy to write the words.",
+      "rogue":     "God forgive us — we have hauled up the black flag. I am {name}{rankc}, and I tell myself there is honour in it yet, though my heart is heavy to write the words.",
       "prize":     "She struck her colours to us — oh, the pride of that moment! I am {name}{rankc}; this hull is our prize, won fair, and I shall keep her log with honour.",
       "recovered": "A brave hunter freed this hull from the black flag and set me to bring her home. I am {name}{rankc}, and I will restore her good name if it takes my every waking hour."
     },
@@ -53,8 +53,52 @@
   },
 
   "kinds": {
-    "plunder": { "recur": { "class": "prize", "phrases": [", our {ord} prize, and my heart races at it yet", " — won with honour, as I mean always to win", ", another to make the crew proud"] } },
-    "fended":  { "recur": { "class": "stand", "phrases": [" — we have stood firm before, and shall again", ", and fortune stood with us as ever"] } },
-    "hunted":  { "recur": { "class": "hunt",  "phrases": [", another wolf run down for the honest folk", " — the {ord} raider we have brought to justice"] } }
+    "plunder": {
+      "say": [
+        "{we} ran {foe} down and won her colours fairly — {goods} bales and {gold}g for the hold, and oh, how the crew cheered",
+        "{foe} struck to us at last, and {we} carried off {goods} crates and {gold}g, then let her go free as honour bids",
+        "{we} boarded {foe} with hearts pounding and took {goods} casks and {gold}g — my very first prize, and I shall never forget it",
+        "{foe} yielded to us bravely, and {we} claimed {goods} chests and {gold}g, and spared her crew every man",
+        "{we} bested {foe} in fair chase and lightened her of {goods} bales and {gold}g, though I made sure none aboard was harmed",
+        "{we} came alongside {foe} and won {goods} crates and {gold}g, and I felt the whole wide world open before us",
+        "{foe} could not outrun us, and {we} took {goods} casks and {gold}g from her — a glorious day, and every coin won with honour"
+      ],
+      "recur": { "class": "prize", "phrases": [", our {ord} prize, and my heart races at it yet", " — won with honour, as I mean always to win", ", another to make the crew proud"] }
+    },
+    "sunk": {
+      "say": [
+        "{we} fought {foe} until she filled and went down, and I grieved a little to see so fine a hull lost",
+        "{foe} would not strike, and {we} were forced to sink her — a heavy thing, and I pray her crew found the boats",
+        "{we} sent {foe} to the bottom in honest battle, her cargo lost with her, and I took no joy in it",
+        "{foe} sank beneath the waves before us, and {we} could save nothing — glory has its sorrows, I am learning",
+        "{we} hammered {foe} till she went under, and I stood bareheaded at the rail as she slipped away",
+        "{foe} fought hard and {we} harder, and down she went at last — a brave enemy, and I honour her for it",
+        "{we} put {foe} under in the end, and though we won, my heart was not light to watch her go"
+      ]
+    },
+    "fended": {
+      "say": [
+        "{foe} fell upon us thinking us easy prey, and {we} fought her off and sank her — how proud I was of every hand aboard",
+        "{we} stood firm against {foe} and sent her under, and I have never felt such fierce joy as when she struck",
+        "{foe} came at us with black intent, but {we} held our nerve and put her down",
+        "{we} beat {foe} back and drove her beneath the waves, and the crew wept and cheered as one",
+        "{foe} meant to plunder us, and {we} taught her that honest men can bite — down she went",
+        "{we} defended our hull against {foe} to the last and sank her, and God be thanked we all came through",
+        "{foe} thought to take what was ours, and {we} sent her to the deep instead — a day I shall tell my children of"
+      ],
+      "recur": { "class": "stand", "phrases": [" — we have stood firm before, and shall again", ", and fortune stood with us as ever"] }
+    },
+    "hunted": {
+      "say": [
+        "{we} ran {foe} down at last and cut her down — one less wolf to prey on the honest folk",
+        "{foe} had terrorised these lanes too long, and {we} brought her to justice at the sword's point",
+        "{we} chased {foe} through the night and sank her by dawn, and the freed waters felt like a gift",
+        "{foe} fled from us, but {we} ran her to ground and ended her reign of fear",
+        "{we} hunted {foe} for the sake of every merchant she had robbed, and sent her under with a glad heart",
+        "{foe} flew the black flag no more once {we} had done — justice, and I never felt prouder to serve it",
+        "{we} brought {foe} down for the good of all who sail here, and I believe with all my heart it was rightly done"
+      ],
+      "recur": { "class": "hunt",  "phrases": [", another wolf run down for the honest folk", " — the {ord} raider we have brought to justice"] }
+    }
   }
 }

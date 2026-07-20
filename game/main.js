@@ -45,6 +45,10 @@ const portraits = new PortraitRenderer(portraitArt); // captain head-and-shoulde
 // The sea (SeaRenderer) paints an opaque gradient inside the scene, so the engine background
 // slot must NOT also draw the sparkle (it would be overpainted, and the glitter would vanish).
 const game = new Game({ canvas, sound, clearColor: PALETTE.deepWater });
+// Sound isn't finished, so hide the engine's auto-created volume overlay (top-right). `sound` STAYS
+// wired (the FX pipeline + audio-resume both use it); Game._frame/_wireInput guard on this.volume,
+// so nulling it simply drops the slider + its hit-testing. No engine edit.
+game.volume = null;
 const sim = new SimClient();
 
 // Coordinated nautical FX (combat bursts, foundering ships, trade sparkles): the engine
@@ -64,6 +68,16 @@ const shared = {
 
 const simScene = new SimScene(shared);
 shared.scenes = { sim: simScene };
+
+// Rasterise the self-hosted HUD fonts before the first canvas draw — canvas text silently falls back
+// to a system font if the face isn't ready (@font-face lives in index.html). Fail-soft: if a face
+// can't load we still boot rather than hang.
+await Promise.all([
+  '400 16px "IM Fell English"', 'italic 16px "IM Fell English"', '400 16px "IM Fell English SC"',
+  '400 16px "Caveat"', '400 16px "Kalam"', '400 16px "Shadows Into Light"',
+  '400 16px "Patrick Hand"', '400 16px "Reenie Beanie"', '400 16px "Cedarville Cursive"',
+].map((f) => document.fonts.load(f).catch(() => {})));
+await document.fonts.ready;
 
 game.start(simScene);
 

@@ -81,7 +81,7 @@ function raiseOneRogue(world) {
   ship.cargo.Weapons = spec ? spec.weaponCap * 0.7 : 14;
   ship.name = shipName(world);
   world.ships.push(ship);
-  turnPirate(world, ship);
+  turnPirate(world, ship, { fresh: true }); // a seeded raider risen from the deep — a fresh pirate master
 }
 
 /** A wholly lawless, uncivilised port teeters for HAVEN_FALL_DAYS, then falls. Capped fleet-wide.
@@ -151,7 +151,7 @@ function buildPirate(world, haven) {
   ship.name = shipName(world);
   ship.x = haven.x; ship.y = haven.y;
   world.ships.push(ship);
-  turnPirate(world, ship); // sets the black flag, a pirate captain, and its hunting state; logs 'pirate'
+  turnPirate(world, ship, { fresh: true }); // a haven-built raider under a fresh pirate master; logs 'pirate'
 }
 
 /** Pirates near a haven RESUPPLY (draw food from the haven's stores) and FENCE their loot (offload

@@ -13,7 +13,7 @@
       "founder":   "I set my name to this book as I set it to my commission: {name}{rankc}, in the service of the Crown. This {home} {type} sails under letters of marque, and every line I write here shall do honour to the flag she flies.",
       "successor": "The log passes to my hand in good order, and I take it up as a charge of duty. I am {name}{rankc}; her service to the Crown goes on under me, unbroken and unstained.",
       "mutiny":    "A shameful day, and I set it down as such — the crew cast out their lawful master, and the book was forced upon me, {name}, who never sought it. I hold it now only that some honest hand should hold it. God save the King, and God forgive this ship her disorder.",
-      "pirate":    "Let it be written to my lasting shame: we have cast off the King's commission and raised the black flag, and I — {name}{rankc} — gave the word. I who once hunted such men am become one of them. No letter of marque can cover this, and I know it well.",
+      "rogue":     "Let it be written to my lasting shame: we have cast off the King's commission and raised the black flag, and I — {name}{rankc} — gave the word. I who once hunted such men am become one of them. No letter of marque can cover this, and I know it well.",
       "prize":     "We ran her down and she struck her colours to the Crown's flag, as the lawless must. I am {name}{rankc}. She is a lawful prize, taken under commission, and her log continues now in the King's service and my own.",
       "recovered": "We ran the black flag to earth and cut this hull free of it, and I am charged to return her to honest colours. I am {name}{rankc}. It is the King's own work, this — the mending of what pirates mar — and I take it up gladly."
     },
@@ -53,8 +53,56 @@
   },
 
   "kinds": {
-    "hunted":  { "recur": { "class": "hunt",  "phrases": [", the {ord} pirate we have run down for the Crown", " — another rogue answered to the King's law", ", as our commission bids us do"] } },
-    "fended":  { "recur": { "class": "stand", "phrases": [" — we have beaten off worse and kept our colours flying", ", and the flag never once came down"] } },
-    "sunk":    { "recur": { "class": "prize", "phrases": [", sent under, and one less pirate upon the King's waters"] } }
+    "plunder": {
+      "say": [
+        "{we} brought {foe} under our guns and took her as a lawful prize — {goods} bales and {gold}g into the hold, all under the King's commission",
+        "{foe} struck to our colours, and {we} carried off {goods} crates and {gold}g as our letters of marque allow",
+        "{we} ran {foe} down and relieved her of {goods} casks and {gold}g, a prize taken clean and in good order",
+        "{we} boarded {foe} and entered {goods} chests and {gold}g to the prize account, then let the hull limp home",
+        "{foe} yielded to the Crown's flag, and {we} took {goods} bales and {gold}g from her by the right of our commission",
+        "{we} secured {foe} and bore away {goods} crates and {gold}g — a fair prize, and every coin of it lawful",
+        "{we} took {goods} casks and {gold}g off {foe} and set her free, our marque satisfied and our honour clean",
+        "{foe} came under our lee and struck, and {we} carried {goods} chests and {gold}g away in the King's name"
+      ]
+    },
+    "hunted":  {
+      "recur": { "class": "hunt",  "phrases": [", the {ord} pirate we have run down for the Crown", " — another rogue answered to the King's law", ", as our commission bids us do"] },
+      "say": [
+        "{we} ran {foe} to earth and cut her down — another rogue answered to the King's law",
+        "{foe} fled our commission, but {we} overhauled her and made an end of the pirate",
+        "{we} hunted {foe} across the lanes and destroyed her, as our commission bids us do",
+        "{foe} had robbed honest ships too long; {we} ran her down and sent her under for the Crown",
+        "{we} cornered {foe} and finished her — one more black flag hauled down for good",
+        "{foe} thought herself beyond the King's reach, and {we} taught her otherwise beneath the waves",
+        "{we} chased {foe} to the shoals and destroyed her, the lanes the cleaner for a day's hard duty",
+        "{foe} answered at last for her piracies, and {we} were proud to be the hand that called her to it"
+      ]
+    },
+    "fended":  {
+      "recur": { "class": "stand", "phrases": [" — we have beaten off worse and kept our colours flying", ", and the flag never once came down"] },
+      "say": [
+        "{foe} came at us for plunder, and {we} beat her off and sank her — our colours flying the while",
+        "{we} met {foe}'s attack with iron and sent the raider under, the flag never once coming down",
+        "{foe} misjudged us for easy prey; {we} broke her assault and put her beneath the waves",
+        "{we} stood to and repelled {foe}, then holed her clean and watched her founder",
+        "{foe} pressed the boarding and {we} threw her back, sinking the brigand for her insolence",
+        "{we} turned {foe}'s attack aside and sent her down — we have beaten off worse and kept our colours flying",
+        "{foe} sought to take us and found powder instead; {we} sank her and held our course",
+        "{we} answered {foe}'s assault gun for gun and put her under, our decks bloodied but our flag high"
+      ]
+    },
+    "sunk":    {
+      "recur": { "class": "prize", "phrases": [", sent under, and one less pirate upon the King's waters"] },
+      "say": [
+        "{we} sent {foe} to the bottom, and one less enemy sail upon the King's waters",
+        "{foe} would not strike, so {we} sank her outright, her cargo lost with her and the lanes the safer",
+        "{we} closed with {foe} and put her under — no prize in it, but honour enough for the Crown",
+        "{foe} chose battle over surrender, and {we} obliged her to the last plank",
+        "{we} broke {foe} apart with our broadsides and watched her go down beneath the colours she defied",
+        "{foe} fought the King's flag and lost; {we} sent her under with all she carried",
+        "{we} holed {foe} and she foundered whole — a hard end, but a lawful one",
+        "{foe} defied our summons, and {we} sank her where she stood, the water closing over her defiance"
+      ]
+    }
   }
 }

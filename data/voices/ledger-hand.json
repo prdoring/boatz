@@ -13,7 +13,7 @@
       "founder":   "Account opened. Master: {name}{rankc}. Vessel: a {home} {type}. All entries below in my hand.",
       "successor": "The account passes to me, {name}{rankc}. Balances carried forward; the book continues.",
       "mutiny":    "Command changed hands at a loss — the master struck from the roll, the vessel entrusted to me, {name}, untried. I will keep the reckoning honest.",
-      "pirate":    "The venture is reconstituted under the black flag. Master: {name}{rankc}. Henceforth all gains are taken, not traded.",
+      "rogue":     "The venture is reconstituted under the black flag. Master: {name}{rankc}. Henceforth all gains are taken, not traded.",
       "prize":     "This hull is entered to our account as a prize. Master of record: {name}{rankc}. Her ledger continues under new ownership.",
       "recovered": "Seized from the pirates and restored to the register. Master: {name}{rankc}. The vessel returns to lawful trade; the book is set right."
     },
@@ -53,7 +53,51 @@
   },
 
   "kinds": {
-    "plunder": { "recur": { "class": "prize", "phrases": [", prize no. {ord} to our account", " — a further entry in the same column", ", as previously recorded"] } },
+    "plunder": {
+      "recur": { "class": "prize", "phrases": [", prize no. {ord} to our account", " — a further entry in the same column", ", as previously recorded"] },
+      "say": [
+        "{we} boarded {foe} and entered her cargo to our account — {goods} crates and {gold}g received, the hull released as a total loss to her owners",
+        "{we} took {foe} out of {foeHome} and posted {goods} casks and {gold}g to the credit column, then struck her from further reckoning",
+        "{foe} yielded {goods} bales and {gold}g, all weighed and entered, and was let go stripped of every asset worth the carrying",
+        "{we} relieved {foe} of {goods} chests and {gold}g — a clean entry, receipts against no expenditure but powder",
+        "{we} logged {foe} as boarded and profitable: {goods} crates and {gold}g in, the vessel itself written off and dismissed",
+        "{foe} struck to us and we carried {goods} casks and {gold}g to our books, her manifest transferred in full to our hold",
+        "{we} debited {foe} of {goods} bales and {gold}g and let the empty hull sail on, her loss and our gain squared to the coin"
+      ]
+    },
+    "sunk": {
+      "say": [
+        "{we} sank {foe} in the exchange — no boarding, no recovery, her cargo written off entire with the hull",
+        "{foe} refused to strike and we put her under; the entire venture entered as a total loss to her account, nothing to ours",
+        "{we} sent {foe} to the bottom off {foeHome}, her manifest unrecoverable, the column closed at zero",
+        "{we} traded fire with {foe} until she foundered — a costly engagement returning no prize, only powder spent",
+        "{foe} went down under our guns with all aboard; no salvage, no entry but the fact of it",
+        "{we} destroyed {foe} outright, her cargo lost to the deep and struck from every book that held it",
+        "{we} closed {foe} permanently — sunk with all hands and all freight, balance nil on both sides"
+      ]
+    },
+    "fended": {
+      "say": [
+        "{foe} moved against us as a hostile debit and we settled her at the bottom — our stock intact, hers written off",
+        "{we} met {foe}'s attempt on our cargo and sank her for it, the account defended and closed in our favour",
+        "{foe} came to board and take, and we entered her instead as a loss to herself — sunk at our rail",
+        "{we} repelled {foe} and put her under; the raid returned her owners nothing but a struck-out hull",
+        "{foe} priced us as easy freight and we corrected the figure, sending her down with all she meant to steal",
+        "{we} defended the venture against {foe} and sank her clean, our ledger unshaken, hers void",
+        "{foe} closed on us for plunder and we closed her account first, her keel entered as a total write-off"
+      ]
+    },
+    "hunted": {
+      "say": [
+        "{we} ran {foe} down and settled the outstanding account against her — sunk, her long column of thefts closed at last",
+        "{we} hunted {foe} to her end off {foeHome} and struck her from the register, a liability discharged",
+        "{foe} had run up a heavy debt on these lanes, and we collected it in full at the bottom of the sea",
+        "{we} caught {foe} and sank her, her ledger of piracies balanced against her keel and squared",
+        "{foe} fled the reckoning two days and we brought her to it on the third — account closed, hull written off",
+        "{we} put {foe} under and entered the hunt as concluded, the standing bounty on her marked paid",
+        "{we} destroyed {foe} and ruled her books shut — one predatory account removed from the lanes for good"
+      ]
+    },
     "raid":    { "recur": { "class": "sack",  "phrases": [", the {ord} port entered as a loss against its owners"] } }
   }
 }

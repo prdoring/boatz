@@ -8,6 +8,7 @@
 // to the newest at the bottom, new events appended below keeping you stuck there until you scroll up.
 
 import { roundRect } from './UIStack.js';
+import { PALETTE } from '../config.js';
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
@@ -68,7 +69,7 @@ export class ScrollBox {
     const thumbH = Math.max(24, v.h * (v.h / (v.h + this._max)));
     const ty = v.y + (v.h - thumbH) * (this.offset / this._max);
     ctx.save();
-    ctx.fillStyle = 'rgba(180,220,235,0.30)';
+    ctx.fillStyle = PALETTE.scrollThumb;
     roundRect(ctx, v.x + v.w - 5, ty, 3, thumbH, 1.5);
     ctx.fill();
     ctx.restore();

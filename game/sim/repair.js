@@ -197,7 +197,13 @@ export function renderAid(world, helper, victim) {
     helper._aidDeeds = helper._aidDeeds || [];
     helper._aidDeeds.push({ otherHome: victim.homeId, day: Math.floor(world.simTime / (r.SIM_DAY_SECONDS || 60)) });
   }
-  logEvent(world, 'rescue', `${helper.name || 'A ship'} hove to and aided the stricken ${victim.name || 'ship'}${helper.captain ? ` — Capt. ${helper.captain.name} shared canvas, timber, and victuals` : ''}.`, { x: victim.x, y: victim.y, shipId: helper.id });
+  // A prolonged mercy — aiding the SAME stricken ship pass after pass — is ONE deed in the log, not
+  // "hove to and aided her" ten times over. The aid still happens each pass (rep + patching above);
+  // only the headline is deduped, per helper, until a different ship or a long spell resets it.
+  const nowDay = Math.floor(world.simTime / (r.SIM_DAY_SECONDS || 60));
+  const freshDeed = helper._aidId !== victim.id || (nowDay - (helper._aidDay != null ? helper._aidDay : -9999)) > (r.RESCUE_LOG_DAYS || 20);
+  helper._aidId = victim.id; helper._aidDay = nowDay;
+  if (freshDeed) logEvent(world, 'rescue', `${helper.name || 'A ship'} hove to and aided ${victim.name || 'a ship'}, sore stricken${helper.captain ? ` — Capt. ${helper.captain.name} shared canvas, timber, and victuals` : ''}.`, { x: victim.x, y: victim.y, shipId: helper.id });
   return true;
 }
 

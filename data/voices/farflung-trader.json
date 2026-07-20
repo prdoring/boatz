@@ -4,7 +4,7 @@
   "persona": "A courteous merchant-captain from distant eastern ports, keeping the log in careful, formal second-tongue diction. Elaborate courtesy, proverbs of far countries, honour and hospitality, measured formality. Ship: 'I'. Island: 'we'.",
 
   "pronoun": {
-    "ship":   { "subject": "I",  "first": "I" },
+    "ship":   { "subject": "we",  "first": "We" },
     "island": { "subject": "we", "first": "We" }
   },
 
@@ -13,7 +13,7 @@
       "founder":   "In the name of good fortune and fair dealing, I open this record. I am {name}{rankc}, and this {home} {type} is entrusted to my care. As they say in my country: a ship well-kept is a house that never sleeps.",
       "successor": "With all due courtesy, the keeping of this log passes into my hand. I am {name}{rankc}; her account continues under my humble care.",
       "mutiny":    "The crew set the old master into the water's keeping and pressed this book upon me — I am {name}, unschooled in command, and I take up the burden as honour demands. The elders say: the reed that is chosen must learn to stand straight.",
-      "pirate":    "It grieves me to write it, but honest trade lies behind me. The black flag is raised, and I — {name}{rankc} — keep this log with a heavy, honest hand. Even a proverb has its dark verse.",
+      "rogue":     "It grieves me to write it, but honest trade lies behind me. The black flag is raised, and I — {name}{rankc} — keep this log with a heavy, honest hand. Even a proverb has its dark verse.",
       "prize":     "She yielded to me with good grace, and I received her surrender with the courtesy owed a worthy adversary. I am {name}{rankc}; this vessel now sails beneath my flag, and her log continues in my hand.",
       "recovered": "A hunter delivered this hull from the black flag's grip, and the honour of restoring her has fallen to me. I am {name}{rankc}, and I return her to honest trade, as a guest is returned safely to his road."
     },
@@ -53,9 +53,57 @@
   },
 
   "kinds": {
-    "plunder": { "recur": { "class": "prize", "phrases": [", the {ord} such prize, though I take no pride in the counting", " — not, I confess, the first", ", as fortune has granted before"] } },
-    "sunk":    { "recur": { "class": "prize", "phrases": [", another sent below, may the deep be gentle with her"] } },
-    "fended":  { "recur": { "class": "stand", "phrases": [" — I have turned aside such wolves before", ", by good fortune and steady hands, as once before"] } },
-    "hunted":  { "recur": { "class": "hunt",  "phrases": [", the {ord} raider I have brought to account"] } }
+    "plunder": {
+      "recur": { "class": "prize", "phrases": [", the {ord} such prize, though I take no pride in the counting", " — not, I confess, the first", ", as fortune has granted before"] },
+      "say": [
+        "{we} came alongside {foe} as a guest comes to a strange door, and departed the richer by {goods} bales and {gold}g, leaving her the poorer but the wiser",
+        "{we} relieved {foe} of {goods} crates and {gold}g — a hard trade, yet as they say in {our} country, the sea keeps no ledger of fairness",
+        "{we} pressed {foe} until her master yielded, and set {goods} casks and {gold}g into {our} hold before granting her leave to limp for {foeHome}",
+        "{foe} rode low and unwary, and {we} lightened her of {goods} chests and {gold}g, then bade her go on to {foeHome} with {our} regrets",
+        "{we} took from {foe} what the lanes would bear — {goods} bales and {gold}g — and let the stripped hull carry {our} name home",
+        "{we} boarded {foe} with all courtesy and stripped her without it, {goods} crates and {gold}g the measure of the discourtesy",
+        "{we} counted {goods} casks and {gold}g out of {foe}, for a merchant knows a cargo's worth to the last coin, even one {we} did not pay for",
+        "{foe} struck her colours to {us} rather than be sunk, and {we} took {goods} chests and {gold}g for her life — a bargain she named cruel and {we} called merciful"
+      ]
+    },
+    "sunk": {
+      "recur": { "class": "prize", "phrases": [", another sent below, may the deep be gentle with her"] },
+      "say": [
+        "{we} traded shot for shot with {foe} until the sea closed over her and her cargo both — a poor market, where both sides pay",
+        "{we} held {foe} under {our} guns until she filled and went down, and all she carried went to the deep unbought",
+        "{foe} would not yield, and so {we} sent her under with every bale she owned — the sea is a merchant that pays no one",
+        "{we} sank {foe} where she fought, and mourned the honest cargo drowned with her more than the hull",
+        "{we} broke {foe} apart at close quarters and watched her go down whole, holds and all, beyond any man's recovering",
+        "{foe} chose the deep over the yielding of her flag, and {we} granted her the deep — may it prove a gentler port than any {we} could offer",
+        "{we} put {foe} beneath the waves and took nothing for it, for the drowned keep their own accounts",
+        "{we} fought {foe} until she settled and slid away, her wealth unspent, her voyage ended far from {foeHome}"
+      ]
+    },
+    "fended": {
+      "recur": { "class": "stand", "phrases": [" — I have turned aside such wolves before", ", by good fortune and steady hands, as once before"] },
+      "say": [
+        "{foe} bore down on {us} as a wolf upon a laden mule, and learned that even a trader's mule can kick — she went under for the lesson",
+        "{we} were no easy guest for {foe}; she came to rob and {we} sent her to the bottom for her discourtesy",
+        "{foe} mistook {our} cargo for a gift and {our} crew for cowards, and {we} corrected her on both counts before she sank",
+        "{we} turned {foe}'s own boldness against her, and she who came hunting {our} hold now keeps company with the fishes",
+        "{foe} raised her black flag against {us}, and {we} answered with iron until the flag and all beneath it went down together",
+        "{we} beat {foe} off and then below — a merchant defends his road as a host defends his threshold, to the last",
+        "{foe} thought a trader carries goods and no teeth, and {we} showed her the teeth before she showed {us} her keel",
+        "{we} would not be robbed and {foe} would not relent, so the matter was settled the only way left — she sank, and {we} sailed on"
+      ]
+    },
+    "hunted": {
+      "recur": { "class": "hunt",  "phrases": [", the {ord} raider I have brought to account"] },
+      "say": [
+        "{we} ran {foe} to ground at the edge of the lanes and put an end to her — one fewer wolf between honest ports",
+        "{we} chased {foe} out of {foeHome}'s shadow and sank her, and the merchants of these waters will sleep the easier",
+        "{foe} had preyed on the peaceable long enough, and {we} brought her the reckoning the lanes had long owed her",
+        "{we} hunted {foe} across three days of open water and cut her down at the last — a debt of blood, paid in full",
+        "{foe} fled as the guilty flee, and {we} ran her down as duty runs, and left her broken on the swell",
+        "{we} caught {foe} at her wicked trade and sank her mid-crime — as they say in {our} country, the thief meets the sea he made",
+        "{we} put {foe} under and freed the road she haunted, and no honest man from {foeHome} to home will weep for her",
+        "{foe} had grown fat on stolen cargo, and {we} emptied her into the deep where no plunder can follow"
+      ]
+    }
   }
 }

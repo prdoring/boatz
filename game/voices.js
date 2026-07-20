@@ -34,9 +34,10 @@ const importJson = (path) => import(path, { with: { type: 'json' } }).then((m) =
  * With no styles (missing manifest / all failed) `ids` is empty and the chronicler narrates in LEGACY mode.
  */
 export async function loadVoices() {
-  const reg = { base: BASE, byId: {}, ids: [] };
+  const reg = { base: BASE, byId: {}, ids: [], defaults: {} };
   let defaults = {};
   try { defaults = await importJson('/data/voices/_defaults.json'); } catch { /* first-person defaults absent → styles inherit only the base */ }
+  reg.defaults = defaults; // kept UNMERGED so the composer can pool a style's own handover/coda with these shared variants
   const scaffold = merge(BASE, defaults);
 
   let manifest = null;

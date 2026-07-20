@@ -18,17 +18,17 @@ import { drawIcon } from './icons.js';
 
 const CRAWL_ROWS = 9;      // live events shown in the collapsed crawl
 const CRAWL_LH = 18;
-const CRAWL_W = 470;       // bounding width for hit-testing the crawl
 const PANEL_W = 380;
 const ROW_H = 20;
 
 export class NewsPanel extends Panel {
-  constructor({ getEvents, getTimeline, eventLoc, focus }) {
+  constructor({ getEvents, getTimeline, eventLoc, focus, getControlsLeft }) {
     super();
     this.getEvents = getEvents;     // () -> live events (ascending, last ~60)
     this.getTimeline = getTimeline; // () -> { entries(newest-first), loading, done, more }
     this.eventLoc = eventLoc;       // (e) -> { x, y, shipId?, islandId? } | null  (is it focusable?)
     this.focus = focus;             // (e) -> void  (snap the camera + select)
+    this.getControlsLeft = getControlsLeft || null; // () -> left screen-x of the bottom-center controls
     this._expanded = false;
     this._pinned = false;
     this._filter = 'all';
@@ -52,7 +52,11 @@ export class NewsPanel extends Panel {
       this.setRect(12, top, w, bottom - top);
     } else {
       const h = CRAWL_ROWS * CRAWL_LH + 26;
-      this.setRect(8, view.height - 12 - h, CRAWL_W, h);
+      // Fixed width: fill the bottom-left up to the centered control cluster (matches _drawCrawl).
+      const LEFT = 8, GAP = 12;
+      const cl = this.getControlsLeft ? this.getControlsLeft() : (view.width / 2 - 240);
+      const boxW = Math.max(320, Math.min(view.width - 20, (cl - GAP) - LEFT));
+      this.setRect(8, view.height - 12 - h, boxW, h);
     }
   }
 
@@ -106,19 +110,14 @@ export class NewsPanel extends Panel {
     const cur = this._cursor;
     ctx.save();
     ctx.font = tfont('small');
-    // Size the box to the widest visible row so nothing spills out (capped to the viewport).
-    let contentW = 180;
-    for (const e of recent) {
-      const ic = this.eventLoc(e) ? 16 : 0;
-      contentW = Math.max(contentW, ctx.measureText(`Day ${e.day}  ·  ${e.text}`).width + ic);
-    }
-    // Cap the width so a long dispatch never grows the box into the centered clock cluster; rows
-    // that exceed it are ellipsised (clip() below), not spilled.
-    const maxW = Math.min(this._view.width - 20, Math.max(360, this._view.width / 2 - 210));
-    const boxW = Math.min(Math.ceil(contentW) + 30, maxW);
+    // Fixed width: fill the bottom-left up to the centered control cluster (never shrink-wrap the text).
+    // Long dispatches ellipsise via clip()/maxTextW below; short ones no longer shrink the box.
+    const LEFT = 8, GAP = 12;
+    const cl = this.getControlsLeft ? this.getControlsLeft() : (this._view.width / 2 - 240);
+    const boxW = Math.max(320, Math.min(this._view.width - 20, (cl - GAP) - LEFT));
     this.w = boxW; // keep layout/hit-testing in step with what we draw
     // A subtle chart-frame plate so the crawl reads over the painted sea (it used to float).
-    plate(ctx, this.x, this.y, boxW, this.h, { radius: 10, fill: 'rgba(6, 34, 42, 0.72)', corners: true });
+    plate(ctx, this.x, this.y, boxW, this.h, { radius: 10, fill: 'rgba(240, 232, 206, 0.86)', corners: true });
 
     // Header tab: chevron + "History" + an (h) key badge — a proper handle, styled like the buttons.
     const hx = this.x + 8, hy = this.y + 6, hh = 19;
@@ -128,10 +127,10 @@ export class NewsPanel extends Panel {
     if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
     const hw = 22 + lblW + 26;
     const hg = ctx.createLinearGradient(0, hy, 0, hy + hh);
-    hg.addColorStop(0, 'rgba(16, 60, 71, 0.96)'); hg.addColorStop(1, 'rgba(7, 34, 42, 0.96)');
+    hg.addColorStop(0, PALETTE.panelPaperHi); hg.addColorStop(1, PALETTE.panelPaperLo);
     roundRect(ctx, hx, hy, hw, hh, 6); ctx.fillStyle = hg; ctx.fill();
     ctx.lineWidth = 1; ctx.strokeStyle = PALETTE.panelEdge; ctx.stroke();
-    drawIcon(ctx, 'chevronUp', hx + 13, hy + hh / 2, 10, PALETTE.accent);
+    drawIcon(ctx, 'chevronUp', hx + 13, hy + hh / 2, 10, PALETTE.panelAccent);
     ctx.fillStyle = PALETTE.panelText; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
     ctx.font = tfont('section', 700);
     if ('letterSpacing' in ctx) ctx.letterSpacing = '0.6px';
@@ -159,7 +158,7 @@ export class NewsPanel extends Panel {
       const rx = x - 5, ry = y - CRAWL_LH / 2;
       const hovered = loc && cur && cur.x >= rx && cur.x <= rx + w && cur.y >= ry && cur.y <= ry + CRAWL_LH;
       const col = eventColor(e.kind, PALETTE.panelDim);
-      if (hovered) { roundRect(ctx, rx, ry, w, CRAWL_LH, 5); ctx.fillStyle = 'rgba(255,255,255,0.14)'; ctx.fill(); }
+      if (hovered) { roundRect(ctx, rx, ry, w, CRAWL_LH, 5); ctx.fillStyle = 'rgba(60,44,24,0.12)'; ctx.fill(); }
       ctx.globalAlpha = hovered ? 1 : Math.max(0.42, 1 - (recent.length - 1 - i) * 0.07);
       if (loc) drawIcon(ctx, eventIcon(e.kind), x + 5, y, 11, col);
       ctx.fillStyle = hovered ? '#ffffff' : col;
@@ -224,7 +223,7 @@ export class NewsPanel extends Panel {
         const col = eventColor(e.kind, PALETTE.panelDim);
         const rx = this.x + 6, rw = this.w - 12, ry = y;
         const hovered = cur && cur.x >= rx && cur.x <= rx + rw && (cur.y + sb.offset) >= ry && (cur.y + sb.offset) <= ry + ROW_H;
-        if (hovered) { roundRect(ctx, rx, ry, rw, ROW_H, 5); ctx.fillStyle = 'rgba(255,255,255,0.10)'; ctx.fill(); }
+        if (hovered) { roundRect(ctx, rx, ry, rw, ROW_H, 5); ctx.fillStyle = 'rgba(60,44,24,0.12)'; ctx.fill(); }
         drawIcon(ctx, eventIcon(e.kind), x + 5, y + ROW_H / 2, 12, col);
         ctx.font = tfont('section'); ctx.fillStyle = PALETTE.panelDim;
         ctx.fillText(`Day ${e.day}`, x + 15, y + ROW_H / 2);
@@ -244,9 +243,9 @@ export class NewsPanel extends Panel {
   _iconBtn(ctx, x, y, icon, active) {
     ctx.save();
     roundRect(ctx, x, y, 20, 20, 5);
-    ctx.fillStyle = active ? 'rgba(255,240,176,0.18)' : 'rgba(255,255,255,0.05)'; ctx.fill();
-    ctx.lineWidth = 1; ctx.strokeStyle = active ? PALETTE.accent : PALETTE.panelEdge; ctx.stroke();
-    drawIcon(ctx, icon, x + 10, y + 10, 12, active ? PALETTE.accent : PALETTE.panelDim);
+    ctx.fillStyle = active ? 'rgba(156,109,36,0.20)' : PALETTE.panelInset; ctx.fill();
+    ctx.lineWidth = 1; ctx.strokeStyle = active ? PALETTE.panelAccent : PALETTE.panelEdge; ctx.stroke();
+    drawIcon(ctx, icon, x + 10, y + 10, 12, active ? PALETTE.panelAccent : PALETTE.panelDim);
     ctx.restore();
     return { x, y, w: 20, h: 20 };
   }

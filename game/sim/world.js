@@ -99,7 +99,10 @@ export function buildWorld({ economy, roster, seed = 1337 }) {
     world.islandsById.set(isl.id, isl);
   }
 
-  // Small seeded jitter so different seeds diverge (and same seed reproduces).
+  // Small seeded jitter so different seeds diverge (and same seed reproduces). Shared avoid-sets
+  // (magistrates here, captains + hulls below) dedupe each cast in one O(n) pass through genesis;
+  // runtime installs/spawns re-derive their avoid-set from live world state instead.
+  const usedMagNames = new Set();
   for (const isl of world.islands) {
     isl.population = tuning.START_POP * (0.9 + 0.2 * streamFloat(world, 'init'));
     isl.stock[isl.primary] = tuning.STOCKPILE_CAP * 0.15 * (0.8 + 0.4 * streamFloat(world, 'init'));
@@ -114,14 +117,17 @@ export function buildWorld({ economy, roster, seed = 1337 }) {
     isl._rebelCd = 0;
     isl.danger = 0;   // how pirate-haunted these waters are (0..1) — set by attacks, decays in antipiracy
     isl._privCd = 0;  // simTime before which it won't commission another privateer
-    installMagistrate(world, isl); // seat a named magistrate with an economic agenda; retargets the economy
+    installMagistrate(world, isl, usedMagNames); // seat a named magistrate with an economic agenda; retargets the economy
   }
 
+  // Shared avoid-sets thread through genesis so the whole starting cast (captains + hulls) dedupes
+  // its names in a single O(n) pass (no per-entity rescan). Runtime spawns re-derive from the sea.
+  const usedShipNames = new Set(), usedCaptainNames = new Set();
   for (const isl of world.islands) {
     for (let i = 0; i < tuning.START_SHIPS_PER_ISLAND; i++) {
       const s = createShip(world.nextEntityId++, isl, tuning, startingHull(world, isl, tuning));
-      s.captain = makeCaptain(world); // every ship is run by a named, improving captain
-      s.name = shipName(world);
+      s.captain = makeCaptain(world, usedCaptainNames); // every ship is run by a named, improving captain
+      s.name = shipName(world, usedShipNames);
       world.ships.push(s);
     }
   }
@@ -131,7 +137,7 @@ export function buildWorld({ economy, roster, seed = 1337 }) {
   // be empty of any black flag for a long while. Seed a handful of rogues out on the water under
   // fearsome captains, so there's a threat to see (and privateers to answer it) from day one — the
   // usual fleet-fraction cap + privateers keep it self-limiting from there.
-  seedStartPirates(world, tuning);
+  seedStartPirates(world, tuning, usedShipNames, usedCaptainNames);
 
   // Seed every pair's reputation just above/below neutral (the diplomatic layer).
   initReputation(world, tuning.REP_INIT_SPREAD);
@@ -147,7 +153,7 @@ export function buildWorld({ economy, roster, seed = 1337 }) {
 /** Drop START_PIRATES rogue sloops onto the open sea at genesis (deterministic). Each is a fresh
  *  pirate under a fearsome captain, homed to a random port only as a label; they begin hunting at
  *  once. Bounded by START_PIRATES (small) and thereafter by the usual PIRATE_MAX_FRAC cap. */
-function seedStartPirates(world, tuning) {
+function seedStartPirates(world, tuning, usedShipNames, usedCaptainNames) {
   const n = tuning.START_PIRATES || 0;
   for (let k = 0; k < n; k++) {
     const anchor = world.islands[Math.floor(streamFloat(world, 'init') * world.islands.length)] || world.islands[0];
@@ -160,10 +166,10 @@ function seedStartPirates(world, tuning) {
     s.cargo.Food = tuning.CREW_FOOD_PER_DAY * tuning.PROVISION_DAYS * 3; // enough to hunt before it must raid
     const spec = tuning.SHIP_TYPES && tuning.SHIP_TYPES.brig;
     s.cargo.Weapons = spec ? spec.weaponCap * 0.7 : 14; // a full fighting complement of guns
-    s.captain = makeCaptain(world);
-    s.name = shipName(world);
+    s.captain = makeCaptain(world, usedCaptainNames);
+    s.name = shipName(world, usedShipNames);
     world.ships.push(s);
-    turnPirate(world, s); // raise the black flag (fresh pirate captain + hunting state; logs 'pirate')
+    turnPirate(world, s, { fresh: true }); // a seeded raider with no honest past — a fresh pirate master
   }
 }
 

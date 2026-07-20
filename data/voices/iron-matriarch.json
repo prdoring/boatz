@@ -4,7 +4,7 @@
   "persona": "A stern island governor of unbending will and maternal severity — the port is her household to keep in order. Duty, discipline, and a mother's cold love for her people. Island: 'I'. Ship: the same commanding, no-nonsense hand, 'I'.",
 
   "pronoun": {
-    "ship":   { "subject": "I", "first": "I" },
+    "ship":   { "subject": "we", "first": "We" },
     "island": { "subject": "I", "first": "I" }
   },
 
@@ -13,7 +13,7 @@
       "founder":   "This vessel is mine to command, and I will have her run as tight as any house I ever kept. I am {name}{rankc}; this {home} {type} answers to me, and to me alone.",
       "successor": "The log comes to my hand. I am {name}{rankc}. What was slack before will be slack no longer; she is mine now, and she will learn it soon enough.",
       "mutiny":    "The crew threw down their master and forced the book upon me, raw as I am. I am {name}. They will find me no gentler than the one they drowned — order will be kept.",
-      "pirate":    "We are done with honest trade; the black flag is up. I am {name}{rankc}. Thieves or no, this crew will keep discipline under me, or they will answer for the lack.",
+      "rogue":     "We are done with honest trade; the black flag is up. I am {name}{rankc}. Thieves or no, this crew will keep discipline under me, or they will answer for the lack.",
       "prize":     "She struck to me, and I have taken her. I am {name}{rankc}; this hull is mine now, and she will be run properly or she will not be run at all.",
       "recovered": "I have brought this hull out from under the black flag and mean to see her decent again. I am {name}{rankc}; whatever bad habits she learned, I will break them."
     },
@@ -53,8 +53,52 @@
   },
 
   "kinds": {
-    "plunder": { "recur": { "class": "prize", "phrases": [", the {ord} prize I have taken and seen properly divided", " — no less orderly than the last", ", handled as I handle all things"] } },
-    "fended":  { "recur": { "class": "stand", "phrases": [" — I have turned wolves from my door before", ", and sent them off the poorer, as ever"] } },
+    "plunder": {
+      "recur": { "class": "prize", "phrases": [", the {ord} prize I have taken and seen properly divided", " — no less orderly than the last", ", handled as I handle all things"] },
+      "say": [
+        "{we} brought {foe} to heel and took her inventory in hand — {goods} crates and {gold}g removed to my hold, and the hulk sent off to reflect on her carelessness",
+        "{we} laid {foe} alongside and relieved her of {goods} casks and {gold}g, all of it counted twice and stowed properly before I let her limp home",
+        "{foe} out of {foeHome} yielded to me as she ought — {goods} bales and {gold}g into my keeping, and not a coin unaccounted",
+        "{we} took {foe} in good order, stripped her of {goods} chests and {gold}g, and dismissed her the poorer for meeting me",
+        "{we} boarded {foe} and had {goods} crates and {gold}g off her decks with no fuss and no waste — that is how a prize is taken",
+        "{foe} struck to me and I saw her cargo divided fairly — {goods} casks and {gold}g — before sending the empty hull on her way",
+        "{we} disciplined {foe} sharply and carried off {goods} bales and {gold}g, and she will think twice before sailing so fat and so foolish again"
+      ]
+    },
+    "sunk": {
+      "say": [
+        "{we} gave {foe} every chance to strike and she refused, so I put her on the bottom where she now keeps good order",
+        "{we} broke {foe} apart under my guns and sent her down, cargo and crew, and shed no tear for either",
+        "{foe} defied me once too often, and I closed her account beneath the waves",
+        "{we} sank {foe} off {foeHome} without ceremony — a hard lesson, but a mother's lessons often are",
+        "{we} held our fire till it would tell, then sent {foe} under in a single disciplined broadside",
+        "{foe} would not learn, so I taught her the only way left and watched the sea close over the schooling",
+        "{we} put {foe} down cleanly and turned back to my work — there is no profit in dwelling on the drowned"
+      ]
+    },
+    "fended": {
+      "recur": { "class": "stand", "phrases": [" — I have turned wolves from my door before", ", and sent them off the poorer, as ever"] },
+      "say": [
+        "{foe} took me for an easy household and came to rob it — I turned her from my door and sent her under for the impudence",
+        "{we} met {foe} with more iron than she bargained for and broke her upon it",
+        "{foe} closed to board and found me waiting; I sank her at the rail and did not raise my voice",
+        "{we} turned {foe} away as I have turned wolves before, and this one I sent to the bottom to be sure of her",
+        "{foe} thought a governor's ship soft picking — she learned otherwise as the water took her",
+        "{we} held our deck against {foe} and repaid her boldness with a broadside that ended it",
+        "{foe} came for what was mine and I let her keep nothing, not even her keel"
+      ]
+    },
+    "hunted": {
+      "say": [
+        "{we} ran {foe} down like a rat in a good pantry and put an end to her — the lanes are the tidier for it",
+        "{we} hunted {foe} to her hole and cleaned her out of it, and I call it a house set in order",
+        "{foe} had preyed on honest hulls long enough; I caught her and sank her, and felt only satisfaction",
+        "{we} cornered {foe} off {foeHome} and broke her — a wolf dealt with is a wolf that troubles no one's children again",
+        "{we} chased {foe} until she could run no further, then sank her with the discipline the task deserved",
+        "{foe} fouled these waters too long, and I have swept them clean of her at last",
+        "{we} paid {foe} in full for her crimes and sent her under — order restored, the ledger of her closed"
+      ]
+    },
     "raid":    { "recur": { "class": "sack",  "phrases": [", the {ord} town I have put back in its place"] } }
   }
 }

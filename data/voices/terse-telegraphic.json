@@ -13,7 +13,7 @@
       "founder":   "Log opened. {name}{rankc}. A {home} {type}. Mine now. Kept plain.",
       "successor": "New hand on the book. {name}{rankc}. Entries carried on. No frills.",
       "mutiny":    "Master over the side. Crew hands me the book. {name}. Green. Learning her fast.",
-      "pirate":    "Colours down. Black flag up. {name}{rankc}. All taken now. None traded.",
+      "rogue":     "Colours down. Black flag up. {name}{rankc}. All taken now. None traded.",
       "prize":     "She struck. Boarded. Taken. {name}{rankc}. Her book, my hand.",
       "recovered": "Hunter ran the rogues down. Hull freed. {name}{rankc}. Bound home. Honest trade again."
     },
@@ -53,9 +53,53 @@
   },
 
   "kinds": {
-    "plunder": { "recur": { "class": "prize", "phrases": [", {ord} prize", " — another taken", ", as before"] } },
-    "sunk":    { "recur": { "class": "prize", "phrases": [", another sent under"] } },
-    "hunted":  { "recur": { "class": "hunt",  "phrases": [", {ord} wolf down"] } },
-    "fended":  { "recur": { "class": "stand", "phrases": [" — shaken off before", ", not the first"] } }
+    "plunder": {
+      "say": [
+        "{we} ran {foe} down — {goods} bales, {gold}g, let her limp",
+        "{we} boarded {foe} — took {goods} crates, {gold}g, cut her loose",
+        "{foe} struck quick — {goods} casks and {gold}g out of her hold",
+        "{we} stripped {foe} clean — {goods} chests, {gold}g, sent her off",
+        "{we} took {foe} — {goods} bales, {gold}g, no blood spilt",
+        "{foe} yielded fast — {we} lifted {goods} crates and {gold}g, left the hulk",
+        "{we} hit {foe} at dawn — {goods} casks, {gold}g, gone by noon"
+      ],
+      "recur": { "class": "prize", "phrases": [", {ord} prize", " — another taken", ", as before"] }
+    },
+    "sunk": {
+      "say": [
+        "{we} holed {foe} — she filled, went down, cargo with her",
+        "{foe} took our broadside — under in minutes, nothing saved",
+        "{we} sank {foe} cold — no boarding, no loot, just the deep",
+        "{foe} rolled, sank — {we} watched her go bows-first",
+        "{we} put {foe} on the bottom — mast last to show",
+        "{foe} would not strike — {we} sent her under whole",
+        "{we} gutted {foe} at the waterline — down she went, all of her"
+      ],
+      "recur": { "class": "prize", "phrases": [", another sent under"] }
+    },
+    "hunted": {
+      "say": [
+        "{we} ran {foe} down — black flag under, one less on the lanes",
+        "{foe} ran — {we} caught her, sank her, done",
+        "{we} cornered {foe} — no quarter, straight to the bottom",
+        "{foe} raided these waters — {we} ended it, ended her",
+        "{we} chased {foe} two days — took her on the third, sank her",
+        "{foe} showed the black rag — {we} put her under it",
+        "{we} hunted {foe} to ground — cut her down, lanes clear"
+      ],
+      "recur": { "class": "hunt",  "phrases": [", {ord} wolf down"] }
+    },
+    "fended": {
+      "say": [
+        "{foe} came for us — {we} shot her under, held the hold",
+        "{we} stood {foe} off — raked her, sank her, kept our own",
+        "{foe} thought us soft — {we} put her down instead",
+        "{we} took {foe}'s charge — turned it, sent her deep",
+        "{foe} closed to board — {we} broke her, drowned her",
+        "{we} met {foe} gun for gun — she sank first",
+        "{foe} ran alongside — {we} holed her, watched her go under"
+      ],
+      "recur": { "class": "stand", "phrases": [" — shaken off before", ", not the first"] }
+    }
   }
 }

@@ -11,30 +11,24 @@
 // serialise for free. PURE.
 
 import { streamFloat } from './rng.js';
+import { GIVEN, SURNAME, EPITHET, pick, composeUniqueName } from './names.js';
 
-// Deterministically-composed captain names — a given/epithet surname with the odd nickname.
-const FIRST = [
-  'Bartholomew', 'Anne', 'Edward', 'Mary', 'Henry', 'Jack', 'Grace', 'Samuel', 'Eliza',
-  'Roderick', 'Isabel', 'Cutler', 'Morgan', 'Selby', 'Oona', 'Diego', 'Fen', 'Cormac',
-  'Halvard', 'Nadia', 'Tobias', 'Wren', 'Amara', 'Lorcan', 'Sim', 'Petra', 'Osric', 'Yara',
-];
-const SUR = [
-  'Blackwood', 'Ironside', 'Vane', 'Roberts', 'Bonny', 'Teague', 'Kidd', 'Sharpe', 'Thorne',
-  'Doubloon', 'Marlowe', 'Ashgrave', 'Quill', 'Storm', 'Bellweather', 'Crane', 'Voss',
-  'Hollick', 'Dunmore', 'Salt', 'Redfern', 'Copperhand', 'Yarrow', 'Finch', 'Mercer',
-];
-const EPITHET = [
-  'the Bold', 'the Shrewd', 'Redhand', 'the Patient', 'Stormborn', 'the Lucky', 'Ironwill',
-  'the Quiet', 'Longreach', 'the Fair',
-];
+// Captain names — a given + family name, or a given + pirate byname — from the shared person-name
+// pools in names.js, preferring a name no captain currently afloat already bears (see makeCaptain).
+
+/** Names borne by captains of ships currently afloat — the set a fresh captain prefers to dodge. */
+function livingCaptainNames(world) {
+  const set = new Set();
+  const ships = world && world.ships;
+  if (ships) for (const s of ships) if (s.captain && s.captain.name) set.add(s.captain.name);
+  return set;
+}
 
 // Rank tiers by lifetime XP (low → high). The last whose threshold is met wins. Spaced so a
 // captain climbs through most of the ladder over a long session rather than maxing out in days.
 const RANKS = [
   [0, 'Novice'], [100, 'Journeyman'], [280, 'Seasoned'], [620, 'Veteran'], [1300, 'Master'], [2600, 'Legendary'],
 ];
-
-function pick(list, r) { return list[Math.min(list.length - 1, Math.floor(r * list.length))]; }
 
 /** A stable "writing-voice" seed for a person, derived (RNG-FREE) from their already-drawn portrait
  *  seed — so it consumes no RNG stream (determinism-safe: adds no draw to perturb seeded runs) yet
@@ -62,23 +56,48 @@ export function personalityOf(traits) {
 }
 
 /** A pirate captain — an epithet name ("Cormac Redhand"), bold and greedy, and already blooded
- *  (some starting experience). The kind who takes a ship by force and sails it under the black flag. */
-export function makePirateCaptain(world) {
-  const f = pick(FIRST, streamFloat(world, 'captain'));
-  const name = `${f} ${pick(EPITHET, streamFloat(world, 'captain'))}`;
+ *  (some starting experience). The kind who takes a ship by force and sails it under the black flag.
+ *  `taken` (optional) is a caller-owned set of names to avoid + extend for batch naming at genesis;
+ *  omit it and the avoid-set is derived from captains currently afloat. */
+export function makePirateCaptain(world, taken) {
+  const avoid = taken || livingCaptainNames(world);
+  const name = composeUniqueName(
+    () => `${pick(GIVEN, streamFloat(world, 'captain'))} ${pick(EPITHET, streamFloat(world, 'captain'))}`,
+    avoid,
+  );
   const traits = { boldness: 0.7 + 0.3 * streamFloat(world, 'captain'), wanderlust: trait(world), greed: 0.6 + 0.4 * streamFloat(world, 'captain') };
   const portrait = Math.floor(streamFloat(world, 'captain') * 0x7fffffff) >>> 0;
   const s = Math.floor(180 + streamFloat(world, 'captain') * 420); // already blooded — starts every facet equal
   return { name, xp: { sea: s, gun: s, cmd: s }, traits, personality: personalityOf(traits), portrait, voiceSeed: voiceSeedFrom(portrait) };
 }
 
-/** A fresh captain with a seeded name, personality, and zero experience. */
-export function makeCaptain(world) {
-  const f = pick(FIRST, streamFloat(world, 'captain'));
-  const s = pick(SUR, streamFloat(world, 'captain'));
-  const name = streamFloat(world, 'captain') < 0.22
-    ? `${f} ${pick(EPITHET, streamFloat(world, 'captain'))}`
-    : `${f} ${s}`;
+/** An HONEST captain who leads his OWN crew into piracy — the same man, harder now. He keeps his name,
+ *  portrait, and voiceSeed (so the ship's log stays in his hand, an unbroken fall from trade to the black
+ *  flag), but leans into boldness + greed and is blooded for the fight ahead, so a merchant master makes a
+ *  credible raider. No RNG draw — determinism-neutral, mutating the captain in place. */
+export function hardenToPirate(captain) {
+  if (!captain) return captain;
+  const tr = captain.traits || (captain.traits = { boldness: 0.5, wanderlust: 0.5, greed: 0.5 });
+  tr.boldness = Math.max(tr.boldness, 0.7);
+  tr.greed = Math.max(tr.greed, 0.6);
+  captain.personality = personalityOf(tr);
+  const xp = captain.xp && typeof captain.xp === 'object' ? captain.xp : (captain.xp = { sea: 0, gun: 0, cmd: 0 });
+  xp.gun = Math.max(xp.gun || 0, 180);  // a hard first season under the black flag — enough to fight
+  xp.sea = Math.max(xp.sea || 0, 120);
+  xp.cmd = Math.max(xp.cmd || 0, 120);
+  return captain;
+}
+
+/** A fresh captain with a seeded name (preferring one no living captain bears — see `taken` on
+ *  makePirateCaptain), personality, and zero experience. */
+export function makeCaptain(world, taken) {
+  const avoid = taken || livingCaptainNames(world);
+  const name = composeUniqueName(() => {
+    const f = pick(GIVEN, streamFloat(world, 'captain'));
+    return streamFloat(world, 'captain') < 0.22
+      ? `${f} ${pick(EPITHET, streamFloat(world, 'captain'))}`
+      : `${f} ${pick(SURNAME, streamFloat(world, 'captain'))}`;
+  }, avoid);
   const traits = { boldness: trait(world), wanderlust: trait(world), greed: trait(world) };
   // A single seed int the client expands into a head-and-shoulders portrait (PortraitRenderer).
   const portrait = Math.floor(streamFloat(world, 'captain') * 0x7fffffff) >>> 0;

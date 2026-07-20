@@ -4,7 +4,7 @@
   "persona": "A florid, Latinate rhetorician who mistook a logbook for a triumphal arch. Long periodic sentences, rhetorical questions, apostrophe to Fate and Fortune, magnificent self-regard. Ship: the singular 'I'. Island: the royal 'we'.",
 
   "pronoun": {
-    "ship":   { "subject": "I",  "first": "I"  },
+    "ship":   { "subject": "we",  "first": "We"  },
     "island": { "subject": "we", "first": "We" }
   },
 
@@ -13,7 +13,7 @@
       "founder":   "Let the very firmament bear witness: I, {name}{rankc}, do this day take unto myself the keeping of this {home} {type}, and swear before Fortune herself that no vessel afloat shall be more gloriously commanded.",
       "successor": "The book, that noble instrument of memory, descends now into my keeping — I, {name}{rankc}, who shall bear her chronicle to heights the former hand never dared to dream.",
       "mutiny":    "The crew, in their fury, cast the old tyrant to the deep and thrust this book upon me — I, {name}, untried, yet surely not unworthy; for shall not the raw ore, well hammered, yield the finest blade of all?",
-      "pirate":    "Farewell, then, to the mean and grovelling trade of honest men! I, {name}{rankc}, raise the black flag as a king raises his standard, and write my defiance large across the very face of the sea.",
+      "rogue":     "Farewell, then, to the mean and grovelling trade of honest men! I, {name}{rankc}, raise the black flag as a king raises his standard, and write my defiance large across the very face of the sea.",
       "prize":     "She struck to me — and how, I ask you, could she have done otherwise? I, {name}{rankc}, her victor and her master, take up her chronicle at the sword's bright point, that all who read may know to whom she now belongs.",
       "recovered": "Behold: a hunter's guns have loosed this hapless hull from her captivity, and I, {name}{rankc}, am appointed her deliverer — to lead her out of the wilderness of piracy and back to the blessed shores of lawful trade."
     },
@@ -53,9 +53,57 @@
   },
 
   "kinds": {
-    "plunder": { "recur": { "class": "prize", "phrases": [", the {ord} such conquest to adorn my name", " — as I have done, and shall assuredly do again", ", another jewel set in my crown of victories"] } },
+    "plunder": {
+      "recur": { "class": "prize", "phrases": [", the {ord} such conquest to adorn my name", " — as I have done, and shall assuredly do again", ", another jewel set in my crown of victories"] },
+      "say": [
+        "{we} fell upon {foe} as the thunderbolt falls, and bore away {goods} bales and {gold}g — tribute, shall we say, to the greater navigator",
+        "{we} plucked {foe} bare of {goods} crates and {gold}g, for a merchant's hoard is but Fortune's loan, called due at {our} sovereign convenience",
+        "{foe} bowed her colours before {our} guns, and {we}, magnanimous in triumph, took but {goods} casks and {gold}g and granted the wretch her leave",
+        "{we} laid open {foe} and drew from her {goods} chests and {gold}g, that her wealth might grace a worthier flag than {foeHome} ever flew",
+        "{we} descended upon {foe} in glory and rose again the richer by {goods} bales and {gold}g, leaving the stripped hull to bear {our} legend home",
+        "{foe} fancied herself safe upon the open main — a sweet and doomed illusion — and paid {goods} crates and {gold}g for the correction",
+        "{we} suffered {foe} to live, and for that clemency exacted {goods} casks and {gold}g, a price the ungrateful hull thought steep",
+        "{we} relieved {foe} of {goods} chests and {gold}g with the ease of a king collecting his rents, and dismissed her limping toward {foeHome}"
+      ]
+    },
+    "sunk": {
+      "say": [
+        "{we} thundered upon {foe} until the sea itself rose to claim her, and down she went, her riches with her, beyond the reach of avarice",
+        "{foe} defied {us}, of all captains, and for that folly {we} sent her whole and unransomed to the abyss",
+        "{we} battered {foe} till she filled and foundered, and left the deep every last bale, such treasure being fitter for Neptune than for lesser men",
+        "{foe} chose the ocean's cold embrace over {our} mercy, and {we}, ever obliging, consigned her to it entire",
+        "{we} broke {foe} upon the anvil of {our} broadsides, and Fortune herself drew the waters over her ruin",
+        "{foe} went down before {us} with all her wealth ungathered — a monument, if you will, to the folly of resistance",
+        "{we} sank {foe} where she stood defiant, and the indifferent sea did not grieve, and neither, {we} confess, did {we}",
+        "{we} sent {foe} to the deep with her cargo undisturbed, that the drowned might reckon among themselves who was the greater captain"
+      ]
+    },
     "raid":    { "recur": { "class": "sack",  "phrases": [", the {ord} proud town I have humbled unto ashes"] } },
-    "hunted":  { "recur": { "class": "hunt",  "phrases": [", the {ord} wolf I have hunted to his utter ruin", " — another villain swept from the sea by this hand alone"] } },
-    "fended":  { "recur": { "class": "stand", "phrases": [" — for what tempest of foes has ever yet unmade me?", ", as I have ever done, and ever shall"] } }
+    "hunted": {
+      "recur": { "class": "hunt",  "phrases": [", the {ord} wolf I have hunted to his utter ruin", " — another villain swept from the sea by this hand alone"] },
+      "say": [
+        "{we} ran {foe} to her ruin at the last, and swept one more villain from the face of the sea by this hand alone",
+        "{we} pursued {foe} out of the very shadow of {foeHome} and cut her down, that honest keels might pass unmolested",
+        "{foe} fled before {our} prow as the guilty flee the trumpet of judgement, and judgement {we} gave her, entire and final",
+        "{we} hunted {foe} across the wastes of water and delivered unto her the reckoning her crimes had long invited",
+        "{foe} had gorged herself upon stolen wealth, and {we} emptied her wicked hull into the deep where no plunder avails",
+        "{we} brought {foe} to her long-owed account and closed it, and let Fortune set down whom she favoured",
+        "{foe} fancied herself the sea's own terror, until she met a greater and drowned learning the difference",
+        "{we} chased {foe} down and destroyed her utterly, a labour of which posterity, {we} trust, shall one day speak"
+      ]
+    },
+    "fended": {
+      "recur": { "class": "stand", "phrases": [" — for what tempest of foes has ever yet unmade me?", ", as I have ever done, and ever shall"] },
+      "say": [
+        "{foe} bore down upon {us} as though {we} were common prey, and learned too late the calamity of that error",
+        "{we} met {foe}'s black insolence with iron and answered her raid with ruin, sending her howling to the deep",
+        "{foe} came to plunder and found instead her sepulchre, for {we} sank the presumptuous wolf where she snapped",
+        "{we} turned {foe}'s own audacity into her undoing, and the sea swallowed both the rogue and her ambition",
+        "{foe} raised her filthy flag against {us}, and {we} hauled it down to the very seabed",
+        "{we} scattered {foe}'s assault like chaff and sent the raider under, that the lanes might know whom they had troubled",
+        "{foe} reckoned {us} defenceless, and {we} disabused her of the notion with a fury she bore to her grave",
+        "{we} stood athwart {foe}'s greed unshaken, broke her, and let the waters render the verdict"
+      ]
+    }
   }
 }

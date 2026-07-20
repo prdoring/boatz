@@ -13,7 +13,7 @@ import { ScrollBox } from './scroll.js';
 import { STORY_CATEGORIES, filterByCategory, eventColor } from './eventKinds.js';
 import { PALETTE } from '../config.js';
 import { drawIcon } from './icons.js';
-import { sectionHeading, inkRule } from './theme.js';
+import { sectionHeading, inkRule, font, hand, handIndex, HANDS } from './theme.js';
 import { narrate } from './chronicle-narrate.js';
 import VOICE from '/data/chronicle-voice.json' with { type: 'json' };
 
@@ -21,15 +21,15 @@ const W = 320;
 const PAD = 16;
 
 const GOAL = {
-  food: { label: 'Importing food', color: '#ff9d5c' },
-  migrate: { label: 'Carrying migrants', color: '#8fc6ff' },
-  buyShip: { label: 'Buying a ship', color: '#c8a06a' },
-  trade: { label: 'Trading', color: '#8ee6a0' },
-  scout: { label: 'Scouting prices', color: '#c8b3ff' },
-  aid: { label: 'Aid convoy for an ally', color: '#7fe0b0' },
+  food: { label: 'Importing food', color: '#c0561c' },
+  migrate: { label: 'Carrying migrants', color: '#356291' },
+  buyShip: { label: 'Buying a ship', color: '#8a6220' },
+  trade: { label: 'Trading', color: '#2f7d45' },
+  scout: { label: 'Scouting prices', color: '#5f47a0' },
+  aid: { label: 'Aid convoy for an ally', color: '#2d8060' },
 };
 const STATE = { idle: 'In port', sailing: 'Sailing', docked: 'Docked' };
-const STATE_COLOR = { idle: '#9fb6bd', sailing: '#5fd0e0', docked: '#8fc6ff' };
+const STATE_COLOR = { idle: '#5a6b70', sailing: '#1f7f8c', docked: '#356291' };
 
 // The ship's specific live ACTION (snapshot.js `act`/`actId`), turned into a plain-language line with the
 // island/ship it concerns resolved by name — so a pirate reads "Blockading Ironpeak", a privateer
@@ -56,8 +56,8 @@ const ACT = {
 };
 
 const RES_COLOR = {
-  Grain: '#e2c85a', Wood: '#5fb84f', Meat: '#cf9b6a', Fiber: '#a8c85a', Iron: '#9aa6b2', PreciousMetal: '#dfe4ec',
-  Food: '#e0a83f', Ale: '#b07a3a', Clothing: '#d06a9a', Weapons: '#7f8790', LuxuryGoods: '#ffe36a', Ships: '#c8a06a',
+  Grain: '#96751a', Wood: '#3a7d2f', Meat: '#96602f', Fiber: '#5f7020', Iron: '#586470', PreciousMetal: '#6f7885',
+  Food: '#9c6414', Ale: '#7a4f1e', Clothing: '#9a3a66', Weapons: '#464c54', LuxuryGoods: '#8f7a10', Ships: '#8a6220',
 };
 
 export class InfoPanel extends Panel {
@@ -129,13 +129,13 @@ export class InfoPanel extends Panel {
 
   _drawTabs(ctx) {
     ctx.save();
-    ctx.font = '600 12px system-ui, sans-serif';
+    ctx.font = font('badge');
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     for (const t of this._tabRects()) {
       const active = this._tab === t.id;
       roundRect(ctx, t.x, t.y, t.w, t.h, 6);
-      ctx.fillStyle = active ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.04)'; ctx.fill();
-      ctx.lineWidth = 1; ctx.strokeStyle = active ? PALETTE.accent : PALETTE.panelEdge; ctx.stroke();
+      ctx.fillStyle = active ? 'rgba(60,44,24,0.12)' : PALETTE.panelInset; ctx.fill();
+      ctx.lineWidth = 1; ctx.strokeStyle = active ? PALETTE.panelAccent : PALETTE.panelEdge; ctx.stroke();
       ctx.fillStyle = active ? PALETTE.panelText : PALETTE.panelDim;
       ctx.fillText(t.label, t.x + t.w / 2, t.y + t.h / 2 + 0.5);
     }
@@ -163,7 +163,7 @@ export class InfoPanel extends Panel {
     const model = this._narrative(sel, entries, chron.truncated, ctxt);
 
     // ── Pinned header (drawn outside the scroll clip) ──
-    this._titleRow(ctx, model.frame.title, { label: 'Chronicle', color: '#c8b3ff' }, c);
+    this._titleRow(ctx, model.frame.title, { label: 'Chronicle', color: '#5f47a0' }, c);
     if (model.frame.epigraph) this._subtitle(ctx, model.frame.epigraph, c);
     this._vitalStats(ctx, sel, chron.entries, c);
     this._filterChips(ctx, c);
@@ -175,6 +175,18 @@ export class InfoPanel extends Panel {
     sb.begin(ctx, this.x, top, this.w, bottom - top);
     let y = top + 4;
     const vt = sb.visibleTop, vb = sb.visibleBottom;
+    // Each keeper writes in their OWN HAND (theme HANDS, keyed by voiceSeed): the hand changes at a
+    // handover and holds steady across a keeper's span. Blocks carry their own seed; fall back to the
+    // live keeper for the legacy (unsegmented) narration path. Handwriting reads bigger → 18px advance.
+    const liveSeed = (sel.data.captain && sel.data.captain.voiceSeed) ?? (sel.data.magistrate && sel.data.magistrate.voiceSeed) ?? 0;
+    const SIZE = 15;
+    let prevSeed = null, prevIdx = null;
+    const handFor = (b) => {
+      const seed = (b.seed != null ? b.seed : liveSeed);
+      const idx = (seed === prevSeed && prevIdx != null) ? prevIdx : handIndex(seed, prevIdx);
+      prevSeed = seed; prevIdx = idx;
+      return SIZE + 'px ' + HANDS[idx];
+    };
     if (chron.truncated) { // the DB holds more than the first page — hint at the buried past
       if (y + 16 >= vt && y <= vb) this._storyNote(ctx, '⋯ earlier history not shown', x, y, w);
       y += 20;
@@ -188,28 +200,31 @@ export class InfoPanel extends Panel {
         if (y + 22 >= vt && y <= vb) sectionHeading(ctx, x, x + w, y + 12, b.text);
         y += 24;
       } else if (b.type === 'handover') {
-        // A new keeper takes up the book — set off by a hairline and drawn in their own (emphasized) hand.
+        // A new keeper takes up the book — set off by a hairline and drawn in their own (changed) hand.
         y += 3;
         if (y >= vt && y <= vb) inkRule(ctx, x, x + w, y, PALETTE.panelEdge);
         y += 9;
-        const lines = this._proseLines(ctx, b.runs, w - 4);
-        const h = lines.length * 16 + 8;
-        if (y + h >= vt && y <= vb) this._drawProse(ctx, lines, x + 2, y + 13);
+        const handFont = handFor(b);
+        const lines = this._proseLines(ctx, b.runs, w - 4, handFont);
+        const h = lines.length * 18 + 8;
+        if (y + h >= vt && y <= vb) this._drawProse(ctx, lines, x + 2, y + 13, handFont);
         y += h;
       } else {
-        const lines = this._proseLines(ctx, b.runs, w - 4);
-        const h = lines.length * 16 + 10;
-        if (y + h >= vt && y <= vb) this._drawProse(ctx, lines, x + 2, y + 13);
+        const handFont = handFor(b);
+        const lines = this._proseLines(ctx, b.runs, w - 4, handFont);
+        const h = lines.length * 18 + 10;
+        if (y + h >= vt && y <= vb) this._drawProse(ctx, lines, x + 2, y + 13, handFont);
         y += h;
       }
     }
-    if (model.coda) { // a closing "to this day…" line, set off by a thin rule
+    if (model.coda) { // a closing "to this day…" line, set off by a thin rule, in the live keeper's hand
       y += 6;
       if (y >= vt && y <= vb) inkRule(ctx, x, x + w, y, PALETTE.panelEdge);
       y += 8;
-      const lines = this._proseLines(ctx, [{ text: model.coda.text, role: 'coda' }], w - 4);
-      if (y + lines.length * 16 >= vt && y <= vb) this._drawProse(ctx, lines, x + 2, y + 13);
-      y += lines.length * 16 + 4;
+      const codaFont = hand(liveSeed, SIZE);
+      const lines = this._proseLines(ctx, [{ text: model.coda.text, role: 'coda' }], w - 4, codaFont);
+      if (y + lines.length * 18 >= vt && y <= vb) this._drawProse(ctx, lines, x + 2, y + 13, codaFont);
+      y += lines.length * 18 + 4;
     }
     sb.end(ctx, y + 4);
   }
@@ -241,9 +256,9 @@ export class InfoPanel extends Panel {
   /** Word-wrap a list of colored runs into lines of tokens `[{text,color,glue?}]` at the 12px body font.
    *  A token that opens with clause punctuation (a comma/period/… from a callback run like ", her third
    *  prize") is `glue`d to the preceding word so it hugs it — no floating " , " between words. */
-  _proseLines(ctx, runs, maxW) {
+  _proseLines(ctx, runs, maxW, handFont) {
     ctx.save();
-    ctx.font = '12px system-ui, sans-serif';
+    ctx.font = handFont;
     const sp = ctx.measureText(' ').width;
     const lines = [];
     let line = [], lineW = 0;
@@ -264,9 +279,9 @@ export class InfoPanel extends Panel {
   }
 
   /** Draw wrapped prose token-lines from `_proseLines`, each token in its own colour. */
-  _drawProse(ctx, lines, x, y) {
+  _drawProse(ctx, lines, x, y, handFont) {
     ctx.save();
-    ctx.font = '12px system-ui, sans-serif';
+    ctx.font = handFont;
     ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
     const sp = ctx.measureText(' ').width;
     let ly = y;
@@ -279,7 +294,7 @@ export class InfoPanel extends Panel {
         ctx.fillText(tok.text, lx, ly);
         lx += ctx.measureText(tok.text).width + sp;
       }
-      ly += 16;
+      ly += 18;
     }
     ctx.restore();
   }
@@ -288,9 +303,9 @@ export class InfoPanel extends Panel {
   _roleColor(role, kind) {
     switch (role) {
       case 'connective': case 'join': return PALETTE.panelDim;
-      case 'callback': return PALETTE.accent;
-      case 'handover': return '#d9b96b'; // a keeper taking up the book — warm gilt, set apart from the deeds
-      case 'quiet': case 'coda': return PALETTE.hudDim;
+      case 'callback': return PALETTE.panelAccent;
+      case 'handover': return PALETTE.panelAccent; // a keeper taking up the book — deep brass, set apart from the deeds
+      case 'quiet': case 'coda': return '#8a7a58';
       case 'pivot': case 'clause': default: return eventColor(kind, PALETTE.panelText);
     }
   }
@@ -304,8 +319,8 @@ export class InfoPanel extends Panel {
     const tally = {};
     for (const e of entries) tally[e.kind] = (tally[e.kind] || 0) + 1;
     const NOTABLE = sel.kind === 'island'
-      ? [['haven', 'skull', '#e04a5a'], ['rebellion', 'flame', '#ff5b30'], ['plague', 'skull', '#c072e0'], ['blight', 'wheat', '#ec8a3a'], ['boom', 'spark', '#ffd166']]
-      : [['plunder', 'skull', '#e0503a'], ['pirate', 'skull', '#ff5b4a'], ['hunted', 'sabres', '#8ee6a0'], ['fended', 'shield', '#8fc6d4'], ['mutiny', 'flame', '#ff5b4a']];
+      ? [['haven', 'skull', '#b23a2e'], ['rebellion', 'flame', '#c0442b'], ['plague', 'skull', '#8a3d9c'], ['blight', 'wheat', '#a86a1c'], ['boom', 'spark', '#9a7d16']]
+      : [['plunder', 'skull', '#b23a2e'], ['pirate', 'skull', '#b23a2e'], ['hunted', 'sabres', '#2f7d45'], ['fended', 'shield', '#1f7f8c'], ['mutiny', 'flame', '#b23a2e']];
     for (const [k, icon, col] of NOTABLE) if (tally[k]) parts.push({ t: `${tally[k]}`, icon, col });
     this._statChips(ctx, parts, c);
   }
@@ -313,13 +328,13 @@ export class InfoPanel extends Panel {
   _statChips(ctx, parts, c) {
     c.y += 15;
     ctx.save();
-    ctx.font = '11px system-ui, sans-serif'; ctx.textBaseline = 'middle';
+    ctx.font = font('small'); ctx.textBaseline = 'middle';
     let x = c.cx;
     for (const p of parts) {
       const iconW = p.icon ? 13 : 0;
       const w = ctx.measureText(p.t).width + 14 + iconW;
       if (x + w > c.cx + c.cw) { x = c.cx; c.y += 20; }
-      roundRect(ctx, x, c.y - 8, w, 17, 8); ctx.fillStyle = 'rgba(255,255,255,0.05)'; ctx.fill();
+      roundRect(ctx, x, c.y - 8, w, 17, 8); ctx.fillStyle = PALETTE.panelInset; ctx.fill();
       let tx = x + 7;
       if (p.icon) { drawIcon(ctx, p.icon, x + 9, c.y, 11, p.col); tx = x + 18; }
       ctx.fillStyle = p.col; ctx.textAlign = 'left';
@@ -335,15 +350,15 @@ export class InfoPanel extends Panel {
     c.y += 18;
     this._chipRects = [];
     ctx.save();
-    ctx.font = '600 11px system-ui, sans-serif'; ctx.textBaseline = 'middle';
+    ctx.font = font('badge'); ctx.textBaseline = 'middle';
     let x = c.cx;
     for (const cat of STORY_CATEGORIES) {
       const w = ctx.measureText(cat.label).width + 16;
       if (x + w > c.cx + c.cw) { x = c.cx; c.y += 22; }
       const active = this._filter === cat.key;
       roundRect(ctx, x, c.y - 9, w, 18, 8);
-      ctx.fillStyle = active ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.04)'; ctx.fill();
-      ctx.lineWidth = 1; ctx.strokeStyle = active ? PALETTE.accent : PALETTE.panelEdge; ctx.stroke();
+      ctx.fillStyle = active ? 'rgba(60,44,24,0.12)' : PALETTE.panelInset; ctx.fill();
+      ctx.lineWidth = 1; ctx.strokeStyle = active ? PALETTE.panelAccent : PALETTE.panelEdge; ctx.stroke();
       ctx.fillStyle = active ? PALETTE.panelText : PALETTE.panelDim; ctx.textAlign = 'center';
       ctx.fillText(cat.label, x + w / 2, c.y + 0.5);
       this._chipRects.push({ key: cat.key, x, y: c.y - 9, w, h: 18 });
@@ -355,8 +370,8 @@ export class InfoPanel extends Panel {
 
   _storyNote(ctx, text, x, y, w) {
     ctx.save();
-    ctx.font = 'italic 11px system-ui, sans-serif';
-    ctx.fillStyle = PALETTE.hudDim; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    ctx.font = 'italic 12px "IM Fell English", Georgia, serif';
+    ctx.fillStyle = PALETTE.panelDim; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
     ctx.fillText(text, x + w / 2, y + 11);
     ctx.restore();
   }
@@ -370,26 +385,26 @@ export class InfoPanel extends Panel {
 
     // Active afflictions.
     if (isl.haven) this._banner(ctx, `PIRATE HAVEN — grip ${Math.round((isl.haven.strength || 0) * 100)}%`, '#b0242e', c, 'skull');
-    if (isl.blight) this._banner(ctx, `Blight — ${isl.blight} crippled`, '#ec8a3a', c, 'wheat');
-    if (isl.plague) this._banner(ctx, 'Plague — population dying', '#c072e0', c, 'skull');
+    if (isl.blight) this._banner(ctx, `Blight — ${isl.blight} crippled`, '#a86a1c', c, 'wheat');
+    if (isl.plague) this._banner(ctx, 'Plague — population dying', '#8a3d9c', c, 'skull');
     if (isl.danger > 0.25) this._banner(ctx, `Pirate danger — ${dangerWord(isl.danger)} waters`, '#c0392b', c, 'pennant');
-    if (isl.contract) this._banner(ctx, `WANTED: ${isl.contract.good} · ${fmt(isl.contract.reward)} g reward`, '#e8c15a', c, 'scroll');
+    if (isl.contract) this._banner(ctx, `WANTED: ${isl.contract.good} · ${fmt(isl.contract.reward)} g reward`, '#97781a', c, 'scroll');
 
     // Magistrate + the populace's loyalty (a haven has no lawful magistrate).
     if (isl.magistrate) this._magistrate(ctx, isl, ctxt, c);
 
     // Population + civilization gauges.
     const popFrac = isl.k ? Math.min(1, isl.population / isl.k) : 0;
-    this._gauge(ctx, 'Population', `${fmt(isl.population)}${isl.k ? ' / ' + isl.k : ''}`, popFrac, '#7fd0e0', c);
-    this._gauge(ctx, 'Civilization', (isl.civ ?? 0).toFixed(2), Math.max(0, Math.min(1, isl.civ || 0)), '#8ee6a0', c);
-    this._kv(ctx, 'Treasury', fmt(isl.gold) + ' g', c, PALETTE.accent);
+    this._gauge(ctx, 'Population', `${fmt(isl.population)}${isl.k ? ' / ' + isl.k : ''}`, popFrac, '#1f7f8c', c);
+    this._gauge(ctx, 'Civilization', (isl.civ ?? 0).toFixed(2), Math.max(0, Math.min(1, isl.civ || 0)), '#2f7d45', c);
+    this._kv(ctx, 'Treasury', fmt(isl.gold) + ' g', c, PALETTE.panelAccent);
     // Reach of this port's price knowledge — how many other markets it has any read on, and
     // how many of those are current (it learns firsthand as its ships dock; see beliefs.js).
-    if (isl.intel) this._kv(ctx, 'Price intel', `${isl.intel.known} known · ${isl.intel.fresh} fresh`, c, '#c8b3ff');
+    if (isl.intel) this._kv(ctx, 'Price intel', `${isl.intel.known} known · ${isl.intel.fresh} fresh`, c, '#5f47a0');
     // Reach of its NON-price intel (danger/haven/famine sightings ships have carried home) and how
     // many of its ships it is still awaiting from over the horizon (the outstanding-voyage ledger).
-    if (isl.facts) this._kv(ctx, 'World intel', `${isl.facts.known} known · ${isl.facts.fresh} fresh`, c, '#c8b3ff');
-    if (isl.awaiting > 0) this._kv(ctx, 'At sea', `${isl.awaiting} ship${isl.awaiting > 1 ? 's' : ''} awaited`, c, '#7fd0e0');
+    if (isl.facts) this._kv(ctx, 'World intel', `${isl.facts.known} known · ${isl.facts.fresh} fresh`, c, '#5f47a0');
+    if (isl.awaiting > 0) this._kv(ctx, 'At sea', `${isl.awaiting} ship${isl.awaiting > 1 ? 's' : ''} awaited`, c, '#1f7f8c');
 
     // What it makes.
     if (isl.produces && isl.produces.length) {
@@ -437,10 +452,10 @@ export class InfoPanel extends Panel {
 
     // Faction banner — the loudest line, above everything else.
     if (s.pirate) {
-      c.y += 8; this._banner(ctx, 'BLACK FLAG — PIRATE', '#e04a5a', c, 'skull');
-      if (s.bounty > 0) { c.y += 6; this._banner(ctx, `Bounty: ${fmt(s.bounty)} g on this head`, '#ffd166', c, 'coin'); }
+      c.y += 8; this._banner(ctx, 'BLACK FLAG — PIRATE', '#b23a2e', c, 'skull');
+      if (s.bounty > 0) { c.y += 6; this._banner(ctx, `Bounty: ${fmt(s.bounty)} g on this head`, '#9a7d16', c, 'coin'); }
     } else if (s.privateer) {
-      c.y += 8; this._banner(ctx, 'PRIVATEER — pirate-hunter', '#6fa8d8', c, 'sabres');
+      c.y += 8; this._banner(ctx, 'PRIVATEER — pirate-hunter', '#356291', c, 'sabres');
     }
 
     // Errand banner (merchants only) — the PURPOSE of the voyage.
@@ -471,12 +486,12 @@ export class InfoPanel extends Panel {
     // as the amount of gold.
     this._section(ctx, 'HOLD', c);
     const used = Math.round(s.used || 0), capN = Math.round(s.cap || 0);
-    this._gauge(ctx, 'Cargo hold', `${used} / ${capN}`, capN ? used / capN : 0, '#c8a06a', c);
-    this._cargoRow(ctx, 'Coin', fmt(s.gold || 0) + ' g', PALETTE.accent, c);
+    this._gauge(ctx, 'Cargo hold', `${used} / ${capN}`, capN ? used / capN : 0, '#8a6220', c);
+    this._cargoRow(ctx, 'Coin', fmt(s.gold || 0) + ' g', PALETTE.panelAccent, c);
     const cargo = s.cargo || {}, keys = Object.keys(cargo);
     for (const k of keys) {
       const isPeople = k === 'People';
-      this._cargoRow(ctx, isPeople ? 'Settlers' : k, String(cargo[k]), isPeople ? '#f2b8d0' : (RES_COLOR[k] || PALETTE.panelText), c);
+      this._cargoRow(ctx, isPeople ? 'Settlers' : k, String(cargo[k]), isPeople ? '#a83f6e' : (RES_COLOR[k] || PALETTE.panelText), c);
     }
     if (!keys.length) this._line(ctx, 'No goods aboard', PALETTE.panelDim, c);
   }
@@ -484,7 +499,7 @@ export class InfoPanel extends Panel {
   /** Hull integrity + rigging condition (repair.js) — the ship's physical state, high=green→red=low. */
   _condition(ctx, s, c) {
     const bar = (label, v) => {
-      const col = v > 0.6 ? '#8ee6a0' : v > 0.3 ? '#e0b24a' : '#ff5b4a';
+      const col = v > 0.6 ? '#2f7d45' : v > 0.3 ? '#b0842a' : '#b23a2e';
       this._gauge(ctx, label, `${Math.round(v * 100)}%`, v, col, c);
     };
     this._section(ctx, 'CONDITION', c);
@@ -498,7 +513,7 @@ export class InfoPanel extends Panel {
     if (!s.act) return;
     const fn = ACT[s.act];
     const text = fn ? fn(actName(s.actId, ctxt)) : cap(s.act);
-    const color = s.pirate ? '#e0863a' : s.privateer ? '#8fc6ff' : '#8ee6a0';
+    const color = s.pirate ? '#b5651d' : s.privateer ? '#356291' : '#2f7d45';
     c.y += 8;
     this._banner(ctx, text, color, c, 'caret');
   }
@@ -506,7 +521,7 @@ export class InfoPanel extends Panel {
   // ─── Ship logbook — the intel this ship is physically carrying ───────
   _shipLog(ctx, id, s, c) {
     const ctxt = this.getContext();
-    this._titleRow(ctx, s.name || shipLabel(id, ctxt.shipsById, ctxt.islandsById), { label: 'Logbook', color: '#6fd0e0' }, c);
+    this._titleRow(ctx, s.name || shipLabel(id, ctxt.shipsById, ctxt.islandsById), { label: 'Logbook', color: '#1f7f8c' }, c);
     this._subtitle(ctx, 'What this crew has seen — carried home by sea', c);
     const log = Array.isArray(s.log) ? s.log : [];
     this._section(ctx, `SIGHTINGS (${log.length})`, c);
@@ -518,10 +533,10 @@ export class InfoPanel extends Panel {
       if (c.y > c.max - 18) break;
       const nm = name(ctxt.islandsById, e.id);
       const age = e.age <= 0 ? 'today' : `${e.age}d ago`;
-      let flag = 'quiet', col = '#8ee6a0';
-      if (e.haven) { flag = 'fallen'; col = '#e04a5a'; }
-      else if (e.danger > 0.25) { flag = `danger ${Math.round(e.danger * 100)}%`; col = '#e0863a'; }
-      else if (e.foodDays < 2) { flag = 'famine'; col = '#d98a3a'; }
+      let flag = 'quiet', col = '#2f7d45';
+      if (e.haven) { flag = 'fallen'; col = '#b23a2e'; }
+      else if (e.danger > 0.25) { flag = `danger ${Math.round(e.danger * 100)}%`; col = '#b5651d'; }
+      else if (e.foodDays < 2) { flag = 'famine'; col = '#a86a1c'; }
       this._logRow(ctx, nm, age, flag, col, c);
     }
   }
@@ -529,14 +544,14 @@ export class InfoPanel extends Panel {
   _logRow(ctx, nm, age, flag, color, c) {
     c.y += 19;
     ctx.save();
-    ctx.font = '13px system-ui, sans-serif'; ctx.textBaseline = 'alphabetic';
+    ctx.font = font('label'); ctx.textBaseline = 'alphabetic';
     ctx.fillStyle = PALETTE.panelText; ctx.textAlign = 'left';
     ctx.fillText(clip(ctx, nm, c.cw - 120), c.cx, c.y);
     ctx.textAlign = 'right';
-    ctx.fillStyle = PALETTE.hudDim; ctx.font = '11px system-ui, sans-serif';
+    ctx.fillStyle = PALETTE.panelDim; ctx.font = font('small');
     const aw = ctx.measureText(age).width;
     ctx.fillText(age, c.cx + c.cw, c.y);
-    ctx.fillStyle = color; ctx.font = '12px system-ui, sans-serif';
+    ctx.fillStyle = color; ctx.font = font('small');
     ctx.fillText(flag, c.cx + c.cw - aw - 8, c.y);
     ctx.restore();
   }
@@ -559,21 +574,21 @@ export class InfoPanel extends Panel {
     const tx = px + size + 12;
     ctx.save();
     ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-    ctx.font = '600 15px system-ui, sans-serif'; ctx.fillStyle = PALETTE.panelText;
+    ctx.font = font('heading'); ctx.fillStyle = PALETTE.panelText;
     ctx.fillText(clip(ctx, cn.name, c.cw - size - 12), tx, top + 22);
-    ctx.font = '12.5px system-ui, sans-serif'; ctx.fillStyle = '#c8b3ff';
+    ctx.font = font('body'); ctx.fillStyle = '#5f47a0';
     ctx.fillText(`${cn.rank} · ${cn.personality || 'Steady'}`, tx, top + 42);
     ctx.restore();
     c.y = top + size + 2;
     const sk = cn.skills || { sea: cn.skill || 0, gun: cn.skill || 0, cmd: cn.skill || 0 };
-    this._gauge(ctx, 'Seamanship', `${Math.round(sk.sea * 100)}%`, sk.sea, '#8ee6a0', c);
-    this._gauge(ctx, 'Gunnery', `${Math.round(sk.gun * 100)}%`, sk.gun, '#ff8f6a', c);
-    this._gauge(ctx, 'Command', `${Math.round(sk.cmd * 100)}%  ·  ${cn.xp} xp`, sk.cmd, '#9db8ff', c);
+    this._gauge(ctx, 'Seamanship', `${Math.round(sk.sea * 100)}%`, sk.sea, '#2f7d45', c);
+    this._gauge(ctx, 'Gunnery', `${Math.round(sk.gun * 100)}%`, sk.gun, '#c0561c', c);
+    this._gauge(ctx, 'Command', `${Math.round(sk.cmd * 100)}%  ·  ${cn.xp} xp`, sk.cmd, '#3a5f9a', c);
     const tr = cn.traits;
     if (tr) {
-      this._gauge(ctx, 'Boldness', '', tr.boldness, '#ff9d5c', c);
-      this._gauge(ctx, 'Wanderlust', '', tr.wanderlust, '#8fc6ff', c);
-      this._gauge(ctx, 'Greed', '', tr.greed, '#ffd166', c);
+      this._gauge(ctx, 'Boldness', '', tr.boldness, '#c0561c', c);
+      this._gauge(ctx, 'Wanderlust', '', tr.wanderlust, '#356291', c);
+      this._gauge(ctx, 'Greed', '', tr.greed, '#9a7d16', c);
     }
     const rel = windRel(s.heading, ctxt.wind, s.state);
     if (rel) this._kv(ctx, 'Wind', rel.label, c, rel.color);
@@ -596,19 +611,19 @@ export class InfoPanel extends Panel {
     const tx = px + size + 12;
     ctx.save();
     ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-    ctx.font = '600 15px system-ui, sans-serif'; ctx.fillStyle = PALETTE.panelText;
+    ctx.font = font('heading'); ctx.fillStyle = PALETTE.panelText;
     ctx.fillText(clip(ctx, m.name, c.cw - size - 12), tx, top + 22);
-    ctx.font = '12.5px system-ui, sans-serif'; ctx.fillStyle = '#c8b3ff';
+    ctx.font = font('body'); ctx.fillStyle = '#5f47a0';
     ctx.fillText(`${m.rank} · ${m.personality || 'Even-handed'}`, tx, top + 42);
     if (m.ambition && m.ambition.label) {
-      drawIcon(ctx, 'pennant', tx + 6, top + 56, 11, '#e8c15a');
-      ctx.fillStyle = '#e8c15a';
+      drawIcon(ctx, 'pennant', tx + 6, top + 56, 11, '#97781a');
+      ctx.fillStyle = '#97781a';
       ctx.fillText(clip(ctx, `${m.ambition.label} · ${Math.round((m.ambition.progress || 0) * 100)}%`, c.cw - size - 24), tx + 15, top + 60);
     }
     ctx.restore();
     c.y = top + size + 2;
     const loy = isl.loyalty != null ? isl.loyalty : 1;
-    if (isl.rebellion) this._banner(ctx, 'In open rebellion — the port is aflame', '#ff5b30', c, 'flame');
+    if (isl.rebellion) this._banner(ctx, 'In open rebellion — the port is aflame', '#c0442b', c, 'flame');
     this._gauge(ctx, 'Loyalty', `${Math.round(loy * 100)}%`, loy, loyaltyColor(loy), c);
     const st = loyaltyStatus(isl);
     this._kv(ctx, 'Populace', st.label, c, st.color);
@@ -618,9 +633,9 @@ export class InfoPanel extends Panel {
     if (grv > 0.05) this._gauge(ctx, 'Grievance', grievanceWord(grv), grv, lawlessColor(grv), c); // resentment from revolts crushed by force
     const tr = m.traits;
     if (tr) {
-      this._gauge(ctx, 'Firmness', '', tr.firmness, '#e0863a', c);
-      this._gauge(ctx, 'Generosity', '', tr.generosity, '#8ee6a0', c);
-      this._gauge(ctx, 'Integrity', '', tr.integrity, '#8fc6ff', c);
+      this._gauge(ctx, 'Firmness', '', tr.firmness, '#b5651d', c);
+      this._gauge(ctx, 'Generosity', '', tr.generosity, '#2f7d45', c);
+      this._gauge(ctx, 'Integrity', '', tr.integrity, '#356291', c);
     }
   }
 
@@ -628,25 +643,25 @@ export class InfoPanel extends Panel {
     this._section(ctx, 'CREW', c);
     const m = s.morale != null ? s.morale : 1;
     const st = crewStatus(s);
-    if (s.revolt) this._banner(ctx, 'Crew in revolt — dead in the water', '#ff5b4a', c, 'sabres');
+    if (s.revolt) this._banner(ctx, 'Crew in revolt — dead in the water', '#b23a2e', c, 'sabres');
     this._gauge(ctx, 'Morale', `${Math.round(m * 100)}%`, m, moraleColor(m), c);
     const days = s.foodDays != null ? s.foodDays : 0;
     this._kv(ctx, 'Provisions', `${days.toFixed(1)} days of food`, c, days < 1 ? PALETTE.bad : PALETTE.panelText);
     const ale = Math.round((s.cargo && s.cargo.Ale) || 0);
-    if (ale > 0) this._kv(ctx, 'Grog', `${ale} Ale (lifts morale)`, c, '#b07a3a');
+    if (ale > 0) this._kv(ctx, 'Grog', `${ale} Ale (lifts morale)`, c, '#7a4f1e');
     this._kv(ctx, 'Mood', st.label, c, st.color);
   }
 
   // ─── building blocks ─────────────────────────────────────────────
   _titleRow(ctx, title, badge, c) {
     ctx.save();
-    ctx.font = '600 19px system-ui, sans-serif';
+    ctx.font = font('title');
     ctx.fillStyle = PALETTE.panelText;
     ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
     c.y += 18;
     const bw = badge ? this._badge(ctx, badge.label, badge.color, c.cx + c.cw, c.y) : 0;
     ctx.fillStyle = PALETTE.panelText;
-    ctx.font = '600 19px system-ui, sans-serif';
+    ctx.font = font('title');
     // Vessel names are stored lowercase ("the Salt Wraith") so they read naturally mid-sentence; as a
     // heading the leading article wants a capital.
     ctx.fillText(clip(ctx, cap(title), c.cw - bw - 8), c.cx, c.y);
@@ -657,11 +672,11 @@ export class InfoPanel extends Panel {
   /** Draw a right-aligned pill badge ending at (xRight, yBaseline). Returns its width. */
   _badge(ctx, text, color, xRight, yBaseline) {
     ctx.save();
-    ctx.font = '600 11px system-ui, sans-serif';
+    ctx.font = font('badge');
     const tw = ctx.measureText(text).width;
     const w = tw + 16, h = 17, x = xRight - w, y = yBaseline - 13;
     roundRect(ctx, x, y, w, h, 8);
-    ctx.fillStyle = 'rgba(255,255,255,0.06)'; ctx.fill();
+    ctx.fillStyle = PALETTE.panelInset; ctx.fill();
     ctx.lineWidth = 1; ctx.strokeStyle = color; ctx.stroke();
     ctx.fillStyle = color; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(text, x + w / 2, y + h / 2 + 0.5);
@@ -669,13 +684,15 @@ export class InfoPanel extends Panel {
     return w;
   }
 
-  _subtitle(ctx, text, c) {
+  /** A dim subtitle under a title — the Story epigraph, the island type/goods line, etc. WRAPS to
+   *  up to `maxLines` (the epigraph is a full descriptive sentence that used to clip mid-word); the
+   *  final line ellipsises if it still overflows. Short subtitles stay a single line. */
+  _subtitle(ctx, text, c, maxLines = 2) {
     ctx.save();
-    ctx.font = '12.5px system-ui, sans-serif';
+    ctx.font = font('body');
     ctx.fillStyle = PALETTE.panelDim;
     ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-    c.y += 15;
-    ctx.fillText(clip(ctx, text, c.cw), c.cx, c.y);
+    for (const ln of wrapLines(ctx, text, c.cw, maxLines)) { c.y += 15; ctx.fillText(ln, c.cx, c.y); }
     ctx.restore();
     c.y += 6;
   }
@@ -690,14 +707,14 @@ export class InfoPanel extends Panel {
   _gauge(ctx, label, valText, frac, color, c) {
     c.y += 16;
     ctx.save();
-    ctx.font = '12.5px system-ui, sans-serif';
+    ctx.font = font('body');
     ctx.textBaseline = 'alphabetic';
     ctx.fillStyle = PALETTE.panelDim; ctx.textAlign = 'left';
     ctx.fillText(label, c.cx, c.y);
     if (valText) { ctx.fillStyle = PALETTE.panelText; ctx.textAlign = 'right'; ctx.fillText(valText, c.cx + c.cw, c.y); }
     c.y += 6;
     const bw = c.cw, bh = 6;
-    roundRect(ctx, c.cx, c.y, bw, bh, 3); ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fill();
+    roundRect(ctx, c.cx, c.y, bw, bh, 3); ctx.fillStyle = PALETTE.panelTrack; ctx.fill();
     roundRect(ctx, c.cx, c.y, Math.max(2, bw * Math.max(0, Math.min(1, frac))), bh, 3); ctx.fillStyle = color; ctx.fill();
     ctx.restore();
     c.y += 8;
@@ -706,12 +723,12 @@ export class InfoPanel extends Panel {
   _kv(ctx, k, v, c, valColor) {
     c.y += 18;
     ctx.save();
-    ctx.font = '13px system-ui, sans-serif';
+    ctx.font = font('label');
     ctx.textBaseline = 'alphabetic';
     ctx.fillStyle = PALETTE.panelDim; ctx.textAlign = 'left';
     ctx.fillText(k, c.cx, c.y);
     ctx.fillStyle = valColor || PALETTE.panelText; ctx.textAlign = 'right';
-    ctx.font = '13px ui-monospace, "SF Mono", Menlo, monospace';
+    ctx.font = font('num');
     ctx.fillText(v, c.cx + c.cw, c.y);
     ctx.restore();
   }
@@ -720,11 +737,11 @@ export class InfoPanel extends Panel {
     c.y += 20;
     ctx.save();
     roundRect(ctx, c.cx, c.y - 15, c.cw, 22, 6);
-    ctx.fillStyle = 'rgba(255,255,255,0.05)'; ctx.fill();
+    ctx.fillStyle = PALETTE.panelInset; ctx.fill();
     ctx.lineWidth = 1; ctx.strokeStyle = color; ctx.globalAlpha = 0.5; ctx.stroke(); ctx.globalAlpha = 1;
     let tx = c.cx + 10;
     if (icon) { drawIcon(ctx, icon, c.cx + 12, c.y - 4, 13, color); tx = c.cx + 24; }
-    ctx.fillStyle = color; ctx.font = '600 13px system-ui, sans-serif';
+    ctx.fillStyle = color; ctx.font = font('label');
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
     ctx.fillText(text, tx, c.y - 4);
     ctx.restore();
@@ -734,14 +751,14 @@ export class InfoPanel extends Panel {
   _chipRow(ctx, goods, c) {
     c.y += 16;
     ctx.save();
-    ctx.font = '12px system-ui, sans-serif';
+    ctx.font = font('small');
     ctx.textBaseline = 'middle';
     let x = c.cx;
     for (const g of goods) {
       const tw = ctx.measureText(g).width, w = tw + 20;
       if (x + w > c.cx + c.cw) { x = c.cx; c.y += 22; }
-      roundRect(ctx, x, c.y - 8, w, 17, 8); ctx.fillStyle = 'rgba(255,255,255,0.06)'; ctx.fill();
-      ctx.fillStyle = RES_COLOR[g] || '#ccc'; ctx.beginPath(); ctx.arc(x + 8, c.y, 3.5, 0, 7); ctx.fill();
+      roundRect(ctx, x, c.y - 8, w, 17, 8); ctx.fillStyle = PALETTE.panelInset; ctx.fill();
+      ctx.fillStyle = RES_COLOR[g] || PALETTE.panelDim; ctx.beginPath(); ctx.arc(x + 8, c.y, 3.5, 0, 7); ctx.fill();
       ctx.fillStyle = PALETTE.panelText; ctx.textAlign = 'left';
       ctx.fillText(g, x + 15, c.y + 0.5);
       x += w + 6;
@@ -753,13 +770,13 @@ export class InfoPanel extends Panel {
   _relation(ctx, icon, nm, v, color, c) {
     c.y += 16;
     ctx.save();
-    ctx.font = '12.5px system-ui, sans-serif';
+    ctx.font = font('body');
     ctx.textBaseline = 'alphabetic';
     drawIcon(ctx, icon, c.cx + 5, c.y - 4, 11, color);
     ctx.fillStyle = PALETTE.panelText; ctx.textAlign = 'left';
     ctx.fillText(clip(ctx, nm, c.cw - 60), c.cx + 16, c.y);
     ctx.fillStyle = color; ctx.textAlign = 'right';
-    ctx.font = '12px ui-monospace, Menlo, monospace';
+    ctx.font = font('numSmall');
     ctx.fillText((v > 0 ? '+' : '') + v.toFixed(2), c.cx + c.cw, c.y);
     ctx.restore();
   }
@@ -767,7 +784,7 @@ export class InfoPanel extends Panel {
   _marketHeader(ctx, c) {
     c.y += 14;
     ctx.save();
-    ctx.font = '10.5px system-ui, sans-serif';
+    ctx.font = font('section');
     ctx.fillStyle = PALETTE.panelDim; ctx.textBaseline = 'alphabetic';
     const rSell = c.cx + c.cw, rBuy = rSell - 58, rStock = rBuy - 54;
     ctx.textAlign = 'right';
@@ -782,10 +799,10 @@ export class InfoPanel extends Panel {
     const { rSell, rBuy, rStock } = c._cols;
     ctx.save();
     ctx.textBaseline = 'alphabetic';
-    ctx.fillStyle = RES_COLOR[good] || '#ccc'; ctx.beginPath(); ctx.arc(c.cx + 4, c.y - 4, 3, 0, 7); ctx.fill();
-    ctx.font = '12px system-ui, sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = PALETTE.panelText;
+    ctx.fillStyle = RES_COLOR[good] || PALETTE.panelDim; ctx.beginPath(); ctx.arc(c.cx + 4, c.y - 4, 3, 0, 7); ctx.fill();
+    ctx.font = font('small'); ctx.textAlign = 'left'; ctx.fillStyle = PALETTE.panelText;
     ctx.fillText(good, c.cx + 12, c.y);
-    ctx.font = '11.5px ui-monospace, Menlo, monospace'; ctx.textAlign = 'right';
+    ctx.font = font('numSmall'); ctx.textAlign = 'right';
     ctx.fillStyle = PALETTE.panelText; ctx.fillText(String(isl.stock[good]), rStock, c.y);
     ctx.fillStyle = PALETTE.good; ctx.fillText(num2(isl.buy && isl.buy[good]), rBuy, c.y);
     ctx.fillStyle = PALETTE.bad; ctx.fillText(num2(isl.sell && isl.sell[good]), rSell, c.y);
@@ -796,7 +813,7 @@ export class InfoPanel extends Panel {
     c.y += 16;
     const stops = ['home', ...s.route, 'home'].map((r) => r === 'home' ? name(ctxt.islandsById, s.homeId) : name(ctxt.islandsById, r));
     ctx.save();
-    ctx.font = '12px system-ui, sans-serif';
+    ctx.font = font('small');
     ctx.textBaseline = 'alphabetic';
     let x = c.cx;
     for (let i = 0; i < stops.length; i++) {
@@ -805,8 +822,8 @@ export class InfoPanel extends Panel {
       if (i > 0) { ctx.fillStyle = PALETTE.panelDim; ctx.fillText(' → ', x, c.y); x += ctx.measureText(' → ').width; }
       const tw = ctx.measureText(label).width;
       if (x + tw > c.cx + c.cw) { c.y += 16; x = c.cx + 10; }
-      ctx.fillStyle = isDest ? PALETTE.accent : PALETTE.panelText;
-      ctx.font = isDest ? '600 12px system-ui, sans-serif' : '12px system-ui, sans-serif';
+      ctx.fillStyle = isDest ? PALETTE.panelAccent : PALETTE.panelText; // dest emphasized by brass, not weight
+      ctx.font = font('small');
       ctx.fillText(label, x, c.y); x += ctx.measureText(label).width;
     }
     ctx.restore();
@@ -818,9 +835,9 @@ export class InfoPanel extends Panel {
     ctx.save();
     ctx.textBaseline = 'alphabetic';
     ctx.fillStyle = color; ctx.beginPath(); ctx.arc(c.cx + 4, c.y - 4, 3, 0, 7); ctx.fill();
-    ctx.font = '12.5px system-ui, sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = PALETTE.panelText;
+    ctx.font = font('body'); ctx.textAlign = 'left'; ctx.fillStyle = PALETTE.panelText;
     ctx.fillText(k, c.cx + 12, c.y);
-    ctx.textAlign = 'right'; ctx.font = '12px ui-monospace, Menlo, monospace';
+    ctx.textAlign = 'right'; ctx.font = font('numSmall');
     ctx.fillText(v, c.cx + c.cw, c.y);
     ctx.restore();
   }
@@ -828,7 +845,7 @@ export class InfoPanel extends Panel {
   _line(ctx, text, color, c) {
     c.y += 15;
     ctx.save();
-    ctx.font = '12px system-ui, sans-serif';
+    ctx.font = font('small');
     ctx.fillStyle = color; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
     ctx.fillText(clip(ctx, text, c.cw), c.cx, c.y);
     ctx.restore();
@@ -841,20 +858,20 @@ function islandState(isl) {
   const civ = isl.civ || 0;
   if (ratio < 0.35 || civ < 0.12) return { label: 'Struggling', color: PALETTE.bad };
   if (civ >= 0.55) return { label: 'Prosperous', color: PALETTE.good };
-  if (ratio >= 0.8) return { label: 'Established', color: '#7fd0e0' };
-  return { label: 'Growing', color: PALETTE.accent };
+  if (ratio >= 0.8) return { label: 'Established', color: '#1f7f8c' };
+  return { label: 'Growing', color: PALETTE.panelAccent };
 }
 /** Populace mood label + colour from island loyalty (or open rebellion). */
 function loyaltyStatus(isl) {
-  if (isl.rebellion) return { label: 'In rebellion!', color: '#ff5b30' };
+  if (isl.rebellion) return { label: 'In rebellion!', color: '#c0442b' };
   const l = isl.loyalty != null ? isl.loyalty : 1;
   if (l >= 0.6) return { label: 'Loyal', color: PALETTE.good };
-  if (l >= 0.45) return { label: 'Content', color: '#8fc6d4' };
-  if (l >= 0.3) return { label: 'Restless', color: '#e0b24a' };
+  if (l >= 0.45) return { label: 'Content', color: '#1f7f8c' };
+  if (l >= 0.3) return { label: 'Restless', color: '#b0842a' };
   return { label: 'Seething', color: PALETTE.bad };
 }
 function loyaltyColor(l) {
-  return l >= 0.6 ? PALETTE.good : l >= 0.4 ? '#8fc6d4' : l >= 0.28 ? '#e0b24a' : PALETTE.bad;
+  return l >= 0.6 ? PALETTE.good : l >= 0.4 ? '#1f7f8c' : l >= 0.28 ? '#b0842a' : PALETTE.bad;
 }
 
 /** How feared a port's waters are, from its danger scalar. */
@@ -872,7 +889,7 @@ function lawlessWord(l) {
   return 'orderly';
 }
 function lawlessColor(l) {
-  return l >= 0.7 ? '#c0392b' : l >= 0.45 ? '#e0863a' : l >= 0.25 ? '#e0b24a' : '#8ee6a0';
+  return l >= 0.7 ? '#c0392b' : l >= 0.45 ? '#b5651d' : l >= 0.25 ? '#b0842a' : '#2f7d45';
 }
 
 /** Resentment label from an island's grievance scalar (rebellions crushed by force). */
@@ -885,15 +902,15 @@ function grievanceWord(g) {
 
 /** Crew mood label + colour from morale (or open revolt). */
 function crewStatus(s) {
-  if (s.revolt) return { label: 'In revolt!', color: '#ff5b4a' };
+  if (s.revolt) return { label: 'In revolt!', color: '#b23a2e' };
   const m = s.morale != null ? s.morale : 1;
   if (m >= 0.6) return { label: 'Content', color: PALETTE.good };
-  if (m >= 0.45) return { label: 'Steady', color: '#8fc6d4' };
-  if (m >= 0.3) return { label: 'Uneasy', color: '#e0b24a' };
+  if (m >= 0.45) return { label: 'Steady', color: '#1f7f8c' };
+  if (m >= 0.3) return { label: 'Uneasy', color: '#b0842a' };
   return { label: 'Mutinous', color: PALETTE.bad };
 }
 function moraleColor(m) {
-  return m >= 0.6 ? PALETTE.good : m >= 0.4 ? '#8fc6d4' : m >= 0.28 ? '#e0b24a' : PALETTE.bad;
+  return m >= 0.6 ? PALETTE.good : m >= 0.4 ? '#1f7f8c' : m >= 0.28 ? '#b0842a' : PALETTE.bad;
 }
 
 /** Wind relative to a sailing ship's heading → { label, color }, or null when not underway. */
@@ -901,8 +918,8 @@ function windRel(heading, wind, state) {
   if (state !== 'sailing' || !wind || wind.str < 0.05 || heading == null) return null;
   const align = Math.cos(heading - wind.dir);
   if (align > 0.35) return { label: `Tailwind (${wind.str < 0.6 ? 'moderate' : 'strong'})`, color: PALETTE.good };
-  if (align < -0.35) return { label: 'Headwind', color: '#ff9d5c' };
-  return { label: 'Crosswind', color: '#8fc6d4' };
+  if (align < -0.35) return { label: 'Headwind', color: '#c0561c' };
+  return { label: 'Crosswind', color: '#1f7f8c' };
 }
 function fmt(n) { return Math.round(n || 0).toLocaleString('en-US'); }
 function num2(n) { return n == null ? '—' : (Math.round(n * 100) / 100).toFixed(2); }
@@ -927,4 +944,26 @@ function clip(ctx, text, maxW) {
   let t = text;
   while (t.length > 1 && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1);
   return t + '…';
+}
+/** Greedy word-wrap of a plain string into at most `maxLines` lines that each fit `maxW`. The last
+ *  allowed line absorbs any remaining words and is ellipsised if it still overflows. Measures in the
+ *  ctx's CURRENT font, so set it before calling. */
+function wrapLines(ctx, text, maxW, maxLines = 2) {
+  const words = ('' + text).split(/\s+/).filter(Boolean);
+  if (!words.length) return [''];
+  const lines = [];
+  let line = '';
+  for (let i = 0; i < words.length; i++) {
+    const trial = line ? line + ' ' + words[i] : words[i];
+    if (line && ctx.measureText(trial).width > maxW) {
+      lines.push(line);
+      if (lines.length === maxLines - 1) { // last line: pack the rest, clip if it overflows
+        return lines.concat(clip(ctx, words.slice(i).join(' '), maxW));
+      }
+      line = words[i];
+    } else {
+      line = trial;
+    }
+  }
+  return lines.concat(clip(ctx, line, maxW));
 }

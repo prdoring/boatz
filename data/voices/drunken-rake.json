@@ -13,7 +13,7 @@
       "founder":   "Right, a book. Someone insists I keep one, so — I am {name}{rankc}, this {home} {type} is mine, and I shall scribble in her whenever the grog permits.",
       "successor": "They handed me the log along with the headache. {name}{rankc}. I will fill it between hands of cards, more or less honestly.",
       "mutiny":    "The lads pitched the old soak over the rail and shoved the book at me — {name}, who scarcely knows the sharp end from the blunt. Cheers, I suppose.",
-      "pirate":    "Turns out honest trade will not pay for the drink. The black flag is up, the book is mine — {name}{rankc} — and I regret nothing, or shall not until morning.",
+      "rogue":     "Turns out honest trade will not pay for the drink. The black flag is up, the book is mine — {name}{rankc} — and I regret nothing, or shall not until morning.",
       "prize":     "She gave up without much fuss, bless her, and now she is ours. {name}{rankc}. I will keep her book once I have found where they stow the wine.",
       "recovered": "Some grim hunter caught us with our breeches down and cut the flag clean off her. {name}{rankc}. Now I am to sober her up and sail her honest — a cruel joke, that."
     },
@@ -53,9 +53,53 @@
   },
 
   "kinds": {
-    "plunder": { "recur": { "class": "prize", "phrases": [", my {ord} prize, or near enough", " — done this before, though the particulars blur", ", same trick, same headache"] } },
-    "sunk":    { "recur": { "class": "prize", "phrases": [", another one down, and I barely spilled my drink"] } },
-    "fended":  { "recur": { "class": "stand", "phrases": [" — shaken off worse with a worse hangover", ", and lived to raise a glass"] } },
-    "hunted":  { "recur": { "class": "hunt",  "phrases": [", the {ord} wolf I have run down, sober by accident"] } }
+    "plunder": {
+      "recur": { "class": "prize", "phrases": [", my {ord} prize, or near enough", " — done this before, though the particulars blur", ", same trick, same headache"] },
+      "say": [
+        "{we} caught {foe} napping and helped ourselves to {goods} bales and {gold}g — she sailed off lighter and we drank to her health",
+        "{foe} put up a token squeak before {we} carried off {goods} crates and {gold}g, and back to the bottle we went",
+        "{we} bumped alongside {foe}, prised loose {goods} chests and {gold}g, and let the poor dear limp home with {our} compliments",
+        "{we} lifted {goods} casks and {gold}g off {foe} between hangovers — hardly spilled a drop doing it",
+        "{foe} out of {foeHome} handed over {goods} bales and {gold}g with barely a fuss, bless her sensible captain",
+        "{we} relieved {foe} of {goods} crates and {gold}g, toasted the takings twice, and waved the empty hull away",
+        "{we} rifled {foe} for {goods} chests and {gold}g, called it a fine day's work, and refilled {our} cups"
+      ]
+    },
+    "sunk":    {
+      "recur": { "class": "prize", "phrases": [", another one down, and I barely spilled my drink"] },
+      "say": [
+        "{we} traded shots with {foe} until she went down, cargo and all — a waste of good wine, that",
+        "{foe} would not see reason, so {we} sank her and raised a glass to the poor stubborn thing",
+        "{we} put {foe} under and only slopped half {our} cup doing it — call that a steady hand",
+        "{foe} came at {us} spoiling for it, and down she went with nothing in it for anyone but the fish",
+        "{we} holed {foe} good and proper and watched her slip away — sad about the cargo, sadder about the interruption",
+        "{foe} out of {foeHome} picked a fight, and {we} obliged her a berth on the seabed",
+        "{we} sent {foe} to the bottom with no loot to divide, so we divided the rum instead"
+      ]
+    },
+    "fended":  {
+      "recur": { "class": "stand", "phrases": [" — shaken off worse with a worse hangover", ", and lived to raise a glass"] },
+      "say": [
+        "{foe} came at {us} thinking easy pickings and caught a broadside for her cheek — down she went",
+        "{we} shook {foe} off and sank her, then poured a stiff one for the fright of it",
+        "{foe} fancied {our} cargo; {we} fancied keeping it, and settled the matter with powder",
+        "{we} met {foe}'s boarding half-cut and beat her under anyway — never underestimate a desperate drunk",
+        "{foe} out of {foeHome} thought {us} soft, and {we} sank her before the kettle had even boiled",
+        "{we} blasted {foe} to splinters, kept every cask of cargo, and did not lose a drop of grog",
+        "{foe} tried her luck on {us} and drowned it — we toasted her nerve on the way down"
+      ]
+    },
+    "hunted":  {
+      "recur": { "class": "hunt",  "phrases": [", the {ord} wolf I have run down, sober by accident"] },
+      "say": [
+        "{we} chased {foe} down half-sober and cut her wicked flag off the mast — barely knew we had it in us",
+        "{foe} had it coming a long time, and {we} ran her to ground and gave it to her",
+        "{we} caught {foe} at last and put her under, then celebrated rather harder than the deed deserved",
+        "{foe} ran from {us} for days and drowned all the same — persistence or dumb luck, hard to say which",
+        "{we} finished {foe} off {foeHome} and toasted the tidy lanes we left behind",
+        "{foe} led {us} a merry chase before {we} sent her down — good sport, if nothing else",
+        "{we} ran {foe} clean to the bottom and did not spill a drop celebrating, which frightened us more than the fight"
+      ]
+    }
   }
 }

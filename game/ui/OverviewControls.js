@@ -1,12 +1,13 @@
 // Top-left overview toolbar — [Overlays] [Links] [Almanac] — so the map data views are reachable
-// by mouse, not just the o / l / m hotkeys. Each button cycles/toggles its view and lights (brass)
-// while that view is active; the Almanac button opens the panel whose picker selects any metric.
-// Transport-agnostic like SimControls: the scene injects the cycle/toggle callbacks + active readers.
+// by mouse, not just the o / l / m hotkeys. [Overlays] and [Links] are plain on/off TOGGLES for two
+// independent map layers (click again hides); [Almanac] opens the panel where you pick WHICH metric
+// / link each layer shows. Each button lights (brass) while its layer/panel is active. Transport-
+// agnostic like SimControls: the scene injects the toggle callbacks + active readers.
 
 import { Widget, Button } from './UIStack.js';
 
 const BW = 64, BH = 26, GAP = 6, X = 12, Y = 62;
-const FONT = '600 12px system-ui, sans-serif';
+const FONT = '400 13px "IM Fell English SC", Georgia, serif';
 
 export class OverviewControls extends Widget {
   constructor({ onOverlay, onLinks, onAlmanac, overlayActive, linksActive, almanacActive }) {

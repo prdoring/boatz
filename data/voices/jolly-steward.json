@@ -13,7 +13,7 @@
       "founder":   "Well now, this fine book is ours to fill, and I mean to fill it warm. I am {name}{rankc}, cook and keeper both, and this {home} {type} shall want for neither a full pot nor a kind word while I hold the ladle and the pen.",
       "successor": "The book is passed to me over a shared cup, as good things ought to be. I am {name}{rankc}; I'll keep her tale simmering along as the old hand did, with a little seasoning of my own.",
       "mutiny":    "A bad business, and I'll not dress it as anything sweeter — the lads turned the old master out, and pressed this book on me with hands that had not been fed proper in weeks. I am {name}. I'll see them warm and full from here, and trust a good galley to mend what a hard master broke.",
-      "pirate":    "So the black flag flies over my galley now, and I like it no better than a burnt loaf — but the crew must eat, flag or no flag. I am {name}{rankc}. I'll keep the pot on and the book honest, and pray it feeds us kinder than trade ever did.",
+      "rogue":     "So the black flag flies over my galley now, and I like it no better than a burnt loaf — but the crew must eat, flag or no flag. I am {name}{rankc}. I'll keep the pot on and the book honest, and pray it feeds us kinder than trade ever did.",
       "prize":     "She struck to us, and the first thing I did upon her deck was seek out her galley — cold, poor souls, and near bare. I am {name}{rankc}. She sails under us now, and by week's end her people will know what a warm mess deck feels like again.",
       "recovered": "A hunter cut this hull free of the black flag, and set me aboard to bring her home gentle. I am {name}{rankc}. First a good hot meal for every hand of her, and then honest work — that is how you mend a ship, and a crew both."
     },
@@ -53,8 +53,52 @@
   },
 
   "kinds": {
-    "plunder": { "recur": { "class": "prize", "phrases": [", another good haul for the larder", " — the more to share round the mess", ", and a fine supper we made of it"] } },
-    "fended":  { "recur": { "class": "stand", "phrases": [" — we have weathered rougher and still sat down to supper", ", and lived to break bread another day"] } },
+    "plunder": {
+      "recur": { "class": "prize", "phrases": [", another good haul for the larder", " — the more to share round the mess", ", and a fine supper we made of it"] },
+      "say": [
+        "{we} came alongside {foe} and helped ourselves to her larder — {goods} casks and {gold}g for our stores, and off she went, lighter but breathing",
+        "{foe} gave up {goods} crates and {gold}g without much fuss, bless her, and we sent her on her way with barely a scratch to complain of",
+        "{we} eased {foe} of {goods} bales and {gold}g, and I'll not pretend the crew didn't cheer at the sight of a full hold",
+        "{we} boarded {foe} out of {foeHome} and carried off {goods} chests and {gold}g — enough good victuals to keep the mess deck merry a good while",
+        "{foe} struck to us and we took {goods} casks and {gold}g from her, and I made sure her own galley kept enough to see her people home",
+        "{we} relieved {foe} of {goods} crates and {gold}g and let the poor dear limp off — no sense sinking a ship you can share a laugh with later",
+        "{we} lightened {foe} by {goods} bales and {gold}g, and that night we ate like kings and drank her health, cheeky as that sounds"
+      ]
+    },
+    "sunk": {
+      "say": [
+        "{we} fought {foe} until she went down, and it grieved me to see all that good cargo go to the fishes with her",
+        "{foe} wouldn't yield and left us no choice — we sent her under, and I'll say a quiet word for her cook, whoever he was",
+        "{we} traded shot with {foe} till the sea took her whole, and there was no supper to be made of that, only a heavy heart",
+        "{we} put {foe} under off {foeHome}, and a sadder business I've rarely had to enter — bellies don't cheer for a sinking",
+        "{foe} came at us fighting and went down fighting, and we lost the whole of her stores to the deep along with her",
+        "{we} sank {foe} in the smoke and I could only think what a waste it was — good bread now feeding nothing but the cod",
+        "{foe} would not strike and so she foundered, and we watched her go with none of the gladness a full hold brings"
+      ]
+    },
+    "fended": {
+      "recur": { "class": "stand", "phrases": [" — we have weathered rougher and still sat down to supper", ", and lived to break bread another day"] },
+      "say": [
+        "{foe} came at us thinking to rob our pantry, and we gave her a hotter welcome than she'd bargained for and sent her down",
+        "{we} were only minding our stew when {foe} bore down on us — so we fought her off and under, and got back to the pot",
+        "{foe} rigged her nets for our rail and we broke her apart instead, then sat down to a well-earned supper",
+        "{we} turned {foe} away the hard way and sank her, and I'll not lose sleep over a wolf that meant to leave us hungry",
+        "{foe} thought us easy pickings and a soft galley — she learned better as the water closed over her",
+        "{we} held our deck against {foe} and put her under, and counted ourselves lucky to break bread another day",
+        "{foe} closed to board and we sent her to the bottom, and that night the mess deck was quieter but grateful"
+      ]
+    },
+    "hunted": {
+      "say": [
+        "{we} ran {foe} down at last and put an end to her — a hard day's work, but the lanes'll sleep easier and eat safer for it",
+        "{we} chased {foe} till she could run no more and sank her, and I'll admit the crew wanted their supper more than her blood",
+        "{foe} had left too many galleys cold and empty, so we hunted her down and closed her account for good",
+        "{we} cornered {foe} off {foeHome} and broke her, and I said a word for her crew even so — sailors all, in the end",
+        "{we} paid {foe} back for all the honest hulls she'd emptied, and sent her under where she'll trouble no one's larder again",
+        "{foe} fled us two days and we caught her on the third, and there was more relief than triumph in it, truth be told",
+        "{we} put {foe} down and turned home, and I had a hot meal waiting for every weary hand that had earned it"
+      ]
+    },
     "raid":    { "recur": { "class": "sack",  "phrases": [", another town left the leaner, and I am sorry for their empty pots", ", the {ord} port we've cleaned of its bread"] } }
   }
 }

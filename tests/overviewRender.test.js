@@ -78,20 +78,34 @@ test('drawRelations runs for every edge kind and culls off-screen links', () => 
 test('OverlayModel.sync populates stats + leaderboard for a scalar and clears for off', () => {
   const m = new OverlayModel();
   const wealth = OVERLAYS.find((o) => o.key === 'wealth');
-  m.sync(ISLANDS, wealth, {}, new Map(ISLANDS.map((i) => [i.id, i])), 1000);
+  m.sync(ISLANDS, wealth, OVERLAYS[0], {}, new Map(ISLANDS.map((i) => [i.id, i])), 1000);
   assert.ok(m.stats && m.stats.count > 0, 'stats computed');
   assert.ok(m.stats.leaderboard && m.stats.leaderboard.rankById.size > 0, 'leaderboard computed');
   assert.ok(m.trouble && typeof m.trouble.starving === 'number', 'trouble tallied');
-  // Switching to off on the next (non-throttled) call clears stats.
-  m.sync(ISLANDS, OVERLAYS[0], {}, new Map(), 2000);
+  // Switching the scalar layer to off on the next (non-throttled) call clears stats.
+  m.sync(ISLANDS, OVERLAYS[0], OVERLAYS[0], {}, new Map(), 2000);
   assert.equal(m.stats, null);
 });
 
-test('OverlayModel.sync builds edges (not stats) for a relational overlay', () => {
+test('OverlayModel.sync builds edges (not stats) for a links overlay', () => {
   const m = new OverlayModel();
   const islands = [{ id: 'a', x: 0, y: 0, allies: [{ id: 'b', v: 0.6 }] }, { id: 'b', x: 100, y: 0 }];
   const byId = new Map(islands.map((i) => [i.id, i]));
-  m.sync(islands, OVERLAYS.find((o) => o.key === 'alliances'), {}, byId, 1000);
+  m.sync(islands, OVERLAYS[0], OVERLAYS.find((o) => o.key === 'alliances'), {}, byId, 1000);
   assert.ok(Array.isArray(m.edges) && m.edges.length === 1, 'one deduped ally edge');
   assert.equal(m.stats, null);
+});
+
+test('OverlayModel.sync holds a scalar overlay AND a links overlay at the same time', () => {
+  const m = new OverlayModel();
+  const islands = [
+    { id: 'a', name: 'A', x: 0, y: 0, k: 100, population: 50, gold: 2000, allies: [{ id: 'b', v: 0.6 }] },
+    { id: 'b', name: 'B', x: 100, y: 0, k: 100, population: 80, gold: 9000 },
+  ];
+  const byId = new Map(islands.map((i) => [i.id, i]));
+  const wealth = OVERLAYS.find((o) => o.key === 'wealth');
+  const alliances = OVERLAYS.find((o) => o.key === 'alliances');
+  m.sync(islands, wealth, alliances, {}, byId, 1000);
+  assert.ok(m.stats && m.stats.count > 0, 'scalar stats populated');
+  assert.ok(Array.isArray(m.edges) && m.edges.length === 1, 'links edges populated too');
 });

@@ -13,7 +13,7 @@
       "founder":   "I am {name}{rankc}, and this {home} {type} is given into my keeping by Providence. May the Lord steer us true, and may I set down His works faithfully.",
       "successor": "The log passes to my hand now, and I take it up humbly. I am {name}{rankc}, and I will record what mercies and what trials the Lord is pleased to send.",
       "mutiny":    "The crew cast down our old master and pressed this book upon me, a green and unworthy hand. I am {name}. God forgive us the manner of it; I will do my poor best before Him.",
-      "pirate":    "My crew has raised the black flag, and we are turned from honest trade to sin. I am {name}{rankc}. May the Lord have mercy on our souls, for I fear the reckoning that is owed us.",
+      "rogue":     "My crew has raised the black flag, and we are turned from honest trade to sin. I am {name}{rankc}. May the Lord have mercy on our souls, for I fear the reckoning that is owed us.",
       "prize":     "We boarded her and she struck, and the Lord delivered this vessel into our hands. I am {name}{rankc}. Her log continues now under our flag, as He in His wisdom willed it.",
       "recovered": "A hunter ran the wicked down, and I am set to bring this hull back to honest trade. I am {name}{rankc}. Providence has cleansed her; by His grace I will keep her clean."
     },
@@ -53,9 +53,57 @@
   },
 
   "kinds": {
-    "plunder": { "recur": { "class": "prize", "phrases": [", another prize the Lord suffered us to take", ", my {ord} such sin upon the water", " — and I pray it be forgiven"] } },
-    "sunk":    { "recur": { "class": "prize", "phrases": [", sent to the deep, and God rest the souls of them"] } },
-    "fended":  { "recur": { "class": "stand", "phrases": [", and we were spared again", " — delivered once more from the jaws of it"] } },
-    "hunted":  { "recur": { "class": "hunt",  "phrases": [", the {ord} wolf brought to judgment", " — His justice worked through our poor hands"] } }
+    "plunder": {
+      "recur": { "class": "prize", "phrases": [", another prize the Lord suffered us to take", ", my {ord} such sin upon the water", " — and I pray it be forgiven"] },
+      "say": [
+        "{we} took {foe} and stripped her of {goods} bales and {gold}g — the Lord suffered it, though I tremble to write it down",
+        "{foe} fell to us, and {we} carried off {goods} crates and {gold}g; may He weigh the deed more gently than it deserves",
+        "{we} boarded {foe} and bore away {goods} casks and {gold}g, and let the poor hull limp home under His mercy",
+        "{we} laid hands to {foe} and took {goods} chests and {gold}g from her — riches gained in sin, and I pray they choke us not",
+        "{foe} struck to us, and {we} entered {goods} bales and {gold}g to our hold; God forgive the manner of our bread",
+        "{we} plundered {foe} of {goods} crates and {gold}g, and I set it down plainly, for He sees it whether I write it or no",
+        "{we} took {goods} casks and {gold}g off {foe} and spared her keel — a small mercy in a sinful business",
+        "{foe} yielded {goods} chests and {gold}g to our hands, and we let her go; may that sparing be counted to us at the last"
+      ]
+    },
+    "sunk":    {
+      "recur": { "class": "prize", "phrases": [", sent to the deep, and God rest the souls of them"] },
+      "say": [
+        "{we} sent {foe} down into the deep, and God rest the souls that went with her",
+        "{foe} would not yield, and {we} sank her — Heaven weigh the lives lost in it, for I cannot",
+        "{we} broke {foe} and she foundered whole, her cargo and her crew given to the mercy of the sea",
+        "{foe} fought us to the end, and {we} put her under — I pray the drowned find grace we could not give them",
+        "{we} holed {foe} and watched her go down, and stood bareheaded as the waters closed over her",
+        "{foe} sank beneath our guns with all she carried, and {we} commended her dead to a merciful God",
+        "{we} sent {foe} to the bottom, and no man's hand profited by it — only the deep was made the richer",
+        "{foe} met her end at our broadside, and {we} could do naught after but pray for the souls she carried down"
+      ]
+    },
+    "fended":  {
+      "recur": { "class": "stand", "phrases": [", and we were spared again", " — delivered once more from the jaws of it"] },
+      "say": [
+        "{foe} fell upon us as a wolf on the fold, and {we} were spared — the raider sunk, and I know whose hand delivered us",
+        "{we} beat off {foe} and sent her under, and give humble thanks we were not made her prey",
+        "{foe} came to plunder us and {we} were preserved; she went to the deep, and we to our knees in gratitude",
+        "{we} stood against {foe} and the Lord upheld us — the brigand foundered, and we live to bless His name",
+        "{foe} closed upon us with evil intent, and {we} sank her; deliverance was His, and I claim none of it",
+        "{we} turned {foe}'s assault and put her under the waves, delivered once more from the jaws of ruin",
+        "{foe} sought our lives and lost her own to us, and {we} thank the Providence that shielded this hull",
+        "{we} broke {foe} and watched her sink, and set down only this — that we were saved, and it was mercy"
+      ]
+    },
+    "hunted":  {
+      "recur": { "class": "hunt",  "phrases": [", the {ord} wolf brought to judgment", " — His justice worked through our poor hands"] },
+      "say": [
+        "{we} ran {foe} to ground and cut her down, and I trust His justice was worked through our poor hands",
+        "{foe} had preyed long upon the innocent, and {we} brought her to judgment beneath the waves",
+        "{we} hunted {foe} across the water and made an end of her — one wolf the fewer to trouble the flock",
+        "{foe} fled the reckoning, but {we} overhauled her and she answered at last to a higher court than ours",
+        "{we} destroyed {foe} outright, and pray the deed was righteousness and not merely our own wrath",
+        "{foe} met the judgment owed her sort, and {we} were but the instrument of a patient God",
+        "{we} put {foe} under and gave her wickedness to the deep — may the sea keep it, and He forgive us the killing",
+        "{foe} was run down and finished by our guns, and {we} set it down as His justice, humbly and in fear"
+      ]
+    }
   }
 }

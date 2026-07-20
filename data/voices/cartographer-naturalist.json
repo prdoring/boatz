@@ -4,7 +4,7 @@
   "persona": "A curious observer-scientist who keeps the log as a field journal: latitudes and currents noted, weather read off the glass, specimens and strange creatures recorded with restrained wonder. Measured, inquisitive, precise. Always 'I'.",
 
   "pronoun": {
-    "ship":   { "subject": "I", "first": "I" },
+    "ship":   { "subject": "we", "first": "We" },
     "island": { "subject": "I", "first": "I" }
   },
 
@@ -13,7 +13,7 @@
       "founder":   "This journal I open as I would a survey. I am {name}{rankc}, master of this {home} {type}, and I mean to record her waters as faithfully as any coastline — every wind, every current, every strange thing the sea consents to show me.",
       "successor": "The journal comes into my keeping. I am {name}{rankc}; I shall continue the record in the same careful hand, and note where the last observer left off.",
       "mutiny":    "The crew removed the old master and set this journal before me. I am {name}, untried in command and candid about it, and I will record what I do not yet understand beside what I do.",
-      "pirate":    "We have turned to the black flag — a change I set down plainly, as I would any turn of weather. I am {name}{rankc}, and I mean to observe this darker trade as closely as I once observed the birds.",
+      "rogue":     "We have turned to the black flag — a change I set down plainly, as I would any turn of weather. I am {name}{rankc}, and I mean to observe this darker trade as closely as I once observed the birds.",
       "prize":     "We boarded and took her; I record it as fact, without ornament. I am {name}{rankc}, and this vessel and the waters she knows now fall within my survey.",
       "recovered": "A hunter overtook the pirates, and I was appointed to restore this hull. I am {name}{rankc}, glad to return her to honest trade — and to resume a proper record of her passages."
     },
@@ -53,9 +53,53 @@
   },
 
   "kinds": {
-    "plunder": { "recur": { "class": "prize", "phrases": [", the {ord} such prize by my reckoning", " — I note the pattern without pride", ", duly entered in the record"] } },
-    "sunk":    { "recur": { "class": "prize", "phrases": [", her wreck noted and its position marked", " — another lost to the depths I chart"] } },
-    "fended":  { "recur": { "class": "stand", "phrases": [" — I have observed this manoeuvre serve before", ", a repetition I set down with interest"] } },
-    "hunted":  { "recur": { "class": "hunt",  "phrases": [", the {ord} raider so accounted for", " — the outcome grows predictable"] } }
+    "plunder": {
+      "recur": { "class": "prize", "phrases": [", the {ord} such prize by my reckoning", " — I note the pattern without pride", ", duly entered in the record"] },
+      "say": [
+        "{we} overhauled {foe} and relieved her of {goods} bales and {gold}g, recording her tonnage and rig before releasing the emptied hull",
+        "{we} took from {foe} some {goods} crates and {gold}g, and noted with interest how readily a laden merchant strikes her colours",
+        "{foe} yielded {goods} chests and {gold}g to {us} with little resistance — a specimen of the common coastal trader, duly stripped and set loose",
+        "{we} boarded {foe} off her home reach, entered {goods} casks and {gold}g into the manifest, and let her limp on toward {foeHome}",
+        "{we} drew alongside {foe} and removed {goods} bales and {gold}g, observing that her captain surrendered by instinct rather than calculation",
+        "{foe} out of {foeHome} carried {goods} crates and {gold}g into {our} hold, and {we} marked the position where she was taken",
+        "{we} lightened {foe} of {goods} chests and {gold}g, and set down the encounter as {we} would any collection made in the field"
+      ]
+    },
+    "sunk":    {
+      "recur": { "class": "prize", "phrases": [", her wreck noted and its position marked", " — another lost to the depths I chart"] },
+      "say": [
+        "{we} engaged {foe} until she foundered, and fixed the position where she went down for the chart",
+        "{foe} would not strike, so {we} reduced her by degrees and watched the sea close over the wreck",
+        "{we} sank {foe} in open water, her cargo lost with her — {we} note the depth here runs beyond any sounding line",
+        "{foe} chose battle over surrender, and {we} recorded her end as one records a specimen preserved in the deep",
+        "{we} holed {foe} below the waterline and observed how swiftly a wooden hull yields to the ocean once opened",
+        "{we} brought {foe} down off {foeHome} and entered the loss in the log, with no cargo to weigh against it",
+        "{foe} settled and vanished beneath {us}, and {we} fixed her grave by cross-bearing as habit demands"
+      ]
+    },
+    "fended":  {
+      "recur": { "class": "stand", "phrases": [" — I have observed this manoeuvre serve before", ", a repetition I set down with interest"] },
+      "say": [
+        "{foe} came upon {us} as a predator upon prey, and {we} answered with fire enough to send her under",
+        "{we} repelled {foe}'s attack and sank the raider — {we} note the manoeuvre that served, for future reference",
+        "{foe} bore down expecting little defence; {we} corrected the assumption and marked her wreck on the chart",
+        "{we} met {foe}'s advance with steady broadsides and observed her break apart as surely as any storm-struck hull",
+        "{foe} out of {foeHome} sought {our} cargo and found instead the depth beneath her keel",
+        "{we} fought {foe} off and watched her founder, entering the position and the hour in the record",
+        "{foe} mistook {our} readiness, and {we} preserved both ship and journal by sending her down"
+      ]
+    },
+    "hunted":  {
+      "recur": { "class": "hunt",  "phrases": [", the {ord} raider so accounted for", " — the outcome grows predictable"] },
+      "say": [
+        "{we} overtook {foe} after a long pursuit and destroyed her, noting the lanes she had lately haunted",
+        "{foe} had preyed upon these waters for a season; {we} ran her down and closed the account",
+        "{we} brought {foe} to battle and sank her, marking the reef where the last of her settled",
+        "{foe} fled {us} across the chart until wind and hull failed her, and {we} put her under",
+        "{we} accounted for {foe} off {foeHome}, and observed the lanes grow quieter in the days that followed",
+        "{we} cornered {foe} and reduced her to wreckage, entering the hunt in the log as plainly as a tide table",
+        "{foe} met {us} at the last, and {we} recorded her destruction with the detachment the work now warrants"
+      ]
+    }
   }
 }

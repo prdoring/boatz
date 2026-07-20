@@ -30,23 +30,26 @@ export const PALETTE = {
   // ── HUD text over bright water (unchanged — world labels/rings depend on these) ──
   hud: '#08313b',
   hudDim: '#2e6b78',
-  // ── Panels / chart frames / parchment ──
-  panelBg: 'rgba(6, 38, 46, 0.90)',
-  panelEdge: 'rgba(180, 240, 255, 0.28)',
-  panelInk: 'rgba(5, 20, 25, 0.55)',       // inner hairline of the chart frame
-  panelInset: 'rgba(255, 255, 255, 0.06)', // badge/chip/banner fills (was inlined)
-  panelTrack: 'rgba(255, 255, 255, 0.10)', // gauge track (was inlined)
-  panelText: '#eaf7fb',
-  panelDim: '#8fc6d4',
+  // ── Panels / chart frames: INK ON PARCHMENT (warm aged paper, dark sepia ink) ──
+  panelBg: 'rgba(240, 232, 206, 0.95)',    // aged cream paper (near-opaque so ink reads over the sea)
+  panelPaperHi: '#f4ecd2',                 // plate() body gradient — lit top of the sheet
+  panelPaperLo: '#e6d6ad',                 // plate() body gradient — shadowed bottom
+  panelEdge: 'rgba(74, 52, 26, 0.55)',     // dark ink rule (outer chart frame + borders)
+  panelInk: 'rgba(40, 28, 14, 0.40)',      // inner hairline of the chart frame
+  panelInset: 'rgba(60, 44, 24, 0.08)',    // badge/chip/banner fills — a faint ink wash on paper
+  panelTrack: 'rgba(60, 44, 24, 0.16)',    // gauge-track groove
+  panelText: '#33291a',                    // primary sepia ink
+  panelDim: '#7a6a4a',                      // secondary muted-brown ink
   parchment: '#f2ead2',
   parchmentDim: '#e2d5b0',
-  scrollThumb: 'rgba(180, 220, 235, 0.34)',// ScrollBox thumb (was inlined)
+  scrollThumb: 'rgba(74, 52, 26, 0.38)',   // ScrollBox thumb
+  panelAccent: '#9c6d24',                  // deep brass — panel borders/active/callbacks (legible on cream)
   // ── Accents / semantic ──
-  accent: '#ffd166',      // gold accent (unchanged)
+  accent: '#ffd166',      // gold accent — WORLD-shared (ship sails); unchanged
   accentDim: '#c8a24a',
-  good: '#8ee6a0',
-  bad: '#ff7b6b',
-  warn: '#e0b24a',
+  good: '#2f7d45',        // forest — darkened for legibility on parchment (panel-only token)
+  bad: '#b23a2e',         // oxblood
+  warn: '#9a6b1f',        // dark ochre
   selection: '#fff2b0',   // world selection rings (unchanged)
   // ── Faction inks ──
   pirate: '#e04a5a',
@@ -55,7 +58,7 @@ export const PALETTE = {
 };
 
 // Bump when PALETTE changes so SpriteCache keys (island relief, icon tiles) invalidate.
-export const PALETTE_VERSION = 2;
+export const PALETTE_VERSION = 3;
 
 // Sea surface (SeaRenderer): screen-space depth gradient + a wind-driven crest field.
 // Wave work is skipped below WAVE_MIN_ZOOM (ships are LOD dots out there), so the overview

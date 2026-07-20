@@ -1,8 +1,10 @@
 // Headless draw-smoke for the world almanac (OverviewDashboard). The panel is hidden by default,
 // so the browser smoke never renders it — this drives draw() over a Proxy canvas stub (every
-// unknown method is a no-op; measureText/gradients return sane objects) for a scalar overlay, an
-// edges overlay, and the off state, then exercises the click hit-tests (chip → setMetric, row →
-// onPickIsland). Structural "does it throw / does it wire up?" coverage, not pixel checks.
+// unknown method is a no-op; measureText/gradients return sane objects) for a scalar overlay, a
+// links overlay, both-at-once, and the off state, then exercises the click hit-tests (Overlays chip
+// → setOverlay, Links chip → setLinks, row → onPickIsland). The scalar overlay and the links overlay
+// are two INDEPENDENT layers now, each with its own picker section + "Off" chip. Structural "does it
+// throw / does it wire up?" coverage, not pixel checks.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { OverviewDashboard } from '/game/ui/OverviewDashboard.js';
@@ -31,15 +33,17 @@ const ISLANDS = [
 ];
 const byId = new Map(ISLANDS.map((i) => [i.id, i]));
 
-function makeDash(overKey, calls = {}) {
+function makeDash(overKey, linkKey = 'off', calls = {}) {
   const model = new OverlayModel();
-  model.sync(ISLANDS, overlayByKey(overKey), {}, byId, 1000);
+  model.sync(ISLANDS, overlayByKey(overKey), overlayByKey(linkKey), {}, byId, 1000);
   const d = new OverviewDashboard({
     getModel: () => model,
-    getSpec: () => overlayByKey(overKey),
+    getScalarSpec: () => overlayByKey(overKey),
+    getLinkSpec: () => overlayByKey(linkKey),
     getSummary: () => ({ economy: { totalGold: 94000, shipCount: 12, people: 400, pirates: 3 }, season: { name: 'Summer' }, clock: { day: 42 }, islandCount: ISLANDS.length }),
     getRegistry: () => OVERLAYS,
-    setMetric: (k) => { calls.metric = k; },
+    setOverlay: (k) => { calls.overlay = k; },
+    setLinks: (k) => { calls.links = k; },
     onPickIsland: (id) => { calls.picked = id; },
     nameById: (id) => (byId.get(id) || {}).name || id,
   });
@@ -55,29 +59,55 @@ test('dashboard draws for a scalar overlay without throwing', () => {
   assert.ok(d._rowRects.length > 0, 'leaderboard rows laid out');
 });
 
-test('dashboard draws for an edges overlay (legend, no leaderboard rows)', () => {
-  const { d } = makeDash('alliances');
+test('dashboard draws for a links overlay (legend, no leaderboard rows)', () => {
+  const { d } = makeDash('off', 'alliances');
   assert.doesNotThrow(() => d.draw(stubCtx()));
   assert.ok(d._chipRects.length > 0, 'picker still present');
-  assert.equal(d._rowRects.length, 0, 'no island rows for an edge overlay');
+  assert.equal(d._rowRects.length, 0, 'no island rows when only a links layer is on');
 });
 
-test('dashboard draws in the off state (picker + trouble, no distribution)', () => {
-  const { d } = makeDash('off');
+test('dashboard draws with BOTH a scalar overlay and a links layer at once', () => {
+  const { d } = makeDash('wealth', 'alliances');
   assert.doesNotThrow(() => d.draw(stubCtx()));
+  assert.ok(d._rowRects.length > 0, 'the scalar leaderboard still ranks ports while links are on');
 });
 
-test('clicking a picker chip switches the metric; a leaderboard row flies to that island', () => {
-  const { d, calls } = makeDash('wealth');
+test('dashboard draws in the off state (both pickers + trouble, no distribution)', () => {
+  const { d } = makeDash('off', 'off');
+  assert.doesNotThrow(() => d.draw(stubCtx()));
+  // Both sections still offer their chips (incl. an Off chip) so a layer can be turned on.
+  assert.ok(d._chipRects.some((c) => c.kind === 'overlay'), 'overlay picker present');
+  assert.ok(d._chipRects.some((c) => c.kind === 'link'), 'links picker present');
+});
+
+test('an Overlays chip calls setOverlay; a Links chip calls setLinks; a row flies to the island', () => {
+  const { d, calls } = makeDash('wealth', 'alliances');
   d.draw(stubCtx());
-  const chip = d._chipRects.find((c) => c.key === 'danger');
-  assert.ok(chip, 'a danger chip exists');
-  assert.equal(d.onDown(chip.x + 2, chip.y + 2), true);
-  assert.equal(calls.metric, 'danger');
+  const over = d._chipRects.find((c) => c.kind === 'overlay' && c.key === 'danger');
+  assert.ok(over, 'a danger overlay chip exists');
+  assert.equal(d.onDown(over.x + 2, over.y + 2), true);
+  assert.equal(calls.overlay, 'danger');
+
+  const link = d._chipRects.find((c) => c.kind === 'link' && c.key === 'lanes');
+  assert.ok(link, 'a trade-lanes link chip exists');
+  assert.equal(d.onDown(link.x + 2, link.y + 2), true);
+  assert.equal(calls.links, 'lanes');
 
   const row = d._rowRects[0];
   assert.equal(d.onDown(row.x + 4, row.y + 4), true);
   assert.ok(['a', 'b', 'c'].includes(calls.picked), 'a real island id was picked');
+});
+
+test('each picker section has an Off chip that clears its own layer', () => {
+  const { d, calls } = makeDash('wealth', 'alliances');
+  d.draw(stubCtx());
+  const overOff = d._chipRects.find((c) => c.kind === 'overlay' && c.key === 'off');
+  const linkOff = d._chipRects.find((c) => c.kind === 'link' && c.key === 'off');
+  assert.ok(overOff && linkOff, 'both sections expose an Off chip');
+  assert.equal(d.onDown(overOff.x + 2, overOff.y + 2), true);
+  assert.equal(calls.overlay, 'off', 'Overlays Off clears the scalar layer');
+  assert.equal(d.onDown(linkOff.x + 2, linkOff.y + 2), true);
+  assert.equal(calls.links, 'off', 'Links Off clears the links layer');
 });
 
 test('a click in empty panel space is swallowed but selects nothing', () => {

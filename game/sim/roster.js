@@ -18,16 +18,34 @@ const SEC = {
   Fiber: ['Grain', 'Meat', 'Grain', 'PreciousMetal', 'Grain', 'Meat', 'Wood', 'Grain', 'Meat', 'Grain'],
   PreciousMetal: ['Iron', 'Fiber', 'Grain', 'Iron', 'Meat', 'Fiber', 'Iron', 'Grain', 'Fiber', 'Iron'],
 };
+// Resource-themed name stems (20 per resource). A Grain isle reads "Wheat-", an ore isle "Forge-",
+// so a port's name hints at its trade. Kept distinct from SUF/QUAL words so stems don't self-echo.
 const NAMEPRE = {
-  Grain: ['Grain', 'Wheat', 'Barley', 'Corn', 'Meadow', 'Harvest', 'Rye', 'Field', 'Furrow', 'Golden'],
-  Iron: ['Iron', 'Forge', 'Ore', 'Anvil', 'Ember', 'Cinder', 'Slag', 'Steel', 'Coal', 'Rust'],
-  Meat: ['Cattle', 'Stag', 'Elk', 'Ram', 'Hunt', 'Bison', 'Drover', 'Herd', 'Boar', 'Pasture'],
-  Wood: ['Oak', 'Pine', 'Cedar', 'Timber', 'Ash', 'Birch', 'Grove', 'Thorn', 'Elm', 'Maple'],
-  Fiber: ['Flax', 'Loom', 'Linen', 'Weaver', 'Reed', 'Thread', 'Cotton', 'Fleece', 'Spindle', 'Wool'],
-  PreciousMetal: ['Silver', 'Gem', 'Gold', 'Bright', 'Quartz', 'Onyx', 'Marble', 'Amber', 'Opal', 'Pearl'],
+  Grain: ['Grain', 'Wheat', 'Barley', 'Corn', 'Meadow', 'Harvest', 'Rye', 'Furrow', 'Granary', 'Golden', 'Millet', 'Sheaf', 'Oat', 'Clover', 'Bramble', 'Husk', 'Hearth', 'Amber', 'Ripe', 'Loam'],
+  Iron: ['Iron', 'Forge', 'Ore', 'Anvil', 'Ember', 'Cinder', 'Slag', 'Steel', 'Coal', 'Rust', 'Bellows', 'Smelt', 'Clinker', 'Furnace', 'Scoria', 'Ironstone', 'Dross', 'Tinder', 'Hammer', 'Foundry'],
+  Meat: ['Cattle', 'Stag', 'Elk', 'Ram', 'Hunt', 'Bison', 'Drover', 'Herd', 'Boar', 'Pasture', 'Ox', 'Buck', 'Hart', 'Venison', 'Shepherd', 'Grazing', 'Tallow', 'Hoof', 'Antler', 'Byre'],
+  Wood: ['Oak', 'Pine', 'Cedar', 'Timber', 'Ash', 'Birch', 'Grove', 'Thorn', 'Elm', 'Maple', 'Aspen', 'Willow', 'Rowan', 'Alder', 'Yew', 'Beech', 'Hazel', 'Sawyer', 'Bark', 'Larch'],
+  Fiber: ['Flax', 'Loom', 'Linen', 'Weaver', 'Reed', 'Thread', 'Cotton', 'Fleece', 'Spindle', 'Wool', 'Hemp', 'Twine', 'Distaff', 'Shear', 'Carder', 'Fuller', 'Skein', 'Tow', 'Nettle', 'Ramie'],
+  PreciousMetal: ['Silver', 'Gem', 'Gold', 'Bright', 'Quartz', 'Onyx', 'Marble', 'Amber', 'Opal', 'Pearl', 'Argent', 'Lustre', 'Sapphire', 'Jasper', 'Beryl', 'Garnet', 'Ingot', 'Bullion', 'Coronet', 'Glimmer'],
 };
-const SHIPPRE = ['Keel', 'Harbor', 'Dock', 'Mast', 'Anchor'];
-const SUF = ['peak', 'holm', 'hold', 'moor', 'bay', 'field', 'vale', 'cliff', 'port', 'fell', 'haven', 'reach', 'watch', 'ford', 'shoal', 'cove', 'ridge', 'strand', 'wick', 'mere', 'crag', 'landing', 'point', 'stead'];
+const SHIPPRE = ['Keel', 'Harbor', 'Dock', 'Mast', 'Anchor', 'Wharf', 'Hull', 'Careen', 'Boom', 'Capstan', 'Tiller', 'Shipwright', 'Slipway', 'Bosun', 'Chandler', 'Quay'];
+const SUF = ['peak', 'holm', 'hold', 'moor', 'bay', 'field', 'vale', 'cliff', 'port', 'fell', 'haven', 'reach', 'watch', 'ford', 'shoal', 'cove', 'ridge', 'strand', 'wick', 'mere', 'crag', 'point', 'stead', 'gate', 'dell', 'glen', 'hollow', 'barrow', 'cairn', 'tarn', 'sound', 'head', 'ness', 'reef', 'key', 'march', 'wold', 'thorpe', 'garth', 'holt', 'by', 'mouth', 'bight', 'spur'];
+// Generic leading qualifiers, applied to a minority of ports ("North Oakhaven", "Little Ironmoor").
+// Multiplies the realized namespace ~13× so a 1000-island sea reads as distinct places, not "Oakbay2".
+const QUAL = ['North', 'South', 'East', 'West', 'Upper', 'Lower', 'Little', 'Great', 'Old', 'New', 'Far', 'High', 'Nether', 'Outer', 'Inner', 'Grey', 'Black', 'White', 'Cold', 'Fair', 'Wild', 'Lone', 'Kings', 'Saint', 'Storm', 'Sunder', 'Windward', 'Leeward'];
+const QUAL_PROB = 0.45;
+
+const pickFrom = (list, r) => list[Math.min(list.length - 1, Math.floor(r * list.length))];
+/** A port name: a resource stem + toponymic suffix, with a leading qualifier on QUAL_PROB of ports. */
+function placeName(primary, rng) {
+  const core = pickFrom(NAMEPRE[primary], rng()) + pickFrom(SUF, rng());
+  return rng() < QUAL_PROB ? `${pickFrom(QUAL, rng())} ${core}` : core;
+}
+/** A shipyard's name — a dockside stem + suffix, same qualifier treatment. */
+function yardName(rng) {
+  const core = pickFrom(SHIPPRE, rng()) + pickFrom(SUF, rng());
+  return rng() < QUAL_PROB ? `${pickFrom(QUAL, rng())} ${core}` : core;
+}
 
 // Density reference: a 60-island sea in a 9600×6800 ocean. Larger seas keep this island
 // density by scaling the ocean ∝√N, so spacing/travel-times stay comparable at any count.
@@ -103,9 +121,10 @@ function pickScale(rng) {
 const kFor = (base, rng) => Math.max(24, Math.round(base * pickScale(rng)));
 
 export function generateRoster(seed = 1, count = BASE_N) {
-  // N islands in an ocean scaled ∝√N (constant density). At the default N=60 this reduces
-  // EXACTLY to the historical roster (same ocean, same per-resource count, 5 shipyards) so
-  // seeded tests stay byte-identical — larger counts only extend the same construction.
+  // N islands in an ocean scaled ∝√N (constant density): at N=60 the same ocean size, per-resource
+  // count, and 5 shipyards as the historical roster; larger counts only extend the same construction.
+  // Everything is a pure function of `seed` (names now drawn from the seeded rng, not the island
+  // index), so a seed reproduces exactly while different seeds give genuinely different seas.
   const N = Math.max(1, Math.round(count));
   const scale = Math.sqrt(N / BASE_N);
   const OCEAN_W = Math.round(BASE_W * scale), OCEAN_H = Math.round(BASE_H * scale);
@@ -147,7 +166,7 @@ export function generateRoster(seed = 1, count = BASE_N) {
     const primary = resPool[i];
     const secondary = SEC[primary][secCount[primary]++ % 10];
     const type = TYPE[primary], color = COLOR[primary], k = kFor(KBASE[type], rng);
-    const nm = uniqName(NAMEPRE[primary][(i * 3) % 10] + SUF[(i * 5) % SUF.length]);
+    const nm = uniqName(placeName(primary, rng));
     islands.push({ id: idFor(nm), name: nm, x: positions[i].x, y: positions[i].y, type, color, primary, secondary, k, produces: goodsFor(primary, secondary, false), _cluster: clusterOf[i] });
   }
 
@@ -158,7 +177,7 @@ export function generateRoster(seed = 1, count = BASE_N) {
     const has = new Set([isl.primary, isl.secondary]);
     if (has.has('Iron') && has.has('Wood') && !usedClusters.has(isl._cluster)) {
       isl.type = 'shipyard'; isl.color = '#b08a5a'; isl.k = kFor(KBASE.shipyard, rng);
-      isl.name = uniqName(SHIPPRE[made % SHIPPRE.length] + SUF[(made * 7) % SUF.length]); isl.produces = goodsFor(isl.primary, isl.secondary, true);
+      isl.name = uniqName(yardName(rng)); isl.produces = goodsFor(isl.primary, isl.secondary, true);
       usedClusters.add(isl._cluster); made++;
     }
   }

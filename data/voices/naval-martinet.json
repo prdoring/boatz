@@ -4,7 +4,7 @@
   "persona": "A stiff disciplinarian who ran merchant service by the book and never let it drop. Clipped, formal, forever citing regulation, the watch, the standard, the service. Cold precision, everything duly noted. Speaks in the first person of command: 'I'.",
 
   "pronoun": {
-    "ship":   { "subject": "I", "first": "I" },
+    "ship":   { "subject": "we", "first": "We" },
     "island": { "subject": "I", "first": "I" }
   },
 
@@ -13,7 +13,7 @@
       "founder":   "I am {name}{rankc}, and I assume command of this {home} {type} this day. The log is opened. All entries shall be kept regular and by the book.",
       "successor": "Command of this vessel passes to me, {name}{rankc}, in good order. The log is continued without lapse. Standards will be maintained.",
       "mutiny":    "The former master was put out by the hands in gross breach of discipline, and this book forced upon me, an unproven man. I am {name}. I record the fact and reserve judgement.",
-      "pirate":    "The crew have hauled down the ensign and hoisted the black. I am {name}{rankc}. I note for the record that this is mutiny and piracy both, and outside every regulation.",
+      "rogue":     "The crew have hauled down the ensign and hoisted the black. I am {name}{rankc}. I note for the record that this is mutiny and piracy both, and outside every regulation.",
       "prize":     "I carried her by boarding and received her surrender in proper form. I am {name}{rankc}. Her log passes to my command; the capture is duly noted.",
       "recovered": "A King's hunter ran the pirates to ground, and I am appointed to restore this hull to lawful service. I am {name}{rankc}. She will be brought back to standard."
     },
@@ -53,9 +53,57 @@
   },
 
   "kinds": {
-    "plunder": { "recur": { "class": "prize", "phrases": [", the {ord} prize entered in the book", ", taken in due form", " — noted and stowed to account"] } },
-    "sunk":    { "recur": { "class": "prize", "phrases": [", sent under, the engagement logged in full"] } },
-    "fended":  { "recur": { "class": "stand", "phrases": [", the action repulsed by the book", ", beaten off, all hands at station"] } },
-    "hunted":  { "recur": { "class": "hunt",  "phrases": [", the {ord} pirate brought to account", " — engagement concluded, prisoners logged"] } }
+    "plunder": {
+      "recur": { "class": "prize", "phrases": [", the {ord} prize entered in the book", ", taken in due form", " — noted and stowed to account"] },
+      "say": [
+        "{we} brought {foe} to and carried her by boarding; {goods} bales and {gold}g removed to the hold and entered in the book",
+        "{we} took {foe}'s surrender in due form and stripped her of {goods} crates and {gold}g, all duly logged",
+        "{foe} struck on the second broadside; {we} removed {goods} casks and {gold}g and released the hull per standing practice",
+        "{we} secured {foe} alongside, transferred {goods} chests and {gold}g to account, and dismissed her under the watch",
+        "{we} boarded {foe} in good order and entered {goods} bales and {gold}g to the manifest — the capture regular in every particular",
+        "{foe} yielded without further resistance; {we} took off {goods} crates and {gold}g and noted the hour of it",
+        "{we} carried {foe} by the book, {goods} casks and {gold}g into the hold, and set her loose stripped to her timbers",
+        "{we} relieved {foe} of {goods} chests and {gold}g, the tally checked twice and signed before she was let go"
+      ]
+    },
+    "sunk":    {
+      "recur": { "class": "prize", "phrases": [", sent under, the engagement logged in full"] },
+      "say": [
+        "{we} engaged {foe} and sank her, the action begun and concluded within the watch",
+        "{foe} declined to strike; {we} reduced her by gunfire until she went down, cargo and all",
+        "{we} holed {foe} below the waterline and she foundered — no prize taken, the engagement logged in full",
+        "{we} brought {foe} under fire at close range and sent her under in good order",
+        "{foe} chose to fight; {we} dismasted her, holed her, and saw her go down by the head",
+        "{we} put {foe} beneath the surface with all aboard her, the particulars entered as required",
+        "{we} closed with {foe} and continued the action until she sank — nothing recovered, the matter closed",
+        "{foe} fought to the last and {we} sent her to the bottom, the range and duration duly recorded"
+      ]
+    },
+    "fended":  {
+      "recur": { "class": "stand", "phrases": [", the action repulsed by the book", ", beaten off, all hands at station"] },
+      "say": [
+        "{foe} attempted {us} out of the weather; {we} beat her off and sank her, all hands at station throughout",
+        "{we} repelled {foe}'s boarders by the drill and put the raider under — the ship's company answered to standard",
+        "{foe} closed to board; {we} met her with a disciplined broadside and sent her down",
+        "{we} stood to quarters at the alarm and beat {foe} off, then holed her and watched her founder",
+        "{foe} pressed the attack and {we} returned fire until she sank — the action repulsed by the book",
+        "{we} received {foe}'s assault at station and answered it in full, sending the raider to the bottom",
+        "{foe} misjudged this hull; {we} broke the attack and put her under, no ground given",
+        "{we} beat off {foe} and sank her at short range, the watch kept and the log squared away after"
+      ]
+    },
+    "hunted":  {
+      "recur": { "class": "hunt",  "phrases": [", the {ord} pirate brought to account", " — engagement concluded, prisoners logged"] },
+      "say": [
+        "{we} ran {foe} down and destroyed her — the pirate brought to account, the engagement concluded in order",
+        "{foe} ran; {we} overhauled her by the second watch and finished the action as regulation requires",
+        "{we} pursued {foe} to close range and sank her, one more rogue struck from the rolls",
+        "{foe} showed the black flag and {we} answered it with gunfire, sending her under by the book",
+        "{we} cornered {foe} against the shoals and reduced her — the hunt logged from sighting to finish",
+        "{we} closed with {foe} and cut her down, prisoners taken and entered as required",
+        "{foe} would not strike to lawful demand, so {we} sank her outright and squared the log",
+        "{we} brought {foe} to action and put her under, the matter concluded to the letter of the service"
+      ]
+    }
   }
 }

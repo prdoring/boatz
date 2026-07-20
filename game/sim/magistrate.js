@@ -18,14 +18,13 @@ import { streamFloat } from './rng.js';
 import { foodDays } from './island.js';
 import { logEvent, logEventThrottled } from './events.js';
 import { voiceSeedFrom, regimeData } from './captains.js';
+import { GIVEN, SURNAME, composeUniqueName } from './names.js';
 import { clamp, safeDiv, tradeables, targetFor } from './resources.js';
 
-const SUR = [
-  'Ashcombe', 'Pennywise', 'Harrow', 'Thistlewood', 'Grimsby', 'Whitlock', 'Crowe', 'Fairweather',
-  'Blackstock', 'Hargrave', 'Stoneleigh', 'Verity', 'Underhill', 'Loxley', 'Pembroke', 'Rookwood',
-  'Cordwainer', 'Dabney', 'Fenwick', 'Marchbanks', 'Ravenscroft', 'Sable', 'Thorncastle', 'Wexford',
-];
-const TITLE = ['Magistrate', 'Governor', 'Warden', 'Steward', 'Prefect'];
+// Magistrates read as "Title Given Surname" ("Governor Isabel Hargrave") — the given + family names
+// come from the shared person-name pools (names.js), the title from this official set. A big sea of
+// distinct rulers, deduped against sitting magistrates (see makeMagistrate).
+const TITLE = ['Magistrate', 'Governor', 'Warden', 'Steward', 'Prefect', 'Bailiff', 'Castellan', 'Provost', 'Chancellor', 'Intendant', 'Seneschal', 'Alderman'];
 
 // Rank tiers by lifetime XP (low → high). The last whose threshold is met wins.
 const RANKS = [
@@ -34,6 +33,14 @@ const RANKS = [
 
 function pick(list, r) { return list[Math.min(list.length - 1, Math.floor(r * list.length))]; }
 function trait(world) { return (streamFloat(world, 'mag') + streamFloat(world, 'mag')) / 2; } // triangular → moderates common
+
+/** Names of the magistrates currently in office — the set a fresh magistrate prefers to dodge. */
+function livingMagistrateNames(world) {
+  const set = new Set();
+  const islands = world && world.islands;
+  if (islands) for (const i of islands) if (i.magistrate && i.magistrate.name) set.add(i.magistrate.name);
+  return set;
+}
 
 /** One-word governing style from the most pronounced trait (else "Even-handed"). */
 export function magPersonality(traits) {
@@ -84,9 +91,15 @@ function chooseAmbition(world, island) {
   return kinds[0];
 }
 
-/** A fresh magistrate: seeded name/title, portrait, traits, experience, and an economic agenda. */
-export function makeMagistrate(world, island = null) {
-  const name = `${pick(TITLE, streamFloat(world, 'mag'))} ${pick(SUR, streamFloat(world, 'mag'))}`;
+/** A fresh magistrate: seeded name/title, portrait, traits, experience, and an economic agenda. The
+ *  name prefers one no sitting magistrate already bears; `taken` (optional) is a caller-owned set to
+ *  avoid + extend for batch naming at genesis, else it's derived from the magistrates in office. */
+export function makeMagistrate(world, island = null, taken) {
+  const avoid = taken || livingMagistrateNames(world);
+  const name = composeUniqueName(
+    () => `${pick(TITLE, streamFloat(world, 'mag'))} ${pick(GIVEN, streamFloat(world, 'mag'))} ${pick(SURNAME, streamFloat(world, 'mag'))}`,
+    avoid,
+  );
   const traits = { firmness: trait(world), generosity: trait(world), integrity: trait(world) };
   const portrait = Math.floor(streamFloat(world, 'mag') * 0x7fffffff) >>> 0;
   const ambition = { kind: chooseAmbition(world, island), progress: 0.35, milestone: false };
@@ -124,9 +137,10 @@ export function retarget(island, economy, tuning) {
   }
 }
 
-/** Seat a fresh magistrate on an island and re-target its economy to the new agenda. */
-export function installMagistrate(world, island) {
-  island.magistrate = makeMagistrate(world, island);
+/** Seat a fresh magistrate on an island and re-target its economy to the new agenda. `taken`
+ *  (optional) threads a shared avoid-set through world genesis so the whole first cast dedupes. */
+export function installMagistrate(world, island, taken) {
+  island.magistrate = makeMagistrate(world, island, taken);
   island.magistrate._installedDay = Math.floor(world.simTime / world.rules.SIM_DAY_SECONDS); // for the first-year beat
   retarget(island, world.economy, world.rules);
   return island.magistrate;
@@ -273,7 +287,7 @@ export function governance(world, h) {
       - (isl.grievance || 0) * t.REBEL_GRACE_GRIEVANCE);
     if (isl.unrest >= grace && world.simTime >= (isl._rebelCd || 0)) {
       isl.rebellion = { until: world.simTime + t.REBELLION_DAYS * t.SIM_DAY_SECONDS };
-      logEvent(world, 'rebellion', `Rebellion erupts on ${isl.name} — ${rebelCause(isl, t)} drove the people to the streets; the port is aflame.`, { islandId: isl.id });
+      logEvent(world, 'rebellion', `Rebellion erupts on ${isl.name} — ${rebelCause(isl, t)} drove the people to rise; the port is aflame.`, { islandId: isl.id });
     }
 
     // A magistrate who has held the port in good order through a first full year — a governance beat

@@ -10,6 +10,7 @@
 
 import { PALETTE } from '../config.js';
 import { drawIcon } from './icons.js';
+import { agePaper } from './parchment.js';
 
 export function roundRect(ctx, x, y, w, h, r) {
   const rr = Math.min(r, w / 2, h / 2);
@@ -39,7 +40,7 @@ export class Widget {
 }
 
 export class Button extends Widget {
-  constructor({ label = '', icon = null, iconSize = 15, onClick = null, isActive = null, font = '15px system-ui, sans-serif' } = {}) {
+  constructor({ label = '', icon = null, iconSize = 15, onClick = null, isActive = null, font = '400 15px "IM Fell English", Georgia, serif' } = {}) {
     super();
     this.label = label;
     this.icon = icon;         // optional vector-icon name (drawn instead of the label text)
@@ -58,20 +59,20 @@ export class Button extends Widget {
     const active = !!this.isActive();
     const { x, y, w, h } = this;
     ctx.save();
-    // Body — a top-lit gradient: warm brass when active, cool lacquered teal at rest.
+    // Body — a top-lit gradient: an aged-brass "stamped seal" when active, warm parchment at rest.
     roundRect(ctx, x, y, w, h, 7);
     const g = ctx.createLinearGradient(0, y, 0, y + h);
-    if (active) { g.addColorStop(0, '#ffe08a'); g.addColorStop(1, PALETTE.accentDim); }
-    else { g.addColorStop(0, 'rgba(15, 58, 69, 0.96)'); g.addColorStop(1, 'rgba(6, 30, 38, 0.96)'); }
+    if (active) { g.addColorStop(0, '#d9b25e'); g.addColorStop(1, '#b8863a'); }
+    else { g.addColorStop(0, PALETTE.panelPaperHi); g.addColorStop(1, PALETTE.panelPaperLo); }
     ctx.fillStyle = g; ctx.fill();
-    // A thin inner top-sheen line (the raised-key highlight).
+    // A thin inner top-sheen line (the raised-paper highlight).
     ctx.beginPath();
     ctx.moveTo(x + 6, y + 2.5); ctx.lineTo(x + w - 6, y + 2.5);
-    ctx.strokeStyle = active ? 'rgba(255,255,255,0.5)' : 'rgba(180,240,255,0.16)'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.strokeStyle = active ? 'rgba(255,244,214,0.55)' : 'rgba(255,250,232,0.5)'; ctx.lineWidth = 1; ctx.stroke();
     // Border.
     roundRect(ctx, x, y, w, h, 7);
-    ctx.lineWidth = 1.5; ctx.strokeStyle = active ? '#ffe9a8' : PALETTE.panelEdge; ctx.stroke();
-    const fg = active ? '#06323b' : PALETTE.panelText;
+    ctx.lineWidth = 1.5; ctx.strokeStyle = active ? PALETTE.panelAccent : PALETTE.panelEdge; ctx.stroke();
+    const fg = active ? '#3a2a12' : PALETTE.panelText;
     const cx = x + w / 2, cy = y + h / 2;
     if (this.icon) {
       drawIcon(ctx, this.icon, cx, cy, this.iconSize, fg);
@@ -95,6 +96,10 @@ export class Panel extends Widget {
     roundRect(ctx, this.x, this.y, this.w, this.h, 10);
     ctx.fillStyle = PALETTE.panelBg;
     ctx.fill();
+    // Worn-paper grain + a burnt pirate-map rim on the big reading surfaces (logbook / stats /
+    // controls). Both are baked once and painted as cached tiles, so this stays a couple of cheap
+    // composites per frame regardless of panel count.
+    agePaper(ctx, this.x, this.y, this.w, this.h, 10, { tex: 0.5, burn: true, burnIntensity: 0.8 });
     ctx.lineWidth = 1;
     ctx.strokeStyle = PALETTE.panelEdge;
     ctx.stroke();

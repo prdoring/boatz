@@ -16,7 +16,7 @@ import { bidAsk } from './pricing.js';
 import { skill01, makeCaptain, rankOf, regimeData } from './captains.js';
 import { logEvent } from './events.js';
 import { streamFloat } from './rng.js';
-import { turnPirate, canTurnPirate } from './piracy.js';
+import { turnPirate, canTurnPirate, maybeTurnRogue } from './piracy.js';
 import { nearestIsland } from './grid.js';
 import { fleetAt, computeFleetByHome } from './fleet.js';
 
@@ -152,6 +152,7 @@ export function crew(world, h) {
     // 4) UNREST → UPRISING — merchant crews only; a pirate crew is already the mutiny, and a
     //    privateer crew is state-paid (its wages bought its loyalty for the commission).
     if (ship.pirate || ship.privateer) continue;
+    if (maybeTurnRogue(world, ship)) continue; // a bold, greedy master may raise the black flag himself
     if (ship.morale < r.MUTINY_MORALE) ship.unrest += dDay; else ship.unrest = Math.max(0, ship.unrest - dDay * 1.5);
     const grace = r.MUTINY_GRACE_DAYS + skill01(ship.captain, r, 'cmd') * r.MUTINY_GRACE_SKILL;
     if (!ship.uprising && world.simTime >= (ship._upCd || 0) && ship.unrest >= grace) {
@@ -176,9 +177,15 @@ function resolveUprising(world, ship) {
   if (streamFloat(world, 'mutiny') < pQuell) {
     logEvent(world, 'quell', `Aboard ${vessel}, the crew rose up with ${grievance} — but Capt. ${name} faced them down and held command.`, at);
   } else {
-    // A desperate, victorious crew may raise the black flag instead of finding a new master.
-    if (streamFloat(world, 'mutiny') < r.PIRATE_CONVERT_CHANCE && canTurnPirate(world)) {
-      turnPirate(world, ship); // leaves the economy; sets its own state/voyage + logs
+    // A victorious crew may raise the black flag instead of finding a new master — likelier the hungrier
+    // they are and the more lawless their home port. They've already thrown the captain over, so a NEW
+    // pirate ringleader takes her (overthrow), not the old hand.
+    const home = world.islandsById.get(ship.homeId);
+    const pPirate = Math.min(0.9, r.PIRATE_CONVERT_CHANCE
+      + (r.PIRATE_CONVERT_HUNGER || 0) * Math.min(1, ship.hunger || 0)
+      + (r.PIRATE_CONVERT_LAWLESS || 0) * (home ? (home.lawlessness || 0) : 0));
+    if (streamFloat(world, 'mutiny') < pPirate && canTurnPirate(world)) {
+      turnPirate(world, ship, { overthrow: true }); // leaves the economy; sets its own state/voyage + logs
       return;
     }
     const target = streamFloat(world, 'mutiny') < r.DEFECT_FRACTION ? defectionTarget(world, ship) : null;

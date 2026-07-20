@@ -5,6 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BOATZ — a living sea</title>
   <style>
+    /* Self-hosted HUD fonts (no CDN). "IM Fell" = the weathered-press body + headings; the six
+       handwriting faces are the per-keeper "hands" of the ship's-log Story tab. font-display:block
+       + a boot-time document.fonts.ready gate (main.js) so canvas text never draws in a fallback. */
+    @font-face { font-family: 'IM Fell English'; font-style: normal; font-weight: 400; font-display: block; src: url('/game/fonts/IMFellEnglish-Regular.woff2') format('woff2'); }
+    @font-face { font-family: 'IM Fell English'; font-style: italic; font-weight: 400; font-display: block; src: url('/game/fonts/IMFellEnglish-Italic.woff2') format('woff2'); }
+    @font-face { font-family: 'IM Fell English SC'; font-style: normal; font-weight: 400; font-display: block; src: url('/game/fonts/IMFellEnglishSC-Regular.woff2') format('woff2'); }
+    @font-face { font-family: 'Caveat'; font-weight: 400; font-display: block; src: url('/game/fonts/Caveat.woff2') format('woff2'); }
+    @font-face { font-family: 'Kalam'; font-weight: 400; font-display: block; src: url('/game/fonts/Kalam.woff2') format('woff2'); }
+    @font-face { font-family: 'Shadows Into Light'; font-weight: 400; font-display: block; src: url('/game/fonts/ShadowsIntoLight.woff2') format('woff2'); }
+    @font-face { font-family: 'Patrick Hand'; font-weight: 400; font-display: block; src: url('/game/fonts/PatrickHand.woff2') format('woff2'); }
+    @font-face { font-family: 'Reenie Beanie'; font-weight: 400; font-display: block; src: url('/game/fonts/ReenieBeanie.woff2') format('woff2'); }
+    @font-face { font-family: 'Cedarville Cursive'; font-weight: 400; font-display: block; src: url('/game/fonts/CedarvilleCursive.woff2') format('woff2'); }
     html, body { margin: 0; padding: 0; overflow: hidden; background: #0e6379; }
     canvas { display: block; }
   </style>

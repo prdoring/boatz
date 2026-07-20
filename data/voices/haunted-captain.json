@@ -13,7 +13,7 @@
       "founder":   "Here I begin the count. I am {name}{rankc}, and this {home} {type} is mine to keep — her, and every soul aboard her, for as long as the sea will let me keep them.",
       "successor": "The book passes to me, and with it the names. I am {name}{rankc}; I will carry them as the last hand carried them, and add my own before the end.",
       "mutiny":    "They put the old master over the side — one more the water takes — and left the book in my shaking hands. I am {name}, new to this grief, and already I am counting.",
-      "pirate":    "We have raised the black flag, God forgive us, and I — {name}{rankc} — will keep the tally of what it costs. There are always names. There are only ever more names.",
+      "rogue":     "We have raised the black flag, God forgive us, and I — {name}{rankc} — will keep the tally of what it costs. There are always names. There are only ever more names.",
       "prize":     "She struck to us, and men died on both her decks for it. I am {name}{rankc}; her log is mine now, and I open it with the drowned we made today.",
       "recovered": "A hunter's guns freed this hull and left the water full again. I am {name}{rankc}, come to bring her home — and to write down the ones who did not come with her."
     },
@@ -53,9 +53,53 @@
   },
 
   "kinds": {
-    "sunk":    { "recur": { "class": "prize", "phrases": [", and the water took them all", " — we send them down and count them still", ", more souls for the green dark"] } },
-    "plunder": { "recur": { "class": "prize", "phrases": [", though men drowned to make it ours", " — no prize is bought cheaply"] } },
-    "fended":  { "recur": { "class": "stand", "phrases": [" — we held, and buried our own after", ", and the sea let us keep our names this once"] } },
-    "hunted":  { "recur": { "class": "hunt",  "phrases": [", another crew given to the deep", " — I take no joy in the counting of them"] } }
+    "sunk": {
+      "recur": { "class": "prize", "phrases": [", and the water took them all", " — we send them down and count them still", ", more souls for the green dark"] },
+      "say": [
+        "{we} fired into {foe} until the sea came in through her wounds and she went down with all her souls",
+        "{we} held on {foe} till she filled and slipped under — I gave her crew to the green dark and marked the hour",
+        "{foe} would not strike, so we broke her open and watched the water take every hand aboard",
+        "{we} sent {foe} to the bottom off {foeHome}, her cargo and her people swallowed together, and the sea did not so much as sigh",
+        "{we} hammered {foe} beneath the waves and stood a while over the place where she had been, counting",
+        "{foe} went down under our guns with her colours still nailed up, and I added her drowned to the long list",
+        "{we} put {foe} under in the smoke, and the only prize we took away was more names for the keeping"
+      ]
+    },
+    "plunder": {
+      "recur": { "class": "prize", "phrases": [", though men drowned to make it ours", " — no prize is bought cheaply"] },
+      "say": [
+        "{we} came alongside {foe} in the grey and took what she carried — {goods} crates and {gold}g down into our hold, and I marked the men who fell for it",
+        "{we} boarded {foe} out of {foeHome} and stripped her slow — {goods} casks and {gold}g the richer, and one more deck of frightened faces I will not forget",
+        "{foe} gave up her cargo without much blood, God be thanked — {goods} bales and {gold}g into our keeping, and we let the hollow hull drift off to mourn its own",
+        "{we} took {goods} chests and {gold}g from {foe} and let her go, and still I count the two we lost boarding her",
+        "{we} emptied {foe} of {goods} bales and {gold}g, the water quiet around us, and turned away before we had to send anyone else under",
+        "{foe} struck her colours to us and we carried off {goods} crates and {gold}g — a poor trade, I think, for the names it added to the book",
+        "{we} bled {foe} of {goods} casks and {gold}g in the failing light and left her limping, her dead and ours both on my conscience"
+      ]
+    },
+    "fended": {
+      "recur": { "class": "stand", "phrases": [" — we held, and buried our own after", ", and the sea let us keep our names this once"] },
+      "say": [
+        "{foe} ran down on us for easy meat and found guns instead — we opened her hull and let the sea have what it came for",
+        "{we} had no wish to fight, but {foe} left us none, so we sank her and buried our own by lantern-light",
+        "{foe} came out of the murk with her boarding nets rigged, and we sent her under before she could touch our rail",
+        "{we} turned {foe} away the hard way — shot her low till she filled, and I said the words over the water for both crews",
+        "{foe} thought us soft cargo and we proved her wrong, breaking her apart and watching her wolves drown",
+        "{we} met {foe} broadside for broadside until she went down, and I counted the empty berths she cost us after",
+        "{foe} closed to board and we sank her at our very side, so near I heard her men go under"
+      ]
+    },
+    "hunted": {
+      "recur": { "class": "hunt",  "phrases": [", another crew given to the deep", " — I take no joy in the counting of them"] },
+      "say": [
+        "{we} ran {foe} to ground at last and put her down — one less black flag on the water, and no gladness in me for it",
+        "{we} caught {foe} against the wind and sank her, and though she was a wolf I said the words for her drowned all the same",
+        "{foe} had made ghosts of better men than us, so we hunted her down and gave her back to the sea",
+        "{we} cornered {foe} off {foeHome} and broke her — the hunting is done, and I take no joy in the counting of her dead",
+        "{we} chased {foe} through two dawns and sent her under on the third, her crew added to a list that never shortens",
+        "{foe} fled until she could flee no more, and we opened her to the sea and let it close over the last of them",
+        "{we} paid {foe} at last for all the souls she took, and stood over her wake wondering who will pay for ours"
+      ]
+    }
   }
 }

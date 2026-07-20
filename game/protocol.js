@@ -17,5 +17,5 @@ export const M = defineMessageTypes(
   'SET_VIEW',     // C->S (reserved): { x, y, w, h, zoom } — AOI viewport, unused in pass 1
 );
 
-export const SPEEDS = Object.freeze([1, 3, 10]);
+export const SPEEDS = Object.freeze([0.5, 1, 3, 10, 20]);
 export const PROTOCOL_VERSION = 1;

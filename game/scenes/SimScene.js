@@ -12,7 +12,7 @@ import { SimControls } from '../ui/SimControls.js';
 import { OverviewDashboard } from '../ui/OverviewDashboard.js';
 import { OverviewControls } from '../ui/OverviewControls.js';
 import { islandRadius } from '../WorldRenderer.js';
-import { OVERLAYS, heatColor, overlayByKey, cycleOverlay, fmtValue } from '../overlays.js';
+import { OVERLAYS, heatColor, overlayByKey, fmtValue } from '../overlays.js';
 import { OverlayModel } from '../overlayModel.js';
 import { HistoryStore, mergeChronicle } from '../history.js';
 import { SPEEDS } from '../protocol.js';
@@ -102,8 +102,15 @@ export class SimScene extends Scene {
     this.keys = new Set();
     this._lastNow = 0;
     this._wakeTick = 0;
-    this._overlayKey = 'off'; // active map data overlay key (OVERLAYS entry) — 'off' = none
-    this._overlayModel = new OverlayModel(); // throttled derived stats/leaderboard/edges for the active overlay
+    // Two INDEPENDENT map data layers, each an on/off toggle (the toolbar buttons flip them; the
+    // Almanac panel picks WHICH). A scalar OVERLAY tints ports; a LINKS overlay draws edges between
+    // them — both can paint at once. `off` = that layer is hidden; `_last*` restores the prior
+    // choice when a layer is toggled back on from the toolbar/hotkey.
+    this._overlayKey = 'off';       // active SCALAR overlay key (heat tint), or 'off'
+    this._linkKey = 'off';          // active LINKS overlay key (relational edges), or 'off'
+    this._lastOverlayKey = 'wealth';    // scalar restored when [Overlays] is re-enabled
+    this._lastLinkKey = 'alliances';    // links restored when [Links] is re-enabled
+    this._overlayModel = new OverlayModel(); // throttled derived stats/leaderboard/edges for both layers
     this._press = null;       // drag-to-pan state
     this._world = null;       // latest interpolated snapshot (this frame)
     this._selection = null;
@@ -148,26 +155,32 @@ export class SimScene extends Scene {
       getTimeline: () => this._timeline(),
       eventLoc: (e) => this._eventLoc(e),
       focus: (e) => this._focusEvent(e),
+      // Pin the ticker's right edge clear of the bottom-centre control cluster (SimControls' left
+      // screen edge, set in its layout). Evaluated at draw time, so .x is populated.
+      getControlsLeft: () => this.controls.x,
     });
     // The world almanac (press `m`): aggregate stats + active-metric distribution + a clickable
     // fly-to leaderboard. Reads the throttled overlay model + the sim's summary, never the socket.
     this.dashboard = new OverviewDashboard({
       getModel: () => this._overlayModel,
-      getSpec: () => overlayByKey(this._overlayKey),
+      getScalarSpec: () => overlayByKey(this._overlayKey),
+      getLinkSpec: () => overlayByKey(this._linkKey),
       getSummary: () => ({ economy: this.sim.economy, season: this.sim.season, clock: this.sim.getClock(), islandCount: this.sim.islands.length }),
       getRegistry: () => OVERLAYS,
-      setMetric: (key) => { this._overlayKey = key; },
+      setOverlay: (key) => this._setOverlay(key),
+      setLinks: (key) => this._setLinks(key),
       onPickIsland: (id) => this._focusIsland(id),
       nameById: (id) => { const isl = this.sim.islandsById.get(id); return isl ? isl.name : id; },
     });
-    // Top-left toolbar: mouse access to the overlays/links/almanac that were `o`/`l`/`m`-only.
-    // Cycle/toggle the same scene state the hotkeys drive; buttons light while their view is active.
+    // Top-left toolbar: mouse access to the two map layers + the Almanac. Each button is a plain
+    // on/off TOGGLE (click again hides the layer); WHICH metric/link a layer shows is chosen in the
+    // Almanac panel (setOverlay/setLinks above). The Almanac is the picker + readout, not a layer.
     this.overviewControls = new OverviewControls({
-      onOverlay: () => { this._overlayKey = cycleOverlay(this._overlayKey, 'scalar', 1); },
-      onLinks: () => { this._overlayKey = cycleOverlay(this._overlayKey, 'edges', 1); },
+      onOverlay: () => this._setOverlay(this._overlayKey === 'off' ? this._lastOverlayKey : 'off'),
+      onLinks: () => this._setLinks(this._linkKey === 'off' ? this._lastLinkKey : 'off'),
       onAlmanac: () => this.dashboard.toggle(),
-      overlayActive: () => overlayByKey(this._overlayKey).kind === 'scalar',
-      linksActive: () => overlayByKey(this._overlayKey).kind === 'edges',
+      overlayActive: () => this._overlayKey !== 'off',
+      linksActive: () => this._linkKey !== 'off',
       almanacActive: () => this.dashboard.visible,
     });
     this.ui.add(this.newsPanel);
@@ -410,17 +423,25 @@ export class SimScene extends Scene {
     cam.y = Math.max(-m, Math.min(this.sim.mapH + m, cam.y));
   }
 
-  /** Recompute the active overlay's derived data (stats/leaderboard/edges) — throttled inside the
-   *  model. The heat discs, the legend, and the almanac all read the result. Skipped when the
-   *  overlay is off and the almanac is closed (nothing consumes it). */
+  /** Set the active SCALAR overlay layer ('off' hides it). Remembers the last real choice so the
+   *  [Overlays] toolbar toggle / `o` hotkey can restore it. */
+  _setOverlay(key) { this._overlayKey = key; if (key && key !== 'off') this._lastOverlayKey = key; }
+  /** Set the active LINKS overlay layer ('off' hides it). Remembers the last real choice for the
+   *  [Links] toolbar toggle / `l` hotkey. */
+  _setLinks(key) { this._linkKey = key; if (key && key !== 'off') this._lastLinkKey = key; }
+
+  /** Recompute both layers' derived data (scalar stats/leaderboard + links edges) — throttled
+   *  inside the model. The heat discs, the edges, the legend, and the almanac all read the result.
+   *  Skipped when both layers are off and the almanac is closed (nothing consumes it). */
   _syncOverlay(now, world) {
     if (this.sim.status !== 'live') return;
-    const spec = overlayByKey(this._overlayKey);
-    const wantModel = spec.kind !== 'off' || (this.dashboard && this.dashboard.visible);
+    const scalar = overlayByKey(this._overlayKey);
+    const edges = overlayByKey(this._linkKey);
+    const wantModel = scalar.kind === 'scalar' || edges.kind === 'edges' || (this.dashboard && this.dashboard.visible);
     if (!wantModel) return;
     const islands = this.sim.getEcon().islands;
     if (!islands || !islands.length) return;
-    this._overlayModel.sync(islands, spec, world && world.entities, this.sim.islandsById, now);
+    this._overlayModel.sync(islands, scalar, edges, world && world.entities, this.sim.islandsById, now);
   }
 
   // ─── input ───────────────────────────────────────────────────────
@@ -463,22 +484,17 @@ export class SimScene extends Scene {
     const k = e.key;
     if (PAN_KEYS[k]) { this.keys.add(k); return; }
     if (k === ' ') { e.preventDefault(); this.sim.togglePause(); return; }
-    // `o` cycles the scalar data overlays (off → wealth → prosperity → …); Shift+O steps back.
-    if (k === 'o' || k === 'O') {
-      this._overlayKey = cycleOverlay(this._overlayKey, 'scalar', e.shiftKey ? -1 : 1);
-      return;
-    }
-    // `l` cycles the relational LINK overlays (off → alliances → trade lanes → aid); Shift+L back.
-    if (k === 'l' || k === 'L') {
-      this._overlayKey = cycleOverlay(this._overlayKey, 'edges', e.shiftKey ? -1 : 1);
-      return;
-    }
+    // `o` toggles the scalar OVERLAY layer on/off (restoring the last-picked metric); pick which
+    // metric in the Almanac (`m`).
+    if (k === 'o' || k === 'O') { this._setOverlay(this._overlayKey === 'off' ? this._lastOverlayKey : 'off'); return; }
+    // `l` toggles the relational LINKS layer on/off (restoring the last-picked link kind).
+    if (k === 'l' || k === 'L') { this._setLinks(this._linkKey === 'off' ? this._lastLinkKey : 'off'); return; }
     // `h` toggles the news ticker between the compact crawl and the world-history browser.
     if (k === 'h' || k === 'H') { this.newsPanel.toggle(); return; }
     // `m` toggles the world almanac (aggregate stats + fly-to leaderboard).
     if (k === 'm' || k === 'M') { this.dashboard.toggle(); return; }
-    // 1/2/3 select the speed presets (SPEEDS = [1,3,10]).
-    const idx = { '1': 0, '2': 1, '3': 2 }[k];
+    // 1–5 select the speed presets (SPEEDS = [0.5, 1, 3, 10, 20]).
+    const idx = { '1': 0, '2': 1, '3': 2, '4': 3, '5': 4 }[k];
     if (idx != null && SPEEDS[idx] != null) this.sim.setSpeed(SPEEDS[idx]);
   }
 
@@ -554,9 +570,11 @@ export class SimScene extends Scene {
       worldRenderer.beginFrame();
       this.shared.sea.draw(now, bounds, this.sim.wind, this.sim.season, this.sim.storms);
       worldRenderer.drawIslands(econ.islands, bounds, now, highlightIsland);
-      const overlaySpec = overlayByKey(this._overlayKey);
-      if (overlaySpec.kind === 'scalar') worldRenderer.drawOverlay(econ.islands, bounds, overlaySpec, this._overlayModel.stats, now);
-      else if (overlaySpec.kind === 'edges') worldRenderer.drawRelations(this._overlayModel.edges, bounds, overlaySpec, now);
+      // The two independent map layers (either/both/neither): heat tint under, relational edges over.
+      const scalarSpec = overlayByKey(this._overlayKey);
+      if (scalarSpec.kind === 'scalar') worldRenderer.drawOverlay(econ.islands, bounds, scalarSpec, this._overlayModel.stats, now);
+      const linkSpec = overlayByKey(this._linkKey);
+      if (linkSpec.kind === 'edges') worldRenderer.drawRelations(this._overlayModel.edges, bounds, linkSpec, now);
       if (camera.getZoom() >= WAKE_MIN_ZOOM) worldRenderer.drawWakes(effects.getTrails(), now); // skipped at overview (see _emitWakes)
       worldRenderer.drawStorms(this.sim.storms, bounds, now); // named tempests, under the ships
       worldRenderer.drawShips(world.entities, this.sim.islandsById, bounds, now, highlightHome, this._shipFx);
@@ -619,10 +637,10 @@ export class SimScene extends Scene {
     const portSize = portrait != null ? 52 : 0;
     const portGap = portrait != null ? 10 : 0;
     const ICON_GUTTER = 15; // reserved column for a line's optional ink icon (a bullet glyph)
-    ctx.font = '12px system-ui, sans-serif';
+    ctx.font = tfont('small');
     let w = 0;
     for (const l of lines) {
-      ctx.font = (l.bold ? 'bold ' : '') + '12px system-ui, sans-serif';
+      ctx.font = l.bold ? tfont('label') : tfont('small'); // IM Fell has no bold — title reads via the larger 'label' role
       w = Math.max(w, ctx.measureText(l.text).width + (l.icon ? ICON_GUTTER : 0));
     }
     const textH = lines.length * lh + titleH;
@@ -634,10 +652,10 @@ export class SimScene extends Scene {
     bx = Math.max(4, bx); by = Math.max(4, by);
 
     roundRectPath(ctx, bx, by, boxW, boxH, 7);
-    ctx.fillStyle = 'rgba(14, 26, 34, 0.94)';
+    ctx.fillStyle = 'rgba(240, 232, 206, 0.96)'; // parchment card body
     ctx.fill();
     ctx.lineWidth = 1;
-    ctx.strokeStyle = 'rgba(150, 200, 220, 0.28)';
+    ctx.strokeStyle = PALETTE.panelEdge;
     ctx.stroke();
 
     if (portrait != null) {
@@ -654,10 +672,10 @@ export class SimScene extends Scene {
     const textX = bx + padX + portSize + portGap;
     let ty = by + padY + Math.max(0, (portSize - textH) / 2);
     for (const l of lines) {
-      const col = l.color || 'rgba(228, 240, 246, 0.92)';
+      const col = l.color || PALETTE.panelText;
       let tx = textX;
       if (l.icon) { drawIcon(ctx, l.icon, textX + 6, ty + lh / 2 - 1.5, 12, col); tx += ICON_GUTTER; }
-      ctx.font = (l.bold ? 'bold ' : '') + '12px system-ui, sans-serif';
+      ctx.font = l.bold ? tfont('label') : tfont('small');
       ctx.fillStyle = col;
       ctx.textAlign = 'left'; ctx.textBaseline = 'top';
       ctx.fillText(l.text, tx, ty);
@@ -671,22 +689,22 @@ export class SimScene extends Scene {
     if (!isl) return null;
     const lines = [{ text: isl.name, bold: true }];
     const pct = Math.round((isl.population / Math.max(1, isl.k)) * 100);
-    lines.push({ text: `${islandStateWord(isl)} · pop ${isl.population}/${isl.k} (${pct}%)`, color: 'rgba(190, 210, 220, 0.85)' });
+    lines.push({ text: `${islandStateWord(isl)} · pop ${isl.population}/${isl.k} (${pct}%)`, color: 'rgba(90, 74, 44, 0.9)' });
     lines.push({ text: `Civ ${Math.round((isl.civ || 0) * 100)}% · ${(isl.produces || []).slice(0, 3).join(', ')}` });
     if (isl.haven) {
       lines.push({ text: `PIRATE HAVEN · grip ${Math.round((isl.haven.strength || 0) * 100)}%`, color: '#c0392b', icon: 'skull' });
     } else if (isl.magistrate) {
       lines.push(isl.rebellion
-        ? { text: 'IN REBELLION', color: '#ff5b30', icon: 'flame' }
+        ? { text: 'IN REBELLION', color: '#b0342a', icon: 'flame' }
         : { text: `Loyalty ${Math.round((isl.loyalty != null ? isl.loyalty : 1) * 100)}% · ${isl.magistrate.name}`, color: moraleColor(isl.loyalty != null ? isl.loyalty : 1) });
       const amb = isl.magistrate.ambition;
-      if (amb && amb.label) lines.push({ text: `${amb.label} agenda · ${Math.round((amb.progress || 0) * 100)}%`, color: '#e8c15a', icon: 'pennant' });
+      if (amb && amb.label) lines.push({ text: `${amb.label} agenda · ${Math.round((amb.progress || 0) * 100)}%`, color: '#97781a', icon: 'pennant' });
     }
     if (isl.blight) lines.push({ text: `Blight: ${isl.blight}`, color: eventColor('blight'), icon: 'wheat' });
     if (isl.plague) lines.push({ text: 'Plague outbreak', color: eventColor('plague'), icon: 'skull' });
     if (isl.danger > 0.25) lines.push({ text: `Pirate danger ${Math.round(isl.danger * 100)}%`, color: '#c0392b', icon: 'pennant' });
     if (isl.lawlessness > 0.35) lines.push({ text: `Lawless ${Math.round(isl.lawlessness * 100)}%`, color: '#c0392b', icon: 'sabres' });
-    if (isl.contract) lines.push({ text: `Wants ${isl.contract.good} · ${isl.contract.reward}g`, color: '#e8c15a', icon: 'scroll' });
+    if (isl.contract) lines.push({ text: `Wants ${isl.contract.good} · ${isl.contract.reward}g`, color: '#97781a', icon: 'scroll' });
     // The active data-overlay's value for this port + how it ranks against the archipelago.
     const ov = overlayByKey(this._overlayKey);
     if (ov.kind === 'scalar' && this._overlayModel.stats && this._overlayModel.stats.count) {
@@ -708,23 +726,23 @@ export class SimScene extends Scene {
     const dest = s.destId != null ? this.sim.islandsById.get(s.destId) : null;
     const cap = s.captain;
     const lines = [{ text: s.name || (cap ? `Capt. ${cap.name}` : (home ? `${home.name} ship` : 'Merchant ship')), bold: true }];
-    if (cap) lines.push({ text: `Capt. ${cap.name} · ${cap.rank} · ${s.pirate ? 'rogue' : (home ? home.name : '—')}`, color: 'rgba(190, 210, 220, 0.85)' });
+    if (cap) lines.push({ text: `Capt. ${cap.name} · ${cap.rank} · ${s.pirate ? 'rogue' : (home ? home.name : '—')}`, color: 'rgba(90, 74, 44, 0.9)' });
     if (s.pirate) {
-      lines.push({ text: 'BLACK FLAG — PIRATE', color: '#ff5b4a', bold: true, icon: 'skull' });
-      if (s.bounty > 0) lines.push({ text: `Bounty ${s.bounty}g on this head`, color: '#ffd166' });
+      lines.push({ text: 'BLACK FLAG — PIRATE', color: '#b23a2e', bold: true, icon: 'skull' });
+      if (s.bounty > 0) lines.push({ text: `Bounty ${s.bounty}g on this head`, color: '#9a7d16' });
     } else if (s.privateer) {
-      lines.push({ text: 'PRIVATEER — pirate-hunter', color: '#6fa8d8', bold: true, icon: 'sabres' });
-    } else lines.push({ text: REASON_LABEL[s.reason] || 'Idle', color: '#c8b3ff' });
+      lines.push({ text: 'PRIVATEER — pirate-hunter', color: '#3a6ea5', bold: true, icon: 'sabres' });
+    } else lines.push({ text: REASON_LABEL[s.reason] || 'Idle', color: '#5f47a0' });
     if (dest && s.state === 'sailing') lines.push({ text: `→ ${dest.name}  (~${s.eta}s)` });
     const rel = s.state === 'sailing' ? windRelation(s.heading, this.sim.wind) : null;
     lines.push({
       text: `Cargo ${s.used}/${s.cap} · ${s.gold}g coin${rel ? '  ·  ' + rel.label : ''}`,
       color: rel ? rel.color : undefined,
     });
-    if (s.cargo && s.cargo.People > 0) lines.push({ text: `${s.cargo.People} settlers aboard`, color: '#f2b8d0', icon: 'anchor' });
+    if (s.cargo && s.cargo.People > 0) lines.push({ text: `${s.cargo.People} settlers aboard`, color: '#a83f6e', icon: 'anchor' });
     if (s.morale != null) {
       lines.push(s.revolt
-        ? { text: 'CREW IN REVOLT', color: '#ff5b4a', icon: 'sabres' }
+        ? { text: 'CREW IN REVOLT', color: '#b23a2e', icon: 'sabres' }
         : { text: `Morale ${Math.round(s.morale * 100)}% · ${(s.foodDays || 0).toFixed(1)}d food`, color: moraleColor(s.morale) });
     }
     if (s.sick) lines.push({ text: 'Infected', color: eventColor('plague'), icon: 'skull' });
@@ -780,7 +798,7 @@ export class SimScene extends Scene {
     const econ = this.sim.getEcon();
     const ships = this._world && this._world.entities ? Object.keys(this._world.entities).length : (econ.economy.shipCount || 0);
     const title = `BOATZ   ${this.sim.islands.length} islands · ${ships} ships · ${fmtGold(econ.economy.totalGold)} gold`;
-    const hint = 'click: inspect · drag/WASD: pan · scroll: zoom · space: pause · o: data · l: links · m: almanac';
+    const hint = 'click: inspect · drag/WASD: pan · scroll: zoom · space: pause · 1–5: speed · o: data · l: links · m: almanac';
     ctx.save();
     ctx.textAlign = 'left'; ctx.textBaseline = 'top';
     ctx.font = tfont('heading'); const w1 = ctx.measureText(title).width;
@@ -841,12 +859,24 @@ export class SimScene extends Scene {
     ctx.restore();
   }
 
-  /** Legend for the active data overlay (below the overview toolbar): its name, a red→green heat
-   *  scale, and the lo/hi endpoints. When off, nothing — the toolbar buttons are the affordance. */
+  /** On-map legend(s) for the active data layers (below the overview toolbar): one card per active
+   *  layer — the scalar overlay's heat scale and/or the links overlay's swatch key, stacked. Hidden
+   *  when the Almanac is open (it carries the full legend + distribution) or both layers are off. */
   _overlayLegend(ctx) {
-    const spec = overlayByKey(this._overlayKey);
-    if (spec.kind === 'off') return; // the [Overlays]/[Links]/[Almanac] toolbar carries discovery now
-    const x = 12, y = 94; // sits just under the overview toolbar (y 62–88)
+    if (this.dashboard && this.dashboard.visible) return; // the Almanac carries discovery when open
+    const cards = [];
+    const scalar = overlayByKey(this._overlayKey);
+    const links = overlayByKey(this._linkKey);
+    if (scalar.kind === 'scalar') cards.push(scalar);
+    if (links.kind === 'edges') cards.push(links);
+    if (!cards.length) return; // the toolbar buttons are the only affordance when nothing's on
+    let y = 94; // first card sits just under the overview toolbar (y 62–88)
+    for (const spec of cards) y = this._drawLegendCard(ctx, spec, y) + 8;
+  }
+
+  /** Draw one layer's legend card at `y`; returns its bottom edge (for stacking). */
+  _drawLegendCard(ctx, spec, y) {
+    const x = 12;
     ctx.save();
     ctx.textAlign = 'left'; ctx.textBaseline = 'top';
     const stats = this._overlayModel.stats;
@@ -874,7 +904,7 @@ export class SimScene extends Scene {
       // Median tick, positioned by the median's place in the [lo,hi] domain.
       const mt = stats.hi > stats.lo ? (stats.p50 - stats.lo) / (stats.hi - stats.lo) : 0.5;
       const mx = bx + Math.max(0, Math.min(1, mt)) * sw;
-      ctx.strokeStyle = '#f4fbff'; ctx.lineWidth = 1.5;
+      ctx.strokeStyle = '#2a2012'; ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.moveTo(mx, by - 2); ctx.lineTo(mx, by + sh + 2); ctx.stroke();
       // The live numeric endpoints (auto-ranged), replacing the old adjective-only scale.
       ctx.font = tfont('numSmall'); ctx.fillStyle = PALETTE.panelDim;
@@ -896,10 +926,12 @@ export class SimScene extends Scene {
       }
       ctx.textBaseline = 'top';
     } else {
+      // Scalar layer on, stats not computed yet — just the labelled frame (fills in next sync).
       ctx.fillStyle = PALETTE.panelDim; ctx.font = tfont('numSmall');
-      ctx.textAlign = 'right'; ctx.fillText('o ↻', x + bw - 12, iy + 1); ctx.textAlign = 'left';
+      ctx.textAlign = 'right'; ctx.fillText('…', x + bw - 12, iy + 1); ctx.textAlign = 'left';
     }
     ctx.restore();
+    return y + bh;
   }
 
   _overlay(ctx) {

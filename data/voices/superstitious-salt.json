@@ -13,7 +13,7 @@
       "founder":   "She's mine now, this {home} {type}, and I've paid the sea her due for the keeping of her. {name}{rankc}. I'll say no more than I must, for the water listens.",
       "successor": "The book's in my hands now. {name}{rankc}. I touched wood before ever I took it up, and I'll set down the omens plain as they come.",
       "mutiny":    "They put the old man over the side — bad luck, that, and it'll follow us a good while — and shoved the book at me, a green hand. {name}. The sea help me, for none else will.",
-      "pirate":    "The lads have run up the black flag, and there's no unspilling that salt. {name}{rankc}. She's a marked ship now, and marked ships end but one way.",
+      "rogue":     "The lads have run up the black flag, and there's no unspilling that salt. {name}{rankc}. She's a marked ship now, and marked ships end but one way.",
       "prize":     "We took her clean, and I'll not whistle aboard for a week for fear of what she carries. {name}{rankc}. Her log's ours now — knock wood it brings no curse in with it.",
       "recovered": "A hunter caught us, and that was only the sea collecting a debt long owed. {name}{rankc}. I'll bring her home the honest way, and throw salt over my shoulder the whole passage."
     },
@@ -53,9 +53,53 @@
   },
 
   "kinds": {
-    "plunder": { "recur": { "class": "prize", "phrases": [", and I threw salt after her for luck", ", my {ord} prize, and I've whistled for none of them", " — no good comes of counting them aloud"] } },
-    "sunk":    { "recur": { "class": "prize", "phrases": [", down she went, and I looked away as she did"] } },
-    "fended":  { "recur": { "class": "stand", "phrases": [", the old ways held once more", " — spared again, touch wood"] } },
-    "hunted":  { "recur": { "class": "hunt",  "phrases": [", the {ord} black-flag wolf the sea took off our backs", " — one Jonah fewer on the water"] } }
+    "plunder": {
+      "say": [
+        "{we} caught {foe} on an ill wind and stripped her — {goods} bales and {gold}g into the hold, and I threw salt after her as she limped off",
+        "{foe} showed us her stern like an omen, and {we} took {goods} crates and {gold}g from her, though I'd not count it aloud for fear of the counting",
+        "{we} boarded {foe} under a red-rimmed moon and eased {goods} casks and {gold}g out of her, this once, with the sea's leave",
+        "{we} ran {foe} down and lightened her of {goods} chests and {gold}g, and knocked the rail thrice before ever we made sail",
+        "{foe} carried a Jonah's luck, and {we} bled her of {goods} bales and {gold}g before letting the marked hulk crawl away home",
+        "{we} came alongside {foe} for {goods} crates and {gold}g, and never whistled once the whole grim while",
+        "{we} took {goods} casks and {gold}g off {foe} and spat to leeward the moment her hull dropped from sight"
+      ],
+      "recur": { "class": "prize", "phrases": [", and I threw salt after her for luck", ", my {ord} prize, and I've whistled for none of them", " — no good comes of counting them aloud"] }
+    },
+    "sunk": {
+      "say": [
+        "{we} held {foe} under the guns till she filled and went down, and I looked away as the water took her",
+        "{foe} slipped beneath before we could lift a single cask — the sea wanted her whole, and what the sea wants it has",
+        "{we} hammered {foe} till she settled, and I muttered the old words the moment her mast went under",
+        "{foe} rolled and sank with all her cargo, and I'd not name aloud what she carried down for fear it heard",
+        "{we} put {foe} on the bottom, and the gulls quit us for a day after — never a good sign, that",
+        "{we} sent {foe} down cold, and threw salt on the deck where she'd lain to ward what rose with the bubbles",
+        "{foe} went under bows-first while we watched, and I knocked wood that her ghost stayed down with the wreck"
+      ],
+      "recur": { "class": "prize", "phrases": [", down she went, and I looked away as she did"] }
+    },
+    "fended": {
+      "say": [
+        "{foe} came at us thinking us easy meat, and {we} shot her under and thanked the horseshoe nailed to the mast",
+        "{we} beat {foe} off and sent her down, and I touched wood a dozen times before I dared believe it",
+        "{foe} ran up alongside like doom itself, but {we} held, and the old ways held with us",
+        "{we} stood {foe} off and put her under, and I'll swear it was the salt I cast that morning that saved us",
+        "{foe} meant to have us, and {we} sank her instead — spared again, and I'll not ask why too loudly",
+        "{we} fought {foe} down to the waterline and crossed ourselves as she slid under",
+        "{foe} chose the wrong hull on the wrong tide, and {we} sent her to the deep with the luck riding our way"
+      ],
+      "recur": { "class": "stand", "phrases": [", the old ways held once more", " — spared again, touch wood"] }
+    },
+    "hunted": {
+      "say": [
+        "{we} ran {foe} to ground at last and cut her down — one Jonah fewer haunting the lanes",
+        "{foe} had cursed these waters long enough, and {we} put her under where she'll trouble no honest keel again",
+        "{we} chased {foe} till the wind failed her, then sank the black-flag wolf and threw salt on her grave of water",
+        "{foe} flew the black rag that draws every ill omen, and {we} sent her down to break the spell of her",
+        "{we} caught {foe} in a dead calm — the sea holding her for us, I'll swear it — and finished the wretch",
+        "{we} brought {foe} to the bottom, and the water lay easier after, as though a curse had lifted clean off it",
+        "{foe} was a marked ship, and marked ships end but the one way, and {we} were the ending of her"
+      ],
+      "recur": { "class": "hunt",  "phrases": [", the {ord} black-flag wolf the sea took off our backs", " — one Jonah fewer on the water"] }
+    }
   }
 }

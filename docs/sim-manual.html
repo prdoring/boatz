@@ -1,0 +1,925 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>BOATZ — Simulation Field Manual</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root{
+  color-scheme: light dark;
+  --paper:#e6ece9; --panel:#f2f5f3; --panel-2:#eaefec;
+  --ink:#152730; --ink-soft:#4d6169; --ink-faint:#75898f;
+  --rule:#c3d0cc; --rule-soft:#d6dfdb;
+  --accent:#0d757f; --accent-ink:#0a5a62; --brass:#9a7526;
+  --crit:#b23528; --warn:#9c6314; --ok:#2c7a53;
+  --crit-bg:#f6e2df; --warn-bg:#f4ead6; --ok-bg:#dcefe4;
+  --sea:#0c1c24; --sea-line:#1b3742; --sea-ink:#dbe8ea;
+  --shadow:0 1px 2px rgba(15,35,42,.08),0 6px 22px rgba(15,35,42,.06);
+  --mono:ui-monospace,SFMono-Regular,"Cascadia Code","JetBrains Mono",Consolas,monospace;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root{
+  --paper:#0b151b; --panel:#0f1e26; --panel-2:#0c1a21;
+  --ink:#dde8ea; --ink-soft:#9db2b8; --ink-faint:#6d858c;
+  --rule:#22404a; --rule-soft:#193038;
+  --accent:#4fcdd4; --accent-ink:#7fdde2; --brass:#d3ac54;
+  --crit:#e56a5f; --warn:#e0a94a; --ok:#63b98a;
+  --crit-bg:#3a1a20; --warn-bg:#352c14; --ok-bg:#16311f;
+  --sea:#0a171e; --sea-line:#173039; --sea-ink:#dbe8ea;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 26px rgba(0,0,0,.28);
+}}
+:root[data-theme="light"]{
+  --paper:#e6ece9; --panel:#f2f5f3; --panel-2:#eaefec;
+  --ink:#152730; --ink-soft:#4d6169; --ink-faint:#75898f;
+  --rule:#c3d0cc; --rule-soft:#d6dfdb;
+  --accent:#0d757f; --accent-ink:#0a5a62; --brass:#9a7526;
+  --crit:#b23528; --warn:#9c6314; --ok:#2c7a53;
+  --crit-bg:#f6e2df; --warn-bg:#f4ead6; --ok-bg:#dcefe4;
+  --shadow:0 1px 2px rgba(15,35,42,.08),0 6px 22px rgba(15,35,42,.06);
+}
+:root[data-theme="dark"]{
+  --paper:#0b151b; --panel:#0f1e26; --panel-2:#0c1a21;
+  --ink:#dde8ea; --ink-soft:#9db2b8; --ink-faint:#6d858c;
+  --rule:#22404a; --rule-soft:#193038;
+  --accent:#4fcdd4; --accent-ink:#7fdde2; --brass:#d3ac54;
+  --crit:#e56a5f; --warn:#e0a94a; --ok:#63b98a;
+  --crit-bg:#3a1a20; --warn-bg:#352c14; --ok-bg:#16311f;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 26px rgba(0,0,0,.28);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:var(--sans); font-size:16px; line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(circle at 1px 1px, var(--rule-soft) 1px, transparent 0);
+  background-size:26px 26px;
+}
+.shell{max-width:1280px; margin:0 auto; padding:0 clamp(16px,4vw,44px);}
+/* ---- masthead ---- */
+header.mast{padding:clamp(40px,7vw,84px) 0 30px; border-bottom:2px solid var(--ink); position:relative;}
+.eyebrow{font-family:var(--mono); font-size:12.5px; letter-spacing:.28em; text-transform:uppercase; color:var(--accent-ink); margin:0 0 14px;}
+h1.title{font-family:var(--serif); font-weight:600; font-size:clamp(2.4rem,6vw,4.3rem); line-height:1.02; letter-spacing:-.01em; margin:0; text-wrap:balance;}
+h1.title em{font-style:italic; color:var(--accent-ink);}
+.dek{font-family:var(--serif); font-size:clamp(1.05rem,2.2vw,1.4rem); color:var(--ink-soft); max-width:60ch; margin:18px 0 0; text-wrap:balance;}
+.mast-meta{display:flex; flex-wrap:wrap; gap:8px 10px; margin-top:26px;}
+.chip{font-family:var(--mono); font-size:12px; letter-spacing:.02em; padding:5px 11px; border:1px solid var(--rule); border-radius:2px; background:var(--panel); color:var(--ink-soft);}
+.chip b{color:var(--ink); font-weight:600;}
+.themebtn{position:absolute; top:clamp(40px,7vw,84px); right:0; font-family:var(--mono); font-size:12px; letter-spacing:.08em; text-transform:uppercase; padding:8px 14px; border:1px solid var(--rule); background:var(--panel); color:var(--ink); border-radius:3px; cursor:pointer;}
+.themebtn:hover{border-color:var(--accent);}
+.themebtn:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+/* ---- layout ---- */
+.grid{display:grid; grid-template-columns:236px minmax(0,1fr); gap:clamp(24px,4vw,56px); padding:40px 0 90px; align-items:start;}
+nav.toc{position:sticky; top:18px; font-size:13.5px; max-height:calc(100vh - 36px); overflow:auto;}
+nav.toc .toc-h{font-family:var(--mono); font-size:11px; letter-spacing:.2em; text-transform:uppercase; color:var(--ink-faint); margin:0 0 10px;}
+nav.toc ol{list-style:none; margin:0 0 20px; padding:0; counter-reset:sec;}
+nav.toc a{display:block; padding:5px 10px; color:var(--ink-soft); text-decoration:none; border-left:2px solid var(--rule-soft); line-height:1.35;}
+nav.toc a:hover{color:var(--ink); border-left-color:var(--accent); background:var(--panel-2);}
+nav.toc a.num::before{counter-increment:sec; content:counter(sec) " · "; font-family:var(--mono); font-size:11px; color:var(--accent-ink);}
+main{min-width:0;}
+section{scroll-margin-top:20px; margin:0 0 8px; padding:38px 0; border-top:1px solid var(--rule);}
+section:first-of-type{border-top:none; padding-top:8px;}
+h2{font-family:var(--serif); font-weight:600; font-size:clamp(1.55rem,3.4vw,2.15rem); letter-spacing:-.01em; margin:0 0 6px; line-height:1.1; text-wrap:balance;}
+h2 .roman{font-family:var(--mono); font-size:.62em; letter-spacing:.05em; color:var(--accent-ink); margin-right:.6em; vertical-align:.12em;}
+h3{font-family:var(--sans); font-weight:700; font-size:1.06rem; letter-spacing:.005em; margin:30px 0 8px;}
+.decides{font-family:var(--mono); font-size:12.5px; color:var(--ink-soft); margin:4px 0 20px; padding:9px 14px; background:var(--panel); border-left:3px solid var(--accent); border-radius:0 3px 3px 0;}
+.decides b{color:var(--accent-ink); letter-spacing:.06em; text-transform:uppercase; font-size:11px;}
+p{margin:0 0 14px; max-width:74ch;}
+ul.tight{margin:0 0 16px; padding-left:0; list-style:none; max-width:78ch;}
+ul.tight>li{position:relative; padding-left:20px; margin:0 0 9px;}
+ul.tight>li::before{content:""; position:absolute; left:3px; top:.62em; width:6px; height:6px; background:var(--accent); border-radius:50%;}
+code,.k{font-family:var(--mono); font-size:.86em; background:var(--panel-2); padding:1px 5px; border-radius:3px; border:1px solid var(--rule-soft); color:var(--ink);}
+.ref{font-family:var(--mono); font-size:.8em; color:var(--accent-ink); white-space:nowrap;}
+b,strong{color:var(--ink); font-weight:700;}
+em.term{font-style:normal; font-weight:600; color:var(--accent-ink);}
+/* ---- chart panel (fixed dark chart-table in both themes) ---- */
+/* A chart is a fixed-height window; the <pre> is the scroll surface, the svg is width-scaled to zoom.
+   Nothing here transforms or re-parents the svg, so it can never fight Mermaid's async render. */
+.chart{position:relative; background:var(--sea); border:1px solid var(--sea-line); border-radius:6px; margin:22px 0 8px; height:clamp(380px,64vh,600px); overflow:hidden; box-shadow:var(--shadow);
+  background-image:linear-gradient(var(--sea-line) 1px,transparent 1px),linear-gradient(90deg,var(--sea-line) 1px,transparent 1px);
+  background-size:34px 34px,34px 34px;}
+.chart pre.mermaid{position:absolute; inset:0; margin:0; padding:16px; overflow:auto; background:transparent; text-align:center; cursor:grab; touch-action:none; -webkit-user-select:none; user-select:none; scrollbar-width:thin; scrollbar-color:#2c515c transparent;}
+.chart pre.mermaid.grabbing{cursor:grabbing;}
+.chart pre.mermaid svg{display:block; margin:0 auto; width:100%; height:auto; max-width:none!important;}
+.chart.pz-max{position:fixed; inset:14px; height:auto; z-index:1000; box-shadow:0 20px 70px rgba(0,0,0,.55);}
+.pz-backdrop{position:fixed; inset:0; z-index:999; background:rgba(4,10,14,.66); backdrop-filter:blur(2px); border:0;}
+body.pz-locked{overflow:hidden;}
+/* per-chart controls */
+.pz-tools{position:absolute; top:8px; right:8px; z-index:6; display:flex; gap:4px;}
+.pz-tools button{width:30px; height:30px; display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-size:15px; line-height:1; color:var(--sea-ink); background:rgba(10,23,30,.72); border:1px solid var(--sea-line); border-radius:4px; cursor:pointer; padding:0; backdrop-filter:blur(3px);}
+.pz-tools button:hover{border-color:#4fcdd4; color:#9fe8ec;}
+.pz-tools button:focus-visible{outline:2px solid #4fcdd4; outline-offset:1px;}
+.pz-hint{position:absolute; left:11px; bottom:8px; z-index:5; font-family:var(--mono); font-size:10.5px; letter-spacing:.03em; color:#5f8a97; pointer-events:none; opacity:.85;}
+.chart.pz-max{position:fixed; inset:14px; height:auto; z-index:1000; box-shadow:0 20px 70px rgba(0,0,0,.55);}
+.pz-backdrop{position:fixed; inset:0; z-index:999; background:rgba(4,10,14,.66); backdrop-filter:blur(2px); border:0;}
+body.pz-locked{overflow:hidden;}
+.chart-cap{font-family:var(--mono); font-size:11.5px; letter-spacing:.04em; color:var(--ink-faint); margin:6px 2px 0; text-transform:uppercase;}
+.legend{display:flex; flex-wrap:wrap; gap:14px; margin:14px 0 4px; font-family:var(--mono); font-size:11.5px; color:var(--ink-soft);}
+.legend span{display:inline-flex; align-items:center; gap:6px;}
+.swatch{width:22px; height:13px; border-radius:2px; border:1.5px solid;}
+.sw-actor{background:#123c3f; border-color:#4fcdd4;}
+.sw-dec{background:#15303a; border-color:#3c6f7c; border-radius:9px;}
+.sw-issue{background:#3b1a22; border-color:#e0645a;}
+.sw-trap{background:#352c14; border-color:#e0a94a;}
+.sw-good{background:#173226; border-color:#63b98a;}
+/* ---- callouts ---- */
+.note{border:1px solid var(--rule); border-left-width:4px; border-radius:0 5px 5px 0; padding:13px 17px; margin:16px 0; background:var(--panel); font-size:14.5px;}
+.note .tag{font-family:var(--mono); font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; font-weight:700; display:inline-block; margin-right:8px;}
+.note.crit{border-left-color:var(--crit); background:var(--crit-bg);} .note.crit .tag{color:var(--crit);}
+.note.warn{border-left-color:var(--warn); background:var(--warn-bg);} .note.warn .tag{color:var(--warn);}
+.note.ok{border-left-color:var(--ok); background:var(--ok-bg);} .note.ok .tag{color:var(--ok);}
+.note p{margin:0; max-width:none;}
+.note p+p{margin-top:8px;}
+/* ---- tables ---- */
+.twrap{overflow-x:auto; margin:20px 0; border:1px solid var(--rule); border-radius:6px; box-shadow:var(--shadow);}
+table{border-collapse:collapse; width:100%; font-size:13.5px; min-width:640px;}
+th,td{text-align:left; padding:10px 13px; border-bottom:1px solid var(--rule-soft); vertical-align:top;}
+thead th{background:var(--panel); font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); position:sticky; top:0;}
+tbody tr:hover{background:var(--panel-2);}
+tbody tr:last-child td{border-bottom:none;}
+td .ref{display:block; margin-top:3px;}
+.sev{font-family:var(--mono); font-size:10.5px; font-weight:700; letter-spacing:.06em; padding:2px 8px; border-radius:3px; white-space:nowrap; text-transform:uppercase;}
+.sev.high{background:var(--crit-bg); color:var(--crit); border:1px solid var(--crit);}
+.sev.med{background:var(--warn-bg); color:var(--warn); border:1px solid var(--warn);}
+.sev.low{background:var(--panel-2); color:var(--ink-soft); border:1px solid var(--rule);}
+.actorcell{font-weight:700; white-space:nowrap;}
+/* ---- footer ---- */
+footer{border-top:2px solid var(--ink); padding:26px 0 60px; font-family:var(--mono); font-size:12px; color:var(--ink-faint); letter-spacing:.02em;}
+footer b{color:var(--ink-soft);}
+@media (max-width:860px){
+  .grid{grid-template-columns:1fr; gap:8px;}
+  nav.toc{position:static; max-height:none; margin-bottom:14px; border:1px solid var(--rule); border-radius:6px; padding:16px; background:var(--panel);}
+  .themebtn{position:static; margin-top:22px;}
+  header.mast{padding-bottom:22px;}
+}
+</style>
+
+<div class="shell">
+<header class="mast">
+  <p class="eyebrow">Admiralty Dossier · System Map + Decision Atlas</p>
+  <h1 class="title">BOATZ — the <em>Simulation</em> Field Manual</h1>
+  <p class="dek">Every actor in this sea, every decision it makes, the numbers behind those decisions — and where the machinery deadlocks, starves, or quietly does nothing.</p>
+  <div class="mast-meta">
+    <span class="chip"><b>21</b> systems · fixed order</span>
+    <span class="chip">tick <b>20 Hz</b> · substep <b>0.05 s</b></span>
+    <span class="chip">1 sim-day = <b>60 s</b></span>
+    <span class="chip">server-authoritative · client renders only</span>
+    <span class="chip"><b>30</b> issues catalogued</span>
+  </div>
+  <button class="themebtn" id="themebtn" aria-label="Toggle light or dark theme">◐ Theme</button>
+</header>
+
+<div class="grid">
+<nav class="toc" aria-label="Contents">
+  <p class="toc-h">The Chart Table</p>
+  <ol>
+    <li><a class="num" href="#pipeline">The tick &amp; the pipeline</a></li>
+    <li><a class="num" href="#actors">The actors, at a glance</a></li>
+    <li><a class="num" href="#port">The Port — economy engine</a></li>
+    <li><a class="num" href="#hulls">The Port — buying hulls</a></li>
+    <li><a class="num" href="#magistrate">The Magistrate — governance</a></li>
+    <li><a class="num" href="#planner">The Merchant Captain — planning a voyage</a></li>
+    <li><a class="num" href="#statemachine">The Ship — states &amp; motion</a></li>
+    <li><a class="num" href="#crew">The Crew — morale &amp; mutiny</a></li>
+    <li><a class="num" href="#pirate">The Pirate — the hunt</a></li>
+    <li><a class="num" href="#combat">Combat — how a fight resolves</a></li>
+    <li><a class="num" href="#navy">The Navy — danger, bounty, privateers</a></li>
+    <li><a class="num" href="#haven">The Haven — a port gone rogue</a></li>
+    <li><a class="num" href="#diplomacy">The Diplomatic layer</a></li>
+    <li><a class="num" href="#weather">The Weather</a></li>
+    <li><a class="num" href="#info">The Information layer</a></li>
+    <li><a class="num" href="#register">Issue register</a></li>
+  </ol>
+  <p class="toc-h">Diagram key</p>
+  <div class="legend" style="flex-direction:column; gap:7px;">
+    <span><i class="swatch sw-actor"></i> actor / entry</span>
+    <span><i class="swatch sw-dec"></i> decision</span>
+    <span><i class="swatch sw-issue"></i> bug / deadlock</span>
+    <span><i class="swatch sw-trap"></i> fragile / trap</span>
+    <span><i class="swatch sw-good"></i> verified sound</span>
+  </div>
+</nav>
+
+<main>
+
+<!-- ============ 1. PIPELINE ============ -->
+<section id="pipeline">
+  <h2><span class="roman">I.</span>The tick &amp; the pipeline</h2>
+  <div class="decides"><b>Decides:</b> nothing — this is the clockwork the actors run inside. Order is load-bearing.</div>
+  <p>The server owns the whole world. Every real tick (<code>20 Hz</code>), a <em class="term">clock</em> turns real elapsed time × the speed dial into <code>dtSim</code> sim-seconds (<code>0</code> when paused). The <em class="term">sim</em> then advances the world in fixed <code>0.05 s</code> substeps — so 10× fast-forward is literally ten 1× steps, identical dynamics at every speed <span class="ref">world.js:182</span>. A single ordered list of <b>21 systems</b> runs once per substep <span class="ref">systems.js:27</span>; the order below is exact, and it matters — production happens before pricing, pricing before dispatch, and every fleet moves before the shore guns and the collision solver read final positions.</p>
+  <p>The client is a pure viewer: it merges server snapshots by id and never simulates <span class="ref">SimClient.js:7</span>. The only authoritative thing a viewer can change today is the clock.</p>
+
+  <div class="chart">
+<pre class="mermaid" id="fig1">
+%%{init:{'theme':'base','themeVariables':{'fontSize':'14px','primaryColor':'#15303a','primaryTextColor':'#e7eff1','primaryBorderColor':'#3c6f7c','lineColor':'#5f8a97','clusterBkg':'#0e2029','clusterBorder':'#295059','edgeLabelBackground':'#0e2029','titleColor':'#dfe9ec'}}}%%
+flowchart TB
+  CLK["CLOCK — realDt × speed → dtSim&lt;br/&gt;0 when paused"]:::actor --> LOOP
+  subgraph LOOP["SUBSTEP LOOP — repeat ⌈dtSim ÷ 0.05s⌉ times, ≤ 20"]
+    direction TB
+    I["applyIntents — player/ext commands"] --> ENV
+    subgraph ENV["① Environment"]
+      direction LR
+      WE["weather&lt;br/&gt;season · storms"] --> WN["wind drift"]
+    end
+    ENV --> ECO
+    subgraph ECO["② Economy — the port"]
+      direction LR
+      PB["produceBase"] --> PG["produceGoods"] --> POP["population&lt;br/&gt;eat · starve · grow"] --> PR["pricing"]
+    end
+    ECO --> TRD
+    subgraph TRD["③ Trade"]
+      direction LR
+      DI["dispatch&lt;br/&gt;assign voyages"] --> SH["ship&lt;br/&gt;move · dock · settle"]
+    end
+    TRD --> CFL
+    subgraph CFL["④ Conflict"]
+      direction LR
+      PI["piracy&lt;br/&gt;pirates move/fight"] --> AP["antipiracy&lt;br/&gt;privateers"] --> SB["shoreBatteries"] --> SEP["separation&lt;br/&gt;anti-collision"]
+    end
+    CFL --> SOC
+    subgraph SOC["⑤ Society"]
+      direction LR
+      CR["crew&lt;br/&gt;morale · mutiny"] --> UP["upkeep&lt;br/&gt;gold in/out"] --> RE["reputation"] --> EV["events&lt;br/&gt;blight · plague"] --> GV["governance&lt;br/&gt;loyalty · rebellion"] --> HV["havens"]
+    end
+    SOC --> GRW
+    subgraph GRW["⑥ Growth — daily-gated"]
+      direction LR
+      DV["development&lt;br/&gt;build hulls"] --> CT["contracts"] --> VY["reckonVoyages&lt;br/&gt;presume lost"]
+    end
+  end
+  LOOP --> CHR["CHRONICLE — drain events → SQLite&lt;br/&gt;write-only, never read back"]:::good
+  classDef actor fill:#123c3f,stroke:#4fcdd4,color:#d6faf9,stroke-width:1.4px;
+  classDef good fill:#173226,stroke:#63b98a,color:#cdeed9;
+</pre>
+  </div>
+  <p class="chart-cap">Fig. I — one authoritative substep. Broadcast cadence: hot ship positions ~10 Hz; economy + cold ship panels ~1 Hz.</p>
+</section>
+
+<!-- ============ 2. ACTORS ============ -->
+<section id="actors">
+  <h2><span class="roman">II.</span>The actors, at a glance</h2>
+  <div class="decides"><b>Decides:</b> who holds a will in this world, and what levers each one pulls.</div>
+  <p>There is no single "AI." Behaviour is distributed across independent agents, each mutating its own slice of state on its own trigger. Two of them mirror each other exactly: a ship's <b>crew</b> (morale → mutiny, gated by the captain's Command) and an island's <b>populace</b> (loyalty → rebellion, gated by the magistrate's skill) are the same machine at two scales.</p>
+  <div class="twrap">
+  <table>
+    <thead><tr><th>Actor</th><th>Trigger</th><th>Chief decisions</th><th>Owns / mutates</th></tr></thead>
+    <tbody>
+      <tr><td class="actorcell">Port / Island</td><td>every substep</td><td>produce, price, spend income, post contracts, order hulls</td><td>stock, gold, price, population, targets</td></tr>
+      <tr><td class="actorcell">Magistrate</td><td>substep + daily</td><td>set economic ambition (retargets demand), hold or lose loyalty, quell rebellions</td><td>loyalty, unrest, lawlessness, grievance, targets</td></tr>
+      <tr><td class="actorcell">Populace</td><td>every substep</td><td>eat, grow/starve, migrate, rebel</td><td>population, civ score</td></tr>
+      <tr><td class="actorcell">Merchant Captain</td><td>when ship idle</td><td>plan the whole voyage basket (food→aid→exports→migration→scout)</td><td>ship.voyage, cargo plan</td></tr>
+      <tr><td class="actorcell">Ship</td><td>every substep</td><td>sail, steer round land, dock, flee, shelter, tack</td><td>x/y/heading, state, hull, rig</td></tr>
+      <tr><td class="actorcell">Crew</td><td>every substep at sea</td><td>eat, hold or break morale, mutiny / desert / turn pirate</td><td>morale, hunger, unrest, uprising</td></tr>
+      <tr><td class="actorcell">Pirate Captain</td><td>every substep</td><td>hunt, blockade, raid, defend a haven, resupply, flee</td><td>_prey, _blockadeId, position, combat</td></tr>
+      <tr><td class="actorcell">Privateer</td><td>every substep</td><td>hunt pirates, patrol, besiege havens, resupply</td><td>_prey, _guard, position, combat</td></tr>
+      <tr><td class="actorcell">Shore battery</td><td>every 12 s</td><td>shell the nearest pirate (port) or besieger (haven)</td><td>target hull/rig/guns</td></tr>
+      <tr><td class="actorcell">Haven</td><td>daily</td><td>entrench, build pirates, fence plunder, resist assault</td><td>havenStrength, lawlessness</td></tr>
+      <tr><td class="actorcell">Diplomacy</td><td>on trade + daily</td><td>warm/cool opinions, form blocs, embargo, betray, send aid</td><td>reputation matrix</td></tr>
+      <tr><td class="actorcell">Weather</td><td>substep + daily</td><td>swing seasonal production, spawn/steer storms, drift the wind</td><td>_prodMult, storms, wind vector</td></tr>
+      <tr><td class="actorcell">The record (beliefs)</td><td>on dock / at sea</td><td>carry imperfect prices &amp; facts port→ship→port; forget the stale</td><td>island.beliefs, ship.knows, intel</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ============ 3. PORT ECONOMY ============ -->
+<section id="port">
+  <h2><span class="roman">III.</span>The Port — the economy engine</h2>
+  <div class="decides"><b>Decides:</b> what a port makes, what it charges, and whether its people eat or breed. Runs blind (no will) — pure functions of stock and population.</div>
+  <ul class="tight">
+    <li><b>Produce.</b> Each island mines its primary raw at <code>10/s</code> and secondary at <code>×0.25</code>, with a logistic taper toward a <code>2000</code> stockpile cap <span class="ref">production.js:17</span>. Recipe goods scale to population (<code>0.07 × pop</code>) but are clamped so ≥25% of any local raw survives as exportable surplus — this is what <em class="term">forces trade</em> <span class="ref">production.js:46-62</span>.</li>
+    <li><b>Consume.</b> Population eats <code>0.011 food/head</code>, plus comfort goods (Ale, Clothing, Weapons, Luxury) burned as demand sinks so every port keeps importing <span class="ref">population.js:28-41</span>.</li>
+    <li><b>Live or die.</b> Starvation deaths are rate-bounded and floored at <code>pop 5</code>; growth is <em class="term">gated on food security</em> (2+ days stored) so population can never outrun its larder <span class="ref">population.js:44-57</span>. There is no true death-spiral here.</li>
+    <li><b>Price.</b> Mid price = <code>base × clamp((target÷stock)^1, 0.33, 3.0)</code>, eased toward target by a non-overshooting 10%/s limiter; bid/ask are ±5% <span class="ref">pricing.js:13-26</span>.</li>
+    <li><b>Bank.</b> Income = <code>2.4 × pop × (0.4 + 0.6·civ)</code>; sinks are ship upkeep + a per-capita admin cost, and any gold above <code>40 × pop</code> overflows and is destroyed. <b>Gold is deliberately not conserved</b> <span class="ref">upkeep.js:38-41</span>.</li>
+  </ul>
+
+  <div class="chart">
+<pre class="mermaid" id="fig2">
+%%{init:{'theme':'base','themeVariables':{'fontSize':'14px','primaryColor':'#15303a','primaryTextColor':'#e7eff1','primaryBorderColor':'#3c6f7c','lineColor':'#5f8a97','clusterBkg':'#0e2029','clusterBorder':'#295059','edgeLabelBackground':'#0e2029'}}}%%
+flowchart LR
+  RAW["Mine primary/secondary raw&lt;br/&gt;logistic taper → cap 2000"]:::actor --> MAKE
+  MAKE["Make recipe goods&lt;br/&gt;rate = 0.07 × pop&lt;br/&gt;clamp: leave ≥25% raw"] --> STOCK[("Stockpiles")]
+  STOCK --> EAT["Populace eats&lt;br/&gt;0.011 food/head + comforts"]
+  EAT --> Q1{"food ≥ 2 days&lt;br/&gt;stored ?"}
+  Q1 -->|yes| GROW["Grow: logistic toward K&lt;br/&gt;× order (1 − 0.8·lawless)"]
+  Q1 -->|deficit| STARVE["Deaths ∝ deficit&lt;br/&gt;floored at pop 5"]:::good
+  GROW --> STOCK
+  STARVE --> STOCK
+  STOCK --> PRICE["Price = base × clamp(target÷stock, 0.33×, 3×)&lt;br/&gt;eased 10%/s"]
+  PRICE --> BANK{"Bank: income − upkeep"}
+  BANK -->|"gt 40 × pop"| BURN["Overflow gold DESTROYED"]:::trap
+  BANK -->|else| HOARD[("Treasury")]
+  EAT -. "spoilage 0.0003" .-> SPOIL["Food decays here…"]:::issue
+  STOCK -. "spoilage 0.0004" .-> SPOIL2["…and AGAIN in upkeep"]:::issue
+  SPOIL --- SPOIL2
+  classDef actor fill:#123c3f,stroke:#4fcdd4,color:#d6faf9,stroke-width:1.4px;
+  classDef issue fill:#3b1a22,stroke:#e0645a,color:#ffdad4,stroke-width:1.3px;
+  classDef trap fill:#352c14,stroke:#e0a94a,color:#ffe9c2;
+  classDef good fill:#173226,stroke:#63b98a,color:#cdeed9;
+</pre>
+  </div>
+  <p class="chart-cap">Fig. III — the port's blind loop. Red = defect; amber = intended-but-fragile.</p>
+
+  <div class="note warn"><span class="tag">Trap</span><p><b>Food is spoiled twice per substep.</b> <code>population</code> decays Food by <code>0.0003·h</code> and then <code>upkeep</code> decays <em>all</em> stock — Food included — by another <code>0.0004·h</code> <span class="ref">population.js:32 · upkeep.js:45</span>. Food loses ~2.3× the decay rate of every other good, tightening the very margin that drives the "starving tail."</p></div>
+  <div class="note ok"><span class="tag">Sound</span><p>Starvation is floored and growth is food-gated, so no runaway death-spiral. Every good/gold trade move goes through the conserved <code>transfer</code> primitive — the <em>only</em> sanctioned gold source/sink is <code>upkeep</code> (plus development &amp; contract escrow).</p></div>
+</section>
+
+<!-- ============ 4. BUYING HULLS ============ -->
+<section id="hulls">
+  <h2><span class="roman">IV.</span>The Port — buying hulls <span style="font-size:.5em; color:var(--crit); font-family:var(--mono); letter-spacing:.1em;">◆ mostly broken</span></h2>
+  <div class="decides"><b>Decides:</b> how a port replaces lost ships. Two independent paths — and both are throttled by a mispriced constant.</div>
+  <p>A port grows its fleet two ways: opportunistically, by sending an idle hull to a shipyard on a voyage; or reliably, via <code>development</code>, which spawns a hull at home each day if the treasury is fat. The intent is sound. The execution is undermined by a pricing bug that makes the true cost of a ship <b>~3× what every gate assumes</b>.</p>
+
+  <div class="chart">
+<pre class="mermaid" id="fig3">
+%%{init:{'theme':'base','themeVariables':{'fontSize':'14px','primaryColor':'#15303a','primaryTextColor':'#e7eff1','primaryBorderColor':'#3c6f7c','lineColor':'#5f8a97','clusterBkg':'#0e2029','clusterBorder':'#295059','edgeLabelBackground':'#0e2029'}}}%%
+flowchart TB
+  ROOT["Shipyard stock.Ships capped at 3,&lt;br/&gt;but price target = 250 ⇒ ratio 3÷250&lt;br/&gt;⇒ price multiplier PINNED at 3×"]:::issue
+  ROOT --> PRICE["Real ask ≈ 1200 × 3 = 3780g&lt;br/&gt;(never the named base 1200)"]:::issue
+  PRICE --> PA & PB
+  subgraph PATHA["Path A — buy-ship-on-voyage"]
+    direction TB
+    PA["Demand gate: owned in 1..5&lt;br/&gt;and gold gt 1800"] --> PA2{"believes yard price?"}
+    PA2 -->|"never observed → thinks 1260"| PAF["Loads ~1512g,&lt;br/&gt;arrives, ask is 3780 → buys NOTHING"]:::issue
+    PA2 -->|"knows true price"| PA3{"gold ≥ 5040 ?&lt;br/&gt;(needs pop ≥ 126)"}
+    PA3 -->|"rare"| PAOK["Buys a hull"]:::good
+    PA3 -->|"usual"| PAF
+  end
+  subgraph PATHB["Path B — development (daily)"]
+    direction TB
+    PB["gold ≥ 2400 (named)…"] --> PB2{"real gate:&lt;br/&gt;gold ≥ ask 3780 + reserve 1000"}
+    PB2 -->|"pop ≥ ~120"| PBOK["Spawn hull at home"]:::good
+    PB2 -->|"smaller port"| PBNO["No hull — fleet only DECAYS"]:::issue
+  end
+  CAP["Hoard cap 40 × pop&lt;br/&gt;pins treasury below the real price"]:::trap --> PA3
+  CAP --> PB2
+  classDef issue fill:#3b1a22,stroke:#e0645a,color:#ffdad4,stroke-width:1.3px;
+  classDef trap fill:#352c14,stroke:#e0a94a,color:#ffe9c2;
+  classDef good fill:#173226,stroke:#63b98a,color:#cdeed9;
+</pre>
+  </div>
+  <p class="chart-cap">Fig. IV — the fleet-replacement machine, and where it jams.</p>
+
+  <div class="note crit"><span class="tag">Bug · high</span><p><b>Ships never cost their base price.</b> <code>SHIP_STOCK_CAP = 3</code> caps a yard's <code>stock.Ships</code>, but the price target for Ships defaults to <code>250</code>, so <code>(250÷3)</code> saturates the multiplier at the <code>3.0</code> ceiling <em>always</em> <span class="ref">economy.json:88 · pricing.js:14</span>. Ask ≈ <b>3780g</b>, not the advertised <code>1200</code>. Every downstream threshold keyed to 1200 is wrong by ~3×.</p></div>
+  <div class="note crit"><span class="tag">Deadlock · high</span><p><b>Small ports can never replace a hull.</b> Healthy treasuries pin at the <code>40 × pop</code> hoard cap. Buying needs ~<code>4780g</code> ⇒ <b>pop ≥ ~120</b>; starting pop is 80. So a port must nearly <em>double its population</em> before it can afford one ship — while pirates and storms take its starting hulls in the meantime. This is the structural engine behind the known "starving tail." <span class="ref">upkeep.js:40 · trade.js:33 · development.js:40</span></p></div>
+</section>
+
+<!-- ============ 5. MAGISTRATE ============ -->
+<section id="magistrate">
+  <h2><span class="roman">V.</span>The Magistrate — governance, loyalty &amp; rebellion</h2>
+  <div class="decides"><b>Decides:</b> a port's economic <em>ambition</em> (which becomes its import/export demand), and whether the populace stays loyal or burns the docks.</div>
+  <p>Each island is ruled by a named magistrate with three traits (<code>firmness, generosity, integrity</code>) and one of six agendas — <code>grow, industry, wealth, fortify, splendor, order</code> — chosen by the island's nature <span class="ref">magistrate.js:69-85</span>. The agenda <b>retargets the economy</b>: it rewrites the port's <code>targets[]</code> (fortify boosts Weapons ×2.4, splendor Luxury ×2.2, etc.), and those targets <em>are</em> the port's dynamic demand that the trade planner reads. Food is always floored at base — no agenda can starve the port <span class="ref">magistrate.js:114-125</span>.</p>
+  <p>Loyalty eases toward a steady value set by civ, skill, generosity and lawlessness, dragged down by famine, plague, crowding and graft, buoyed by "bread &amp; circuses" (Ale+Luxury in stock) <span class="ref">magistrate.js:258-266</span>. Below loyalty <code>0.25</code>, unrest accrues; once it passes a skill-scaled grace window, the island <b>rebels</b> — halting all production and income for exactly one day — then resolves to a <em class="term">quell</em> or an <em class="term">overthrow</em> <span class="ref">magistrate.js:272-318</span>.</p>
+
+  <div class="chart">
+<pre class="mermaid" id="fig4">
+%%{init:{'theme':'base','themeVariables':{'fontSize':'14px','primaryColor':'#15303a','primaryTextColor':'#e7eff1','primaryBorderColor':'#3c6f7c','lineColor':'#5f8a97','clusterBkg':'#0e2029','clusterBorder':'#295059','edgeLabelBackground':'#0e2029'}}}%%
+flowchart TB
+  INSTALL["Seat a magistrate&lt;br/&gt;traits + agenda"]:::actor --> RETARGET["Retarget demand&lt;br/&gt;targets[] × agenda bias"]
+  RETARGET --> DEMAND[("Port demand → trade planner")]:::good
+  INSTALL --> LOY["Loyalty eases to steady:&lt;br/&gt;+civ +skill +generosity&lt;br/&gt;−famine −plague −crowd −graft&lt;br/&gt;+circuses"]
+  LOY --> Q1{"loyalty lt 0.25 ?"}
+  Q1 -->|no| CALM["+6 xp/day, unrest decays"]:::good
+  Q1 -->|yes| UNREST["unrest += 1/day"]
+  UNREST --> Q2{"unrest ≥ grace&lt;br/&gt;(1.1–6.7 d, scales with skill/firmness,&lt;br/&gt;shortened by grievance) ?"}
+  Q2 -->|not yet| LOY
+  Q2 -->|yes| REBEL["REBELLION (1 day)&lt;br/&gt;production = 0, income = 0&lt;br/&gt;civ drains, upkeep still bleeds"]:::trap
+  REBEL --> RES{"resolve after 1 day:&lt;br/&gt;rng lt quell-odds ?"}
+  RES -->|quell| QUELL["Hold power&lt;br/&gt;grievance += 0.13"]
+  RES -->|overthrow| OVER["New magistrate + agenda&lt;br/&gt;civ ×0.75, gold ×0.65&lt;br/&gt;lawlessness += 0.18"]
+  QUELL --> GRIEV["Grievance ratchet ↑&lt;br/&gt;→ lawlessness ↑&lt;br/&gt;→ shorter next grace"]:::trap
+  GRIEV --> HAVEN{"lawlessness ≥ 0.58&lt;br/&gt;and civ ≤ 0.34, 5 days ?"}
+  OVER --> HAVEN
+  HAVEN -->|"yes and slot free"| FALL["Port FALLS to a haven →"]:::issue
+  HAVEN -->|"cap full"| LOOP2["No exit — churns overthrow&lt;br/&gt;every 5 days forever"]:::issue
+  classDef actor fill:#123c3f,stroke:#4fcdd4,color:#d6faf9,stroke-width:1.4px;
+  classDef issue fill:#3b1a22,stroke:#e0645a,color:#ffdad4,stroke-width:1.3px;
+  classDef trap fill:#352c14,stroke:#e0a94a,color:#ffe9c2;
+  classDef good fill:#173226,stroke:#63b98a,color:#cdeed9;
+</pre>
+  </div>
+  <p class="chart-cap">Fig. V — the mirror of crew mutiny at island scale. Grievance is the one-way ratchet toward a haven.</p>
+
+  <div class="note ok"><span class="tag">Sound</span><p>Rebellions always start when warranted and <b>always end</b> after exactly one day (resolution is unconditional). Overthrow vents grievance (×0.4) and haven-redemption caps it at 0.25, so an island is never <em>permanently</em> ungovernable — though the recovery road may run through becoming a haven first. The lawlessness↔civ loop converges (L≈0.27) rather than running away; it only tips to haven territory under an external shock (piracy danger).</p></div>
+  <div class="note warn"><span class="tag">Trap · med</span><p><b>Some agendas are structurally unwinnable and quietly bleed loyalty.</b> A pure shipyard makes only "special" goods, so <code>industry</code>'s signal is pinned at <code>−1</code> forever — yet the agenda-chooser actively pushes shipyards toward <code>industry</code> <span class="ref">magistrate.js:75,142-145</span>. Likewise <code>order</code> takes a loyalty penalty for the very lawlessness it was installed to fix, and <code>wealth</code> is unreachable for a shrunken port (needs 2000g vs a hoard cap that may be 200).</p></div>
+  <div class="note crit"><span class="tag">Deadlock · med</span><p><b>Haven-cap rebellion loop.</b> When havens sit at their <code>8%</code> cap, a fully-failed island <em>cannot</em> fall — but the haven is its only reset for grievance/lawlessness. It stays in an endless overthrow-every-5-days churn, shedding civ and gold each cycle, with no exit until a haven slot frees up <span class="ref">havens.js:96</span>.</p></div>
+</section>
+
+<!-- ============ 6. VOYAGE PLANNER ============ -->
+<section id="planner">
+  <h2><span class="roman">VI.</span>The Merchant Captain — planning a voyage</h2>
+  <div class="decides"><b>Decides:</b> the single richest decision in the sim — an idle hull is handed a whole multi-stop basket, chosen by a strict priority ladder over the port's needs and the captain's personality.</div>
+  <p>When a ship falls idle at home, <code>dispatch</code> hands it to <code>planVoyage</code> (with a re-plan cooldown so idle hulls don't re-scan every substep) <span class="ref">trade.js:44-78</span>. The planner spends three budgets — hold space, <code>0.75 × treasury</code>, and a per-good cap — down a fixed ladder. Every price it reasons about is a <em class="term">belief</em> (stale rumour, §XV), not truth; only availability (who has stock/gold) is live. The captain's traits tune the bars: <b>greed</b> raises the minimum-profit floor, <b>boldness</b> widens range and shrinks provisioning, <b>wanderlust</b> drives scouting.</p>
+
+  <div class="chart">
+<pre class="mermaid" id="fig5">
+%%{init:{'theme':'base','themeVariables':{'fontSize':'14px','primaryColor':'#15303a','primaryTextColor':'#e7eff1','primaryBorderColor':'#3c6f7c','lineColor':'#5f8a97','clusterBkg':'#0e2029','clusterBorder':'#295059','edgeLabelBackground':'#0e2029'}}}%%
+flowchart TB
+  IDLE["Ship idle at home,&lt;br/&gt;off re-plan cooldown"]:::actor --> S1
+  S1{"home food lt 3 days ?"} -->|yes| B1["① SURVIVAL FOOD&lt;br/&gt;reserve up to 70% of hold,&lt;br/&gt;even if can't yet afford"]
+  S1 -->|no| S2
+  S2{"food-secure (≥4d)&lt;br/&gt;and starving ally ?"} -->|yes| B2["② AID CONVOY&lt;br/&gt;gift 120 food to neediest ally"]
+  S2 -->|no| S3
+  B1 --> S3
+  S3{"home wantsShip ?"} -->|yes| B3["③ claim a shipyard stop"]:::trap
+  S3 -->|no| S4
+  B3 --> S4
+  S4["④ EXPORTS — up to 3 goods with&lt;br/&gt;stock ≥ 1.3× target, best margin first"] --> S5
+  S5["⑤ MIGRATION — push (famine/crowd)&lt;br/&gt;+ pull (best believed civ+food port)"] --> S6
+  S6["⑥ BACKHAUL — buy biggest deficit&lt;br/&gt;at a stop already selling it"] --> S7
+  S7{"budget gt 1000 ?"} -->|yes| B7["⑦ PROSPERITY — import luxuries it lacks"]
+  S7 -->|no| S8
+  B7 --> S8
+  S8{"any committed stop ?"} -->|no| SCOUT["⑧ SCOUT least-known ports"]
+  S8 -->|yes| S9
+  SCOUT --> S9
+  S9{"pure trade &amp; profit lt min-bar ?"} -->|yes| REDIR["reject → send scouting instead"]:::good
+  S9 -->|no| ARM["⑨ arm up if route peril ≥ 0.25&lt;br/&gt;and armoury short"]
+  ARM --> ORDER["Order stops: sell-heavy first,&lt;br/&gt;buy-heavy last (earn before you spend)"] --> DEPART["Depart · note the voyage in the ledger"]:::actor
+  classDef actor fill:#123c3f,stroke:#4fcdd4,color:#d6faf9,stroke-width:1.4px;
+  classDef trap fill:#352c14,stroke:#e0a94a,color:#ffe9c2;
+  classDef good fill:#173226,stroke:#63b98a,color:#cdeed9;
+</pre>
+  </div>
+  <p class="chart-cap">Fig. VI — the priority ladder. Survival first, opportunism last; a fruitless plan becomes a scouting run rather than idleness.</p>
+
+  <div class="note warn"><span class="tag">Note</span><p>Partner choice minimises <code>believed-ask + travel + peril</code> for imports and maximises <code>margin − travel − peril + contract-pull</code> for exports, where <code>peril = believedDanger × 7</code> <span class="ref">queries.js:57-112</span>. Believed-haven and embargoed partners are excluded. On <b>day 0</b> nothing is known, so every belief returns base price and routing collapses to a pure "nearest viable port" gravity model until ships start docking.</p></div>
+</section>
+
+<!-- ============ 7. SHIP STATE + MOTION ============ -->
+<section id="statemachine">
+  <h2><span class="roman">VII.</span>The Ship — states &amp; motion</h2>
+  <div class="decides"><b>Decides:</b> moment to moment, where the hull points and how it gets there without hitting land or other ships.</div>
+  <p>A merchant cycles <code>idle → outbound → trading → inbound → idle</code>, but four orthogonal flags pre-empt that switch: a crew <b>uprising</b> (dead in the water), being blown <b>adrift</b>, <b>fleeing</b> a raider, and <b>sheltering</b> in port. The <code>ship</code> system moves merchants only; pirates and privateers are moved by their own systems — which is why there are <b>three byte-identical copies</b> of the mover, kept in sync by hand to dodge an import cycle.</p>
+
+  <div class="chart">
+<pre class="mermaid" id="fig6">
+%%{init:{'theme':'base','themeVariables':{'fontSize':'14px','primaryColor':'#15303a','primaryTextColor':'#e7eff1','primaryBorderColor':'#3c6f7c','lineColor':'#5f8a97','clusterBkg':'#0e2029','clusterBorder':'#295059','edgeLabelBackground':'#0e2029'}}}%%
+flowchart LR
+  IDLE(["idle"]):::actor -->|voyage assigned| OUT(["outbound"])
+  OUT -->|"sail() = arrived"| TRD(["trading — dwell 3s"])
+  TRD -->|more stops| OUT
+  TRD -->|last stop done| INB(["inbound"])
+  INB -->|arrived home| IDLE
+  OUT -. "raider near" .-> FLEE{{"flee / shelter"}}:::trap
+  INB -. "raider near" .-> FLEE
+  FLEE -. clear .-> OUT
+  IDLE -. "blockade + cautious" .-> SHEL{{"shelter in port"}}
+  OUT -. storm .-> ADR{{"adrift — jury-rig, drift"}}
+  ADR -. "regain bearings" .-> OUT
+  IDLE -. "morale collapse" .-> UPR{{"uprising — dead in water"}}:::issue
+  classDef actor fill:#123c3f,stroke:#4fcdd4,color:#d6faf9,stroke-width:1.4px;
+  classDef issue fill:#3b1a22,stroke:#e0645a,color:#ffdad4,stroke-width:1.3px;
+  classDef trap fill:#352c14,stroke:#e0a94a,color:#ffe9c2;
+</pre>
+  </div>
+  <p class="chart-cap">Fig. VII-a — the merchant state machine and its pre-emptive flags.</p>
+
+  <p>Per substep, each mover runs the same chain: sight nearby islands (updating the intel book), steer around land, apply wind, roll for foundering, then move — after which a separate <code>separation</code> pass nudges hulls apart.</p>
+
+  <div class="chart">
+<pre class="mermaid" id="fig7">
+%%{init:{'theme':'base','themeVariables':{'fontSize':'14px','primaryColor':'#15303a','primaryTextColor':'#e7eff1','primaryBorderColor':'#3c6f7c','lineColor':'#5f8a97','clusterBkg':'#0e2029','clusterBorder':'#295059','edgeLabelBackground':'#0e2029'}}}%%
+flowchart TB
+  SAIL["sail(): target = next waypoint"]:::actor --> SIGHT["sightAtSea — record every island&lt;br/&gt;within 700u into intel book"]
+  SIGHT --> STEER{"straight ray cuts an island's land?"}
+  STEER -->|no| AIM["aim = raw target"]
+  STEER -->|yes| CONE["Tangent-cone: aim along the bearing&lt;br/&gt;that grazes land at radius R×1.06,&lt;br/&gt;on the side the target lies"]:::good
+  AIM --> WIND["speed = base × rigMult × windMult&lt;br/&gt;(headwind softened by tacking skill,&lt;br/&gt;floored at 0.4 — never stalls)"]
+  CONE --> WIND
+  WIND --> SINK{"maybeSink: rng lt 0.0006 × dist × leak&lt;br/&gt;(never a port's LAST ship)"}
+  SINK -->|founder| LOST["Ship lost, bounty posted"]:::trap
+  SINK -->|survive| MOVE["Advance x/y; face heading&lt;br/&gt;(even on the arrival snap)"]
+  MOVE --> SEPPASS["separation pass (after ALL movers)"]
+  SEPPASS --> SEP1["Soft de-crowd within 44u"]
+  SEP1 --> SEP2["COLREGS: give way to starboard;&lt;br/&gt;chase pairs skip the courtesy"]
+  SEP2 --> SEP3["Hard anti-stack floor at 34u&lt;br/&gt;(≪ 80u combat standoff)"]:::good
+  SEP3 -. "no island awareness → can shove&lt;br/&gt;a hull onto land near crowded ports" .-> BAD["land penetration"]:::issue
+  classDef actor fill:#123c3f,stroke:#4fcdd4,color:#d6faf9,stroke-width:1.4px;
+  classDef issue fill:#3b1a22,stroke:#e0645a,color:#ffdad4,stroke-width:1.3px;
+  classDef trap fill:#352c14,stroke:#e0a94a,color:#ffe9c2;
+  classDef good fill:#173226,stroke:#63b98a,color:#cdeed9;
+</pre>
+  </div>
+  <p class="chart-cap">Fig. VII-b — one substep of motion. The tangent-cone fix and the 34u anti-stack floor are genuinely structural; separation's land-blindness is not.</p>
+
+  <div class="note warn"><span class="tag">Fragile · med</span><p><b>Three movers, hand-synced.</b> <code>moveToward</code> and its <code>sail</code> wrapper are copied verbatim into <code>ship.js</code>, <code>piracy.js</code> and <code>antipiracy.js</code> to avoid an import cycle <span class="ref">ship.js:88 · piracy.js:45 · antipiracy.js:35</span>. Any future movement fix applied to one copy silently desyncs merchant vs pirate vs privateer motion.</p></div>
+  <div class="note crit"><span class="tag">Bug · med</span><p><b>Two ways a hull passes through land.</b> ① A privateer standing down or running to resupply calls the bare mover, skipping island avoidance — it sails straight through any island in the way <span class="ref">antipiracy.js:146,162</span>. ② The <code>separation</code> pass has zero island awareness and runs <em>after</em> avoidance; near a crowded port its accumulated shoves can push a hull into land that avoidance then won't rescue (an island at/behind the ship isn't treated as a blocker) <span class="ref">separation.js:97-111</span>.</p></div>
+</section>
+
+<!-- ============ 8. CREW ============ -->
+<section id="crew">
+  <h2><span class="roman">VIII.</span>The Crew — morale &amp; mutiny</h2>
+  <div class="decides"><b>Decides:</b> whether a crew keeps working, deserts to another port, or raises the black flag. Gated at every step by the captain's Command.</div>
+  <p>Crews eat food and drink ale (a master's crew eats less and cheers harder). At sea, morale eases toward a steady ~0.6, dragged by sea-fatigue and — decisively — by an empty larder. A <b>fed crew mathematically never mutinies</b>: steady-state morale sits well above the <code>0.3</code> mutiny line. Trouble only begins when food runs out <span class="ref">crew.js:130-144</span>.</p>
+
+  <div class="chart">
+<pre class="mermaid" id="fig8">
+%%{init:{'theme':'base','themeVariables':{'fontSize':'14px','primaryColor':'#15303a','primaryTextColor':'#e7eff1','primaryBorderColor':'#3c6f7c','lineColor':'#5f8a97','clusterBkg':'#0e2029','clusterBorder':'#295059','edgeLabelBackground':'#0e2029'}}}%%
+flowchart TB
+  PROV["Provision at each dock&lt;br/&gt;(home = free from town stores)"]:::actor --> SEA["At sea: eat food, drink ale"]
+  SEA --> Q1{"food aboard ?"}
+  Q1 -->|yes| MO["Morale eases to ~0.6&lt;br/&gt;(steady, above mutiny line)"]:::good
+  Q1 -->|"empty"| WORRY{"worried captain and&lt;br/&gt;a larder reachable ?"}
+  WORRY -->|yes| DEV["Divert to nearest food port&lt;br/&gt;(primary survival valve)"]:::good
+  WORRY -->|"nowhere to go"| DROP["morale −1.5/day, hunger climbs"]
+  DROP --> Q2{"unrest ≥ grace&lt;br/&gt;(1.4–2.3 d, scales with Command)&lt;br/&gt;BEFORE hunger 2.2 ?"}
+  Q2 -->|"novice: mutiny fires"| UPR["UPRISING — dead in water 12s"]
+  Q2 -->|"skilled: grace too long"| STARVE["Ship LOST with all hands&lt;br/&gt;(mutiny never fired)"]:::issue
+  UPR --> RES{"quell odds = 0.4 + Command·0.42"}
+  RES -->|quell| HOLD["Captain holds — morale reset 0.7,&lt;br/&gt;redirect to resupply"]:::good
+  RES -->|"lose → roll"| OUT{"outcome"}
+  OUT -->|"0.30"| PIRATE["Turn PIRATE (if under 8% cap)"]:::trap
+  OUT -->|"0.50"| DEFECT["Desert — re-home to another port"]
+  OUT -->|else| NEWCAP["New novice captain; morale reset,&lt;br/&gt;redirect to resupply (crisis deferred)"]
+  classDef actor fill:#123c3f,stroke:#4fcdd4,color:#d6faf9,stroke-width:1.4px;
+  classDef issue fill:#3b1a22,stroke:#e0645a,color:#ffdad4,stroke-width:1.3px;
+  classDef trap fill:#352c14,stroke:#e0a94a,color:#ffe9c2;
+  classDef good fill:#173226,stroke:#63b98a,color:#cdeed9;
+</pre>
+  </div>
+  <p class="chart-cap">Fig. VIII — the crew crisis tree. A mutiny doesn't kill the crew; it resets morale and defers the food crisis.</p>
+
+  <div class="note crit"><span class="tag">Inversion · med</span><p><b>A skilled captain's crew starves before it can mutiny.</b> Starvation is fixed at <code>2.2</code> days, but the mutiny grace window scales <em>up</em> with Command to ~<code>2.29</code> days for a near-master — so the survival reset (which would redirect the ship to food) fires reliably only for <em>low-Command</em> captains. The better the leader, the more likely the crew simply dies <span class="ref">crew.js:156 · economy.json:444</span>. The <code>deviationTarget</code> valve mitigates this — but only when a larder is actually reachable.</p></div>
+  <div class="note warn"><span class="tag">Trap</span><p><b>The provisioning poverty trap.</b> Home victualling is free, which is load-bearing: a ship whose purse was just emptied into the treasury would otherwise depart broke and spiral. But crews can strip a <em>foreign</em> port's Food down to a <code>10</code>-unit reserve, competing directly with the town's populace — a reserve that doesn't scale with how many crews the port must feed <span class="ref">crew.js:82</span>.</p></div>
+</section>
+
+<!-- ============ 9. PIRATE ============ -->
+<section id="pirate">
+  <h2><span class="roman">IX.</span>The Pirate — the hunt</h2>
+  <div class="decides"><b>Decides:</b> a pirate's every move via a strict priority ladder, coloured by a fearsome captain's traits and sharpened by hunger.</div>
+  <p>Any hull can raise the black flag — via mutiny, a haven's forge, a genesis seed, or capture as a prize — always gated by <code>canTurnPirate</code>, which caps pirates at <code>8%</code> of the fleet <span class="ref">piracy.js:99-115</span>. A pirate then runs the ladder below every substep. Hunger is the master dial: a hungry pirate never rests, uses full hunting range even mid-blockade, and drops its greedy captain's minimum-prize bar to zero.</p>
+
+  <div class="chart">
+<pre class="mermaid" id="fig9">
+%%{init:{'theme':'base','themeVariables':{'fontSize':'14px','primaryColor':'#15303a','primaryTextColor':'#e7eff1','primaryBorderColor':'#3c6f7c','lineColor':'#5f8a97','clusterBkg':'#0e2029','clusterBorder':'#295059','edgeLabelBackground':'#0e2029'}}}%%
+flowchart TB
+  P["Pirate, every substep"]:::actor --> L1{"① timid + privateer within 560u ?"}
+  L1 -->|yes| FLEE["Flee (DEAD CODE — no pirate&lt;br/&gt;is ever timid, floor 0.7)"]:::issue
+  L1 -->|no| L2
+  L2{"② near a haven under siege ?"} -->|"matched → charge / else shadow"| DEF["Defend the haven"]
+  L2 -->|no| L3
+  L3{"③ prey in range?&lt;br/&gt;(1600u, or 900 while blockading)"} -->|yes| HUNT["Close to 150u → fight;&lt;br/&gt;reloading → hold at 80u standoff"]
+  L3 -->|no| L4
+  L4{"④ any haven exists AND&lt;br/&gt;hungry / laden / battered ?"} -->|yes| SUP["Sail to nearest haven&lt;br/&gt;(NO distance check)"]:::issue
+  L4 -->|no| L5
+  L5{"⑤ hungry AND (bold or starving)&lt;br/&gt;AND raid off cooldown ?"} -->|yes| RAID["Raid a port (approach to 144u,&lt;br/&gt;never onto the wharf)"]
+  L5 -->|no| L6
+  L6{"⑥ wanderer or hungry ?"} -->|yes| ROVE["Chase sea traffic"]
+  L6 -->|no| BLOCK["Blockade: orbit a port at 760u,&lt;br/&gt;+0.09 danger/day for 3 days"]
+  classDef actor fill:#123c3f,stroke:#4fcdd4,color:#d6faf9,stroke-width:1.4px;
+  classDef issue fill:#3b1a22,stroke:#e0645a,color:#ffdad4,stroke-width:1.3px;
+</pre>
+  </div>
+  <p class="chart-cap">Fig. IX — first match wins. Rung ④ pre-empts ⑤, which is the source of the starve-en-route trap.</p>
+
+  <div class="note crit"><span class="tag">Bug · med</span><p><b>A starving pirate prefers a distant haven over an adjacent raid.</b> Rung ④ picks the nearest haven with <em>no distance test</em> and pre-empts the raid rung, so whenever <em>any</em> haven exists on the map, a hungry pirate sails toward it — and can starve mid-ocean while a raidable port sits alongside. The port-raid fallback is effectively unreachable in any world that has a haven <span class="ref">piracy.js:231-238</span>.</p></div>
+  <div class="note warn"><span class="tag">Dead code · med</span><p><b>Pirate character has collapsed to "always aggressive."</b> Every pirate captain is forged with <code>boldness ∈ [0.7,1.0]</code> and <code>greed ∈ [0.6,1.0]</code>, so the <code>timid</code> branch (flee a closing privateer) can never run, "only the bold press a haven defence" is always true, and the greedy min-prize gate never differentiates. Only <b>wanderlust</b> genuinely varies pirate behaviour <span class="ref">captains.js:69 · piracy.js:141-161</span>.</p></div>
+</section>
+
+<!-- ============ 10. COMBAT ============ -->
+<section id="combat">
+  <h2><span class="roman">X.</span>Combat — how a fight resolves</h2>
+  <div class="decides"><b>Decides:</b> who wins a broadside exchange, and whether the loser sinks, strikes her colours, or is boarded and taken as a prize.</div>
+  <p>Combat is <em class="term">attrition</em>, not instant. Each round (every 1.2 s while in range) both ships exchange fire; damage scales with the strength ratio and is divided by hull armour. Doctrine differs by flag: pirates chain-shot the <b>rig</b> to cripple-and-board, the navy pounds the <b>hull</b> to sink, merchants shoot rig to <b>flee</b> <span class="ref">piracy.js:364-382</span>. Fighting strength blends a base, gunnery skill (the dominant term, ×1.2), morale, gun count, boldness, a flag bonus, ship class and hull condition <span class="ref">piracy.js:78-96</span>.</p>
+
+  <div class="chart">
+<pre class="mermaid" id="fig10">
+%%{init:{'theme':'base','themeVariables':{'fontSize':'14px','primaryColor':'#15303a','primaryTextColor':'#e7eff1','primaryBorderColor':'#3c6f7c','lineColor':'#5f8a97','clusterBkg':'#0e2029','clusterBorder':'#295059','edgeLabelBackground':'#0e2029'}}}%%
+flowchart TB
+  ENG["In range + reloaded → exchangeFire"]:::actor --> DMG["Both take damage&lt;br/&gt;∝ strength share ÷ armour;&lt;br/&gt;burn guns, drift morale"]
+  DMG --> C1{"attacker hull ≤ 0 ?"}
+  C1 -->|yes| ATTDIE["Attacker founders&lt;br/&gt;→ defender wins, bounty paid"]:::good
+  C1 -->|no| C2{"victim hull ≤ 0 ?"}
+  C2 -->|yes| SINK["Victim founders&lt;br/&gt;CARGO + GOLD LOST"]:::issue
+  C2 -->|no| C3{"victim strikes colours?&lt;br/&gt;(hull ≤ 0.3 or morale ≤ 0.2;&lt;br/&gt;pirates never strike)"}
+  C3 -->|yes| BOARD["Plunder all gold + goods"]
+  C3 -->|no| C4{"attacker outmatched&lt;br/&gt;and able to run ?"}
+  C4 -->|yes| BREAK["Break off / sheer away"]
+  C4 -->|no| ENG
+  BOARD --> TAKE{"take as prize?&lt;br/&gt;hull ≥ 0.15, p = f(gunnery,boldness),&lt;br/&gt;under 8% pirate cap"}
+  TAKE -->|yes| PRIZE["Crew the hull → new pirate&lt;br/&gt;(keeps homeId — see §XV)"]:::issue
+  TAKE -->|no| SCUT{"scuttle 6% ?"}
+  SCUT -->|yes| SINK
+  SCUT -->|no| FREE["Freed to limp home"]
+  classDef actor fill:#123c3f,stroke:#4fcdd4,color:#d6faf9,stroke-width:1.4px;
+  classDef issue fill:#3b1a22,stroke:#e0645a,color:#ffdad4,stroke-width:1.3px;
+  classDef good fill:#173226,stroke:#63b98a,color:#cdeed9;
+</pre>
+  </div>
+  <p class="chart-cap">Fig. X — a fight is a loop of exchanges until someone sinks, strikes, or runs.</p>
+
+  <div class="note ok"><span class="tag">By design</span><p>Merchant-vs-pirate is intentionally lopsided: traders are capped at half their gun capacity and shoot to flee, while pirates carry a combat bonus and more guns. A trader's only wins are escape or a rare fend-off. The old "welded-together" stacking bug is genuinely fixed — coincident hulls get a deterministic golden-angle standoff, and <code>34u anti-stack ≪ 80u standoff ≪ 150u fire range</code> are internally consistent.</p></div>
+  <div class="note warn"><span class="tag">Tension · low</span><p><b>Combat destroys gold, which contradicts the "conserved invariant" label.</b> A hull sunk with cargo destroys its gold; a fenced-but-undelivered hoard lost to a storm destroys that gold; a bounty on a pirate killed by weather is never paid out. These are <em>intended</em> sinks, but <code>worldTotals</code> is labelled "the conserved invariant probe for tests" — any conservation assertion run over a combat/storm scenario would fail <span class="ref">piracy.js:474 · world.js:171</span>.</p></div>
+</section>
+
+<!-- ============ 11. NAVY ============ -->
+<section id="navy">
+  <h2><span class="roman">XI.</span>The Navy — danger, bounty &amp; privateers</h2>
+  <div class="decides"><b>Decides:</b> the economy's self-balancing answer to piracy — how feared waters get, who funds a hunter, and how that hunter behaves.</div>
+  <p>An attack marks nearby waters with <code>danger</code> (which decays daily and reroutes merchants), and the aggrieved port posts a <b>bounty</b> from its treasury. Separately, ports commission <b>privateers</b> when a threat is in range and they can afford it — the fleet size scales as <code>2.5 × pirates + 2 × havens</code> <span class="ref">antipiracy.js:71-99</span>. A commissioned privateer arms up, then hunts, patrols, or besieges a haven, breaking off to resupply for free at its guard port when hungry or battered.</p>
+
+  <div class="chart">
+<pre class="mermaid" id="fig11">
+%%{init:{'theme':'base','themeVariables':{'fontSize':'14px','primaryColor':'#15303a','primaryTextColor':'#e7eff1','primaryBorderColor':'#3c6f7c','lineColor':'#5f8a97','clusterBkg':'#0e2029','clusterBorder':'#295059','edgeLabelBackground':'#0e2029'}}}%%
+flowchart TB
+  RAID["Pirate raids / plunders"]:::actor --> DANGER["Mark waters: danger += 0.34–0.5&lt;br/&gt;decays 0.12/day"]
+  RAID --> BOUNTY["Port posts bounty from treasury&lt;br/&gt;(a gold sink if never claimed)"]
+  COMM{"Commission a privateer?&lt;br/&gt;threat in 2400u · activePriv lt budget&lt;br/&gt;· gold ≥ 680 · Weapons ≥ 6 · off cooldown"}:::actor
+  COMM -->|yes| ARM["Convert an idle trader → privateer,&lt;br/&gt;arm to 26 guns, victual 13 days"]
+  ARM --> HUNT{"Privateer AI ladder"}
+  HUNT --> H1["Fight pirate prey at gun-range"]
+  HUNT --> H2["Chase a haven's defender screen"]
+  HUNT --> H3["Assault haven (−0.11 strength/day, throttled)"]:::trap
+  HUNT --> H4["Patrol orbit / sail to threat"]
+  HUNT --> H5{"food lt 1.6d or hull lt 0.6 ?"}
+  H5 -->|yes| RES["Resupply free at guard port"]:::good
+  HUNT --> H6{"surplus navy &amp; empty seas ?"}
+  H6 -->|yes| STAND["Stand down → revert to trader"]:::good
+  KILL["Kill a pirate → claim bounty,&lt;br/&gt;maybe recover the hull as a lawful prize"] --> FLOOR
+  FLOOR["Pirates wiped below the √N floor →&lt;br/&gt;rogues respawn → re-commission → …"]:::trap
+  classDef actor fill:#123c3f,stroke:#4fcdd4,color:#d6faf9,stroke-width:1.4px;
+  classDef trap fill:#352c14,stroke:#e0a94a,color:#ffe9c2;
+  classDef good fill:#173226,stroke:#63b98a,color:#cdeed9;
+</pre>
+  </div>
+  <p class="chart-cap">Fig. XI — the anti-piracy response. Self-limiting, but it oscillates rather than settling.</p>
+
+  <div class="note warn"><span class="tag">Balance · med</span><p><b>A lone privateer can't reliably break a haven.</b> Assault is throttled to one <code>−0.11</code> hit per striker per day, while the haven's shore guns + return fire drive a single besieger below its refit threshold in ~1.8 days and it entrenches <code>+0.01/day</code>. Net progress per cycle is only marginally positive — it works only because ~2 privateers are commissioned per haven; a solo siege is on the edge of not converging <span class="ref">havens.js:195 · shore.js</span>.</p></div>
+  <div class="note warn"><span class="tag">Oscillation · med</span><p>Privateers out-number (2.5:1) and out-run pirates, so they wipe them below the floor; the rogue-floor then respawns a batch, which re-triggers commissioning, which wipes them again. The system churns <em>spawn → commission → kill → stand-down</em> rather than settling into a stable pirate population — the floor papers over "piracy went invisible" rather than balancing it.</p></div>
+</section>
+
+<!-- ============ 12. HAVEN ============ -->
+<section id="haven">
+  <h2><span class="roman">XII.</span>The Haven — a port gone rogue</h2>
+  <div class="decides"><b>Decides:</b> when a failed island stops being governed and becomes a pirate base — and how it's eventually retaken.</div>
+  <p>A port that stays lawless (≥0.58) and uncivilised (civ ≤0.34) for five days <b>falls</b>: it drops its magistrate, seeds three of its own idle crews as pirates, and starts a strength meter at 0.85. Thereafter it entrenches daily, forges fresh pirates when it can afford the wood and iron, fences plundered goods from visiting pirates, and refits them for free. It's redeemed only when a privateer's repeated assaults grind its strength to zero <span class="ref">havens.js</span>.</p>
+
+  <div class="chart">
+<pre class="mermaid" id="fig12">
+%%{init:{'theme':'base','themeVariables':{'fontSize':'14px','primaryColor':'#15303a','primaryTextColor':'#e7eff1','primaryBorderColor':'#3c6f7c','lineColor':'#5f8a97','clusterBkg':'#0e2029','clusterBorder':'#295059','edgeLabelBackground':'#0e2029'}}}%%
+flowchart LR
+  FAIL["Lawless ≥ 0.58 + civ ≤ 0.34,&lt;br/&gt;5 days, and a haven slot free"]:::actor --> FALL["FALL: drop magistrate,&lt;br/&gt;seed 3 pirates, strength = 0.85"]
+  FALL --> DRIVE["Entrench +0.01/day;&lt;br/&gt;lawlessness pinned = 1"]
+  DRIVE --> BUILD{"build a pirate?&lt;br/&gt;based lt 5 · gold/wood/iron ok&lt;br/&gt;· pirateCount lt 20% (lifted cap)"}:::trap
+  BUILD -->|yes| DRIVE
+  DRIVE --> HARBOUR["Harbour pirates within 900u:&lt;br/&gt;fence gold+goods, feed, refit free"]
+  HARBOUR --> DRIVE
+  DRIVE --> SIEGE{"privateer assault:&lt;br/&gt;strength −0.11/day (throttled)&lt;br/&gt;vs entrench +0.01/day"}
+  SIEGE -->|"strength gt 0"| DRIVE
+  SIEGE -->|"strength ≤ 0"| REDEEM["REDEEM: lawlessness→0.5,&lt;br/&gt;fresh magistrate, grievance capped 0.25"]:::good
+  classDef actor fill:#123c3f,stroke:#4fcdd4,color:#d6faf9,stroke-width:1.4px;
+  classDef trap fill:#352c14,stroke:#e0a94a,color:#ffe9c2;
+  classDef good fill:#173226,stroke:#63b98a,color:#cdeed9;
+</pre>
+  </div>
+  <p class="chart-cap">Fig. XII — fall → entrench → redeem. The build cap fights the global pirate budget.</p>
+
+  <div class="note crit"><span class="tag">Cap conflict · high</span><p><b>Two pirate caps that don't know about each other.</b> Haven <em>builds</em> are allowed up to <code>20%</code> of the fleet, but every <em>other</em> pirate source (mutiny, rogue-floor refill, prize capture) is capped at <code>8%</code> by <code>canTurnPirate</code>. Once haven-built pirates fill ≥8%, all the character-rich sources silently stop — a couple of busy havens can monopolise the entire pirate budget, and the mutineers/rogues the design wants can't spawn <span class="ref">havens.js:133 · piracy.js:100</span>.</p></div>
+</section>
+
+<!-- ============ 13. DIPLOMACY ============ -->
+<section id="diplomacy">
+  <h2><span class="roman">XIII.</span>The Diplomatic layer</h2>
+  <div class="decides"><b>Decides:</b> how ports feel about each other — warming through trade, cooling through rivalry, hardening into blocs, embargoes and betrayals that skew prices and bar deals.</div>
+  <p>Every ordered pair starts just off neutral. Completed trades warm both sides and, via <b>association</b>, nudge third parties who are in fresh contact toward the trader's partner — emergent blocs, gated by the intel network <span class="ref">reputation.js:35-65</span>. Opinions decay daily; same-primary rivals cool; trusted partners can rarely <b>betray</b> for an instant embargo. Reputation has real teeth: it skews a host's quotes ±15% and, below −0.62, bars the deal entirely <span class="ref">reputation.js:72-89</span>.</p>
+
+  <div class="chart">
+<pre class="mermaid" id="fig13">
+%%{init:{'theme':'base','themeVariables':{'fontSize':'14px','primaryColor':'#15303a','primaryTextColor':'#e7eff1','primaryBorderColor':'#3c6f7c','lineColor':'#5f8a97','clusterBkg':'#0e2029','clusterBorder':'#295059','edgeLabelBackground':'#0e2029'}}}%%
+flowchart TB
+  INIT["Seed each pair in ±0.15"]:::actor --> TRADE["Trade completes → both +0.02×volume&lt;br/&gt;+ association pulls bystanders into blocs"]
+  TRADE --> DAILY["Daily: decay 3%;&lt;br/&gt;same-primary rivals cool 0.02/day"]
+  DAILY --> BETRAY{"trusted pair (≥0.55)&lt;br/&gt;rolls betrayal 0.12%/day ?"}
+  BETRAY -->|yes| EMB["Both crash by 1.4 → instant embargo"]
+  BETRAY -->|no| BLOC{"cross a bloc threshold?"}
+  EMB --> BLOC
+  BLOC -->|"≥ 0.32"| ALLY["Ally: aid convoys, price break"]:::good
+  BLOC -->|"≤ −0.32"| RIVAL["Rival"]
+  BLOC -->|"≤ −0.62"| EMBARGO["Embargo: ALL trade barred"]
+  RIVAL --> ATTR["Same-primary pairs with no active trade&lt;br/&gt;settle at −0.667 — BELOW embargo line —&lt;br/&gt;and trade is then barred, so they lock&lt;br/&gt;there PERMANENTLY"]:::issue
+  classDef actor fill:#123c3f,stroke:#4fcdd4,color:#d6faf9,stroke-width:1.4px;
+  classDef issue fill:#3b1a22,stroke:#e0645a,color:#ffdad4,stroke-width:1.3px;
+  classDef good fill:#173226,stroke:#63b98a,color:#cdeed9;
+</pre>
+  </div>
+  <p class="chart-cap">Fig. XIII — opinions warm slowly and can lock cold. The −0.667 attractor is the clearest runaway in the sim.</p>
+
+  <div class="note crit"><span class="tag">Runaway · high</span><p><b>Same-primary ports lock into permanent mutual embargo.</b> For two ports sharing a primary with no active trade, the daily rule is <code>v = v×0.97 − 0.02</code>, whose fixed point is <code>−0.667</code> — <em>below</em> the −0.62 embargo threshold. Once past it, the embargo removes the only positive force (trade), so the pair is frozen at −0.667 forever. With only 6 raw types, each port shares its primary with ~N/6 others and permanently embargoes each one it isn't actively trading with — severing a large slice of cross-good trade at scale. It's a pure tuning artifact of <code>competition 0.02</code> vs <code>decay 0.03</code> <span class="ref">reputation.js:113-115</span>.</p></div>
+</section>
+
+<!-- ============ 14. WEATHER ============ -->
+<section id="weather">
+  <h2><span class="roman">XIV.</span>The Weather</h2>
+  <div class="decides"><b>Decides:</b> seasonal production swings, where storms roam and who they sink, and the single global wind every sail reads.</div>
+  <p>Seasons rotate every 15 days, swinging food-crop output hardest (winter ×0.78 → autumn ×1.28) and setting the storm rate and prevailing wind. Storms are born at random, drift with the wind, bounce off the map edges, and batter any ship inside them — damaging hull and rig and rolling to sink or blow a merchant adrift. The wind is one global vector easing toward periodically-rerolled targets, floored so a headwind slows but never <em class="term">stalls</em> a fleet <span class="ref">weather.js · wind.js</span>.</p>
+
+  <div class="chart">
+<pre class="mermaid" id="fig14">
+%%{init:{'theme':'base','themeVariables':{'fontSize':'14px','primaryColor':'#15303a','primaryTextColor':'#e7eff1','primaryBorderColor':'#3c6f7c','lineColor':'#5f8a97','clusterBkg':'#0e2029','clusterBorder':'#295059','edgeLabelBackground':'#0e2029'}}}%%
+flowchart TB
+  SEASON["Season (every 15 days)&lt;br/&gt;sets _prodMult, storm rate, prevailing wind"]:::actor --> PROD["Food crops swing ×0.78 … ×1.28"]
+  SEASON --> WINDV["Global wind eases toward rerolled targets&lt;br/&gt;(floored 0.4 — never stalls)"]:::good
+  SEASON --> SPAWN{"spawn a storm?&lt;br/&gt;0.175–0.665/day, cap 5"}
+  SPAWN -->|yes| STORM["Storm drifts with wind,&lt;br/&gt;bounces off edges, lives ~2.5 days"]
+  STORM --> BATTER["Ship inside: hull/rig damage&lt;br/&gt;(softened by seamanship)"]
+  BATTER --> SANK{"hull ≤ 0 or sink-roll ?"}
+  SANK -->|yes| SUNK["Founders — bypasses the&lt;br/&gt;'never a port's last ship' guard"]:::issue
+  BATTER --> ADR{"merchant blown adrift? 30%×intensity"}
+  ADR -->|yes| DRIFT["Adrift: drifts, jury-rigs,&lt;br/&gt;elevated founder odds"]:::trap
+  classDef actor fill:#123c3f,stroke:#4fcdd4,color:#d6faf9,stroke-width:1.4px;
+  classDef issue fill:#3b1a22,stroke:#e0645a,color:#ffdad4,stroke-width:1.3px;
+  classDef trap fill:#352c14,stroke:#e0a94a,color:#ffe9c2;
+  classDef good fill:#173226,stroke:#63b98a,color:#cdeed9;
+</pre>
+  </div>
+  <p class="chart-cap">Fig. XIV — weather genuinely sinks ships (two paths), and the wind floor guarantees the fleet never freezes.</p>
+
+  <div class="note crit"><span class="tag">Softlock · med</span><p><b>A storm can take a port's only ship.</b> The distance-based founder check explicitly guards a port's last hull ("with no ship it couldn't even sail to buy a replacement"), but the storm knockdown sinks with <em>no</em> such check <span class="ref">weather.js:118 vs events.js:84</span>. A poor, shipless port then can't afford the ~3400g development path <em>and</em> can't sail to buy one — permanently cut off from food imports, decaying to the population floor.</p></div>
+</section>
+
+<!-- ============ 15. INFORMATION ============ -->
+<section id="info">
+  <h2><span class="roman">XV.</span>The Information layer</h2>
+  <div class="decides"><b>Decides:</b> what each port and ship <em>knows</em> — because prices don't teleport; they ride the ships. This is a genuine, load-bearing fog of price, not decoration.</div>
+  <p>A "belief" is a price book tagged with the day it was seen. Islands hold one; ships carry their own. When a ship docks it <b>observes</b> the port's live prices firsthand, and <b>reports</b> its own firsthand sightings of everywhere else — but never re-spreads the port's hearsay. That firsthand-only rule is what keeps knowledge geographic instead of saturating the map <span class="ref">beliefs.js:82-105</span>. Beliefs age toward base over ~20 days; the same machinery carries five non-price facts (danger, haven, food, civ, lawlessness), refreshed by sighting islands at sea every substep <span class="ref">intel.js</span>.</p>
+  <p>Crucially, the planner reasons on <b>beliefs</b> (partner choice, purse sizing, migration, scouting) while settlement at the dock uses <b>live</b> prices — so a port can be wrong about a distant price but is never wrong about whether that port <em>has</em> stock or gold (availability is deliberate common knowledge). A parallel <b>voyage ledger</b> lets a home port expect each ship until it's overdue, then presume it lost.</p>
+
+  <div class="chart">
+<pre class="mermaid" id="fig15">
+%%{init:{'theme':'base','themeVariables':{'fontSize':'14px','primaryColor':'#15303a','primaryTextColor':'#e7eff1','primaryBorderColor':'#3c6f7c','lineColor':'#5f8a97','clusterBkg':'#0e2029','clusterBorder':'#295059','edgeLabelBackground':'#0e2029'}}}%%
+flowchart TB
+  DOCK["Ship docks at a port"]:::actor --> OBS["OBSERVE port's live prices/facts&lt;br/&gt;firsthand → into ship's book"]
+  OBS --> REP["REPORT ship's OTHER firsthand&lt;br/&gt;sightings → into port's book&lt;br/&gt;(never re-spreads hearsay)"]:::good
+  REP --> AGE["Beliefs age toward base over ~20d;&lt;br/&gt;facts over ~12d; forget after 30–40d"]
+  SEA["Sailing: sight every island in 700u&lt;br/&gt;→ refresh facts (danger/haven/food)"]:::actor --> AGE
+  AGE --> PLAN["Planner reasons on BELIEFS&lt;br/&gt;(routes, purse, scout triggers)"]
+  PLAN --> SETTLE["…but settlement uses LIVE price&lt;br/&gt;at the port you're docked at"]:::good
+  DEP["Depart"]:::actor --> LEDGER["Ledger: expect ship until dueDay"]
+  LEDGER --> OVER{"overdue?"}
+  OVER -->|"returned"| CLEAR["Clear entry"]
+  OVER -->|"gone + past due"| LOST["Presume lost — fire 'lost' event"]
+  OVER -->|"captured merchant"| GHOST["Kept as owned FOREVER —&lt;br/&gt;home under-counts losses,&lt;br/&gt;never orders a replacement"]:::issue
+  classDef actor fill:#123c3f,stroke:#4fcdd4,color:#d6faf9,stroke-width:1.4px;
+  classDef issue fill:#3b1a22,stroke:#e0645a,color:#ffdad4,stroke-width:1.3px;
+  classDef good fill:#173226,stroke:#63b98a,color:#cdeed9;
+</pre>
+  </div>
+  <p class="chart-cap">Fig. XV — knowledge travels by hull. The belief layer drives decisions; only dock settlement is omniscient.</p>
+
+  <div class="note crit"><span class="tag">Leak · high</span><p><b>A captured merchant inflates its home's believed fleet forever.</b> When a pirate takes a prize it sets <code>pirate = true</code> but keeps the ship's <code>homeId</code> and id. So the home's fleet census counts the turned-pirate hull as a still-owned trader — no "lost" event ever fires, and the port stops ordering replacements for ships it thinks it still owns (which are now the raiders attacking it). A port bled by <em>capture</em> rather than sinking silently withers <span class="ref">piracy.js:429 · voyages.js:57 · fleet.js:15</span>.</p></div>
+  <div class="note warn"><span class="tag">Dead agency · low</span><p>The <code>setVoyage</code> intent path is fully wired and validated — but <b>no client message reaches it</b>. In "pass 1" a viewer can only change the clock; the ownership/idle checks in <code>intents.js</code> are exercised only by a unit test. Real player agency over ships needs a new protocol message. <span class="ref">simHost.js:146-154</span></p></div>
+</section>
+
+<!-- ============ 16. REGISTER ============ -->
+<section id="register">
+  <h2><span class="roman">XVI.</span>Issue register</h2>
+  <div class="decides"><b>Decides:</b> where to look first. 30 findings, severity-ranked. "High" = distorts core behaviour or deadlocks an actor; "Med" = a real but bounded failure; "Low" = cosmetic, dead, or a perf/tuning smell.</div>
+  <div class="twrap">
+  <table>
+    <thead><tr><th>#</th><th>Sev</th><th>Actor</th><th>Finding</th><th>Where</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><span class="sev high">high</span></td><td>Port</td><td>Ships never cost base price — <code>stock cap 3</code> vs <code>target 250</code> pins the multiplier at 3× (ask ≈3780, not 1200)</td><td><span class="ref">economy.json:88 · pricing.js:14</span></td></tr>
+      <tr><td>2</td><td><span class="sev high">high</span></td><td>Port</td><td>Small ports can never replace a hull: buy needs pop ≥ ~120 vs the <code>40×pop</code> hoard cap — the "starving tail" engine</td><td><span class="ref">upkeep.js:40 · trade.js:33</span></td></tr>
+      <tr><td>3</td><td><span class="sev high">high</span></td><td>Diplomacy</td><td>Same-primary ports lock in permanent mutual embargo at −0.667 (below the −0.62 bar)</td><td><span class="ref">reputation.js:113</span></td></tr>
+      <tr><td>4</td><td><span class="sev high">high</span></td><td>Info</td><td>Captured merchant keeps homeId → counted as owned forever → home stops ordering replacements</td><td><span class="ref">piracy.js:429 · voyages.js:57</span></td></tr>
+      <tr><td>5</td><td><span class="sev high">high</span></td><td>Haven</td><td>Haven build cap (20%) fights the global 8% pirate cap → havens starve out mutineers/rogues</td><td><span class="ref">havens.js:133 · piracy.js:100</span></td></tr>
+      <tr><td>6</td><td><span class="sev med">med</span></td><td>Pirate</td><td>Timid/bold/greed pirate branches are dead — trait floors make every pirate "always aggressive"</td><td><span class="ref">captains.js:69 · piracy.js:142</span></td></tr>
+      <tr><td>7</td><td><span class="sev med">med</span></td><td>Crew</td><td>Skilled captain's crew starves (2.2d) before its mutiny grace (~2.29d) — survival reset unreachable</td><td><span class="ref">crew.js:156</span></td></tr>
+      <tr><td>8</td><td><span class="sev med">med</span></td><td>Pirate</td><td>Hungry pirate prefers a distant haven over an adjacent raid — no reachability guard, can starve en route</td><td><span class="ref">piracy.js:231</span></td></tr>
+      <tr><td>9</td><td><span class="sev med">med</span></td><td>Weather</td><td>Storm knockdown bypasses the "never a port's last ship" guard → shipless-port softlock</td><td><span class="ref">weather.js:118</span></td></tr>
+      <tr><td>10</td><td><span class="sev med">med</span></td><td>Ship</td><td>Privateer stand-down/resupply moves skip island avoidance → sail through land</td><td><span class="ref">antipiracy.js:146,162</span></td></tr>
+      <tr><td>11</td><td><span class="sev med">med</span></td><td>Ship</td><td>Separation has no island awareness, runs after avoidance → can shove hulls onto land near crowded ports</td><td><span class="ref">separation.js:97</span></td></tr>
+      <tr><td>12</td><td><span class="sev med">med</span></td><td>Navy</td><td>Lone-privateer haven siege is borderline non-converging (0.11/day assault vs shore-fire refit cycle + entrench)</td><td><span class="ref">havens.js:195</span></td></tr>
+      <tr><td>13</td><td><span class="sev med">med</span></td><td>Magistrate</td><td><code>industry</code> ambition pinned at −1 for a pure shipyard — unwinnable agenda bleeds loyalty</td><td><span class="ref">magistrate.js:142</span></td></tr>
+      <tr><td>14</td><td><span class="sev med">med</span></td><td>Magistrate</td><td>Haven-cap rebellion loop: a failed island at cap churns overthrow every 5 days with no exit</td><td><span class="ref">havens.js:96</span></td></tr>
+      <tr><td>15</td><td><span class="sev med">med</span></td><td>Navy</td><td>Piracy oscillates (spawn→commission→kill→standdown) rather than settling to a stable population</td><td><span class="ref">antipiracy.js · havens.js:62</span></td></tr>
+      <tr><td>16</td><td><span class="sev low">low</span></td><td>Port</td><td>Food spoiled twice per substep (population + upkeep) → ~2.3× decay of any other good</td><td><span class="ref">population.js:32 · upkeep.js:45</span></td></tr>
+      <tr><td>17</td><td><span class="sev low">low</span></td><td>Ship</td><td>Three <code>moveToward</code>/<code>sail</code> copies kept in sync by hand — structural desync risk</td><td><span class="ref">ship.js:88 · piracy.js:45</span></td></tr>
+      <tr><td>18</td><td><span class="sev low">low</span></td><td>Combat</td><td>Gold destroyed in combat/storms contradicts the <code>worldTotals</code> "conserved invariant" label</td><td><span class="ref">piracy.js:474 · world.js:171</span></td></tr>
+      <tr><td>19</td><td><span class="sev low">low</span></td><td>Ship</td><td>Fleeing ship won't re-pick a bolt-hole that later gets blockaded → strands under the guns (comment/code mismatch)</td><td><span class="ref">ship.js:380</span></td></tr>
+      <tr><td>20</td><td><span class="sev low">low</span></td><td>Info</td><td><code>setVoyage</code> intent path fully wired but unreachable from any client message (dead player agency)</td><td><span class="ref">simHost.js:146</span></td></tr>
+      <tr><td>21</td><td><span class="sev low">low</span></td><td>Captains</td><td><code>personality</code> string computed &amp; serialized but never read by any sim decision (display-only)</td><td><span class="ref">captains.js:56 · snapshot.js:117</span></td></tr>
+      <tr><td>22</td><td><span class="sev low">low</span></td><td>Captains</td><td>Merchant <code>sea</code> and <code>cmd</code> XP locked together (voyages award both equally) — no divergence</td><td><span class="ref">captains.js:209</span></td></tr>
+      <tr><td>23</td><td><span class="sev low">low</span></td><td>Captains</td><td><code>awardCommandXp</code> never called on quelling a mutiny despite its docstring — missed feedback loop</td><td><span class="ref">captains.js:220 · crew.js:176</span></td></tr>
+      <tr><td>24</td><td><span class="sev low">low</span></td><td>Crew</td><td>Foreign crews strip a port's Food to a flat 10-unit reserve that doesn't scale with fleet size</td><td><span class="ref">crew.js:82</span></td></tr>
+      <tr><td>25</td><td><span class="sev low">low</span></td><td>—</td><td>Dead constants: <code>PORT_STANDOFF</code>, <code>PIRATE_SINK_ON_FEND</code>, <code>PRIVATEER_LOSS_SINK</code>; <code>DANGER_FIGHT</code> branch unreachable</td><td><span class="ref">economy.json · bounty.js:26</span></td></tr>
+      <tr><td>26</td><td><span class="sev low">low</span></td><td>Port</td><td>Contract "fulfilled" usually means the 65-unit purse emptied, not stock replenished — misleading log</td><td><span class="ref">contracts.js:15,34</span></td></tr>
+      <tr><td>27</td><td><span class="sev low">low</span></td><td>Info</td><td><code>sightAtSea</code> runs every substep per moving ship — O(N·S) redundant work (once/day would suffice)</td><td><span class="ref">ship.js:138</span></td></tr>
+      <tr><td>28</td><td><span class="sev low">low</span></td><td>Info</td><td><code>estimateReturnDay</code> fixed at departure, ignores detours → live-but-delayed ships silently un-expected</td><td><span class="ref">voyages.js:20</span></td></tr>
+      <tr><td>29</td><td><span class="sev low">low</span></td><td>Magistrate</td><td><code>order</code> ambition self-defeating on the lawless ports it's assigned to; <code>wealth</code> unreachable for shrunken ports</td><td><span class="ref">magistrate.js:79,147</span></td></tr>
+      <tr><td>30</td><td><span class="sev low">low</span></td><td>Ship</td><td>Separation reads raw <code>ship.speed</code>, ignoring faction multipliers → give-way slightly wrong for pirates/privateers</td><td><span class="ref">separation.js:42</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note ok"><span class="tag">Verified sound</span><p>Not everything that looked risky is broken. Confirmed healthy: no population death-spiral (starvation floored, growth food-gated); rebellions always start-and-end; plague always recovers and floors population; wind never stalls the fleet; RNG is fully deterministic and serializable (per-system streams, roster on a separate LCG); the belief layer is genuinely load-bearing, not cosmetic; and the old stacking / center-park / frozen-standoff bugs are structurally fixed, not papered over.</p></div>
+</section>
+
+<footer>
+  <p><b>BOATZ Simulation Field Manual</b> — mapped from <code>game/sim/*</code> (≈6,400 LOC across 40 systems) + <code>data/economy.json</code> tuning. All file:line anchors are clickable in your editor. Six subsystem sweeps + independent spot-checks of every "dead code" claim. Diagrams render on a fixed chart-table ground in both themes; document chrome follows your light/dark preference.</p>
+</footer>
+</main>
+</div>
+</div>
+
+<script>
+/* ---------- theme toggle ---------- */
+(function(){
+  var btn=document.getElementById('themebtn');
+  var root=document.documentElement;
+  function cur(){var a=root.getAttribute('data-theme'); if(a) return a; return matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';}
+  btn.addEventListener('click',function(){
+    var next=cur()==='dark'?'light':'dark';
+    root.setAttribute('data-theme',next);
+    btn.textContent=(next==='dark'?'☾':'☀')+' Theme';
+  });
+})();
+
+/* ---------- pan / zoom / maximize on each flowchart ---------- */
+(function(){
+  var clamp=function(v,a,b){return v<a?a:(v>b?b:v);};
+  // Wire a chart once Mermaid has drawn its svg. We NEVER re-parent or transform the svg — panning is
+  // native scroll of the <pre>, zoom just scales the svg's display width. So this cannot corrupt
+  // Mermaid's async render or pile diagrams on top of each other (the earlier bug).
+  function ready(svg){ try{ return !!(svg && (svg.querySelector('g')||svg.childElementCount>1)); }catch(e){ return false; } }
+  function wire(chart){
+    if(chart.__pz) return;
+    var pre=chart.querySelector('pre.mermaid');
+    var svg=pre && pre.querySelector('svg');
+    if(!ready(svg)) return;                 // not finished drawing — scan()/observer will retry
+    chart.__pz=true;
+    svg.style.maxWidth='none'; svg.style.height='auto';
+    var z=1;
+    function apply(){ svg.style.width=(z*100)+'%'; }
+    apply();
+    function zoomTo(nz,cx,cy){
+      nz=clamp(nz,0.5,9);
+      var w0=svg.getBoundingClientRect().width||1, sl=pre.scrollLeft, st=pre.scrollTop;
+      z=nz; apply();
+      var w1=svg.getBoundingClientRect().width||1, r=w1/w0;
+      if(cx!=null){ pre.scrollLeft=(sl+cx)*r-cx; pre.scrollTop=(st+cy)*r-cy; }
+    }
+    function center(f){ var r=pre.getBoundingClientRect(); zoomTo(z*f, r.width/2, r.height/2); }
+    function reset(){ z=1; apply(); pre.scrollLeft=0; pre.scrollTop=0; }
+    pre.addEventListener('wheel',function(e){ e.preventDefault(); var r=pre.getBoundingClientRect(); zoomTo(z*(e.deltaY<0?1.15:1/1.15), e.clientX-r.left, e.clientY-r.top); },{passive:false});
+    var down=false,sx,sy,ol,ot;
+    pre.addEventListener('pointerdown',function(e){ down=true; sx=e.clientX; sy=e.clientY; ol=pre.scrollLeft; ot=pre.scrollTop; try{pre.setPointerCapture(e.pointerId);}catch(_){}; pre.classList.add('grabbing'); });
+    pre.addEventListener('pointermove',function(e){ if(!down) return; pre.scrollLeft=ol-(e.clientX-sx); pre.scrollTop=ot-(e.clientY-sy); });
+    function up(){ down=false; pre.classList.remove('grabbing'); }
+    pre.addEventListener('pointerup',up); pre.addEventListener('pointercancel',up);
+    pre.addEventListener('dblclick',reset);
+    var tools=document.createElement('div'); tools.className='pz-tools';
+    function mk(t,title,fn){ var b=document.createElement('button'); b.type='button'; b.textContent=t; b.title=title; b.setAttribute('aria-label',title); b.addEventListener('click',fn); tools.appendChild(b); return b; }
+    mk('−','Zoom out',function(){ center(1/1.3); });
+    mk('⊕','Reset',reset);
+    mk('+','Zoom in',function(){ center(1.3); });
+    var maxBtn=mk('⛶','Maximize',toggleMax);
+    chart.appendChild(tools);
+    var hint=document.createElement('div'); hint.className='pz-hint'; hint.textContent='drag to pan · scroll to zoom · dbl-click to reset'; chart.appendChild(hint);
+    var backdrop=null;
+    function toggleMax(){
+      var on=chart.classList.toggle('pz-max');
+      if(on){ backdrop=document.createElement('div'); backdrop.className='pz-backdrop'; backdrop.addEventListener('click',toggleMax); document.body.appendChild(backdrop); document.body.classList.add('pz-locked'); maxBtn.textContent='✖'; maxBtn.title='Close'; }
+      else { if(backdrop){ backdrop.remove(); backdrop=null; } document.body.classList.remove('pz-locked'); maxBtn.textContent='⛶'; maxBtn.title='Maximize'; }
+    }
+    document.addEventListener('keydown',function(e){ if(e.key==='Escape'&&chart.classList.contains('pz-max')) toggleMax(); });
+  }
+  function scan(){ document.querySelectorAll('.chart').forEach(wire); }
+  var obs=new MutationObserver(scan);
+  document.querySelectorAll('.chart').forEach(function(c){ obs.observe(c,{childList:true,subtree:true}); });
+  scan();
+  var n=0, poll=setInterval(function(){ scan(); if(++n>60) clearInterval(poll); },250);
+
+  // Standalone: if opened directly (not inside the Claude artifact host, which renders Mermaid itself),
+  // fetch Mermaid from a CDN and render. Gated to top-level context so it never touches the network
+  // inside the sandboxed artifact iframe.
+  setTimeout(function(){
+    try{ if(window.self!==window.top) return; }catch(e){ return; }
+    var pending=[].filter.call(document.querySelectorAll('pre.mermaid'),function(p){ return !p.querySelector('svg'); });
+    if(!pending.length || window.mermaid) return;
+    var s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js';
+    s.onload=function(){ try{
+      window.mermaid.initialize({startOnLoad:false, securityLevel:'loose', flowchart:{htmlLabels:true, useMaxWidth:true}});
+      // Render each diagram in ISOLATION with a guaranteed-unique id. mermaid.run() collides svg ids
+      // across many diagrams and dumps them all into the first svg — render(id,text) avoids that.
+      var pres=[].slice.call(document.querySelectorAll('pre.mermaid')), i=0;
+      (function next(){
+        if(i>=pres.length){ scan(); setTimeout(scan,120); return; }
+        // innerHTML (not textContent) so the &lt;br&gt; line-breaks in node labels survive
+        var p=pres[i], txt=p.textContent, gid='g'+(p.id||'mmd')+'_'+i; i++;
+        try{ window.mermaid.render(gid, txt).then(function(r){ p.innerHTML=r.svg; scan(); next(); }).catch(function(){ next(); }); }
+        catch(e){ next(); }
+      })();
+    }catch(e){} };
+    s.onerror=function(){ document.querySelectorAll('.chart').forEach(function(c){
+      if(c.querySelector('svg')) return;
+      var m=document.createElement('div'); m.className='pz-hint'; m.style.cssText='position:static;padding:12px;opacity:1';
+      m.textContent='(diagram needs a Mermaid renderer — view via the artifact link, or open while online)';
+      c.insertBefore(m,c.firstChild);
+    }); };
+    document.head.appendChild(s);
+  }, 1500);
+})();
+</script>

@@ -18,13 +18,13 @@ test('a magistrate builds a workshop into an open slot when it can afford, staff
   const w = makeWorld();
   const t = w.rules;
   const isl = w.islands[0];
-  mutateWorkshops(w, isl, [{ good: 'Food', condition: 1 }]); // a clean slate: 0 industry, open berths
+  mutateWorkshops(w, isl, []); // a clean slate: no workshops, open berths
   isl.population = 300;                                       // enough hands to crew a works
   isl.gold = t.WORKSHOP_BUILD_GOLD + t.POLICY_TREASURY_RESERVE + 2000;
   isl.stock.Wood = 300; isl.stock.Iron = 300;                // timber + iron to build with
   const gold0 = isl.gold;
   aDayLater(w); policy(w, t.SIM_STEP);
-  assert.equal(industrialOf(isl, t).length, 1, 'exactly one industrial workshop was raised');
+  assert.equal(industrialOf(isl, t).length, 1, 'exactly one workshop was raised');
   assert.ok(isl.gold < gold0, 'it paid gold for the works');
   assert.deepEqual(isl.produces, isl.workshops.map((s) => s.good), 'produces stays derived from workshops');
 });
@@ -33,7 +33,7 @@ test('a poor / material-less port cannot build; a full port does not overbuild',
   const w = makeWorld();
   const t = w.rules;
   const isl = w.islands[0];
-  mutateWorkshops(w, isl, [{ good: 'Food', condition: 1 }]);
+  mutateWorkshops(w, isl, []);
   isl.population = 300; isl.gold = 50; isl.stock.Wood = 0; isl.stock.Iron = 0; // no coin, no materials
   aDayLater(w); policy(w, t.SIM_STEP);
   assert.equal(industrialOf(isl, t).length, 0, 'too poor + no materials → nothing built');

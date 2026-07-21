@@ -184,7 +184,9 @@ function fixAgreement(t) {
 // surfaces in the ISLAND's log too — there the ship's "her" must NOT be folded to the island.
 const SHIP_SELF = new Set(['maiden', 'voyages', 'bearings', 'wreck', 'stormloss', 'adrift', 'starve', 'launch', 'shun', 'reroute']);
 const ISLAND_SELF = new Set(['boom', 'goldenage', 'popmilestone', 'longpeace', 'neworder', 'ambition', 'overreach',
-  'haven', 'redeemed', 'contract', 'contractdone', 'famine', 'recover', 'blight', 'plague']);
+  'haven', 'redeemed', 'contract', 'contractdone', 'famine', 'recover', 'blight', 'plague',
+  // Magistrate POLICY beats — a port's own decisions, so its her/its folds to our/we in its log.
+  'workshop', 'derelict', 'taxup', 'taxcut', 'tariff', 'publicworks', 'corruption', 'graftseized']);
 function firstPersonize(text, o) {
   const { name, person, title, lead, cap, obj, poss, singular, isShip, kind } = o;
   let t = String(text);

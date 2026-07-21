@@ -48,7 +48,7 @@ test('an INDUSTRIAL workshop in disrepair makes far less; the raw-input path is 
   assert.ok(madeDerelict < madeHealthy * 0.5, `derelict output (${madeDerelict}) far below healthy (${madeHealthy})`);
 });
 
-test('Food is NEVER condition-gated (survival good rides the full-rate path)', () => {
+test('Food is a NORMAL workshop now — its output scales by condition (no special survival path)', () => {
   const w = makeWorld();
   const t = w.rules;
   const foodIsl = w.islands.find((i) => i.workshops.some((s) => s.good === 'Food'));
@@ -62,9 +62,11 @@ test('Food is NEVER condition-gated (survival good rides the full-rate path)', (
     return foodIsl.stock.Food;
   };
   const madeFull = run(1);
-  const madeStarvedShop = run(0.05); // even a "derelict" Food workshop must produce full — it's not gated
+  const madeDerelict = run(0.05);
   assert.ok(madeFull > 0, 'food is produced');
-  assert.equal(madeStarvedShop, madeFull, 'Food output ignores workshop condition (no famine death-spiral)');
+  // Food is no longer special: a derelict Food works makes far less, so a port that neglects its food
+  // supply (never builds/repairs it, can't import) can starve into famine + revolt — a test of policy.
+  assert.ok(madeDerelict < madeFull * 0.5, `a derelict Food workshop makes far less (${madeDerelict} vs ${madeFull})`);
 });
 
 test('an under-staffed workshop decays toward disrepair; a re-peopled one mends back (upkeep drift)', () => {
@@ -98,15 +100,16 @@ test('an unfunded workshop (empty treasury, income halted) also rots — funding
   assert.ok(shop.condition < 0.5, `unfunded workshop rotted (condition ${shop.condition.toFixed(2)})`);
 });
 
-test('a Food workshop never decays or carries a status byte (survival good is not industrial)', () => {
+test('a Food workshop DECAYS when starved, like every other workshop (bad policy → famine risk)', () => {
   const w = makeWorld();
   const t = w.rules;
   const isl = w.islands.find((i) => i.workshops.some((s) => s.good === 'Food'));
   const foodShop = isl.workshops.find((s) => s.good === 'Food');
-  isl.population = 5; isl.gold = 0; isl.civ = 0; // maximally starved
+  foodShop.condition = 1;
+  isl.population = 5; isl.gold = 0; isl.civ = 0; // maximally starved: no labour, no coin to fund it
   for (let d = 0; d < 30; d++) { w.simTime += t.SIM_DAY_SECONDS; upkeep(w, t.SIM_DAY_SECONDS); }
-  assert.equal(foodShop.condition, 1, 'Food workshop condition is untouched by starvation');
-  assert.equal(foodShop._st, undefined, 'Food workshop carries no industrial status byte');
+  assert.ok(foodShop.condition < 0.8, `the Food works rotted under starvation (${foodShop.condition.toFixed(2)}) — it is a normal workshop now, with no safety net`);
+  assert.equal(foodShop._st != null, true, 'and it carries a status byte like any workshop');
 });
 
 test('slotCap: pop-tiered base + development, floored by built workshops, capped at MAX_SLOTS', () => {

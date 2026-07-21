@@ -735,7 +735,7 @@ export class InfoPanel extends Panel {
    *  manifest, so they carry no status byte `st` and are filtered out here). Each row is the good, a
    *  status word (Running / Idle / Derelict), and a condition bar coloured by that status. */
   _workshops(ctx, isl, c) {
-    const shops = (isl.workshops || []).filter((w) => w.st != null);
+    const shops = (isl.workshops || []).filter((w) => w.st != null); // every works — survival (Food/Ale) + industrial
     if (!shops.length) return;
     const STATUS = [
       { label: 'Running', color: PALETTE.good },   // 0 — staffed, funded, in good repair

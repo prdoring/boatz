@@ -59,8 +59,8 @@ function spendWithGraft(world, isl, base) {
 function ambitionFit(kind, X) {
   switch (kind) {
     case 'fortify': case 'order': return X === 'Weapons' ? 1 : 0;
-    case 'splendor': return X === 'LuxuryGoods' ? 1 : X === 'Clothing' ? 0.5 : 0;
-    case 'grow': return X === 'Clothing' ? 0.5 : 0;
+    case 'splendor': return X === 'LuxuryGoods' ? 1 : (X === 'Clothing' || X === 'Ale') ? 0.5 : 0;
+    case 'grow': return X === 'Food' ? 0.7 : (X === 'Clothing' || X === 'Ale') ? 0.5 : 0; // a grow mayor feeds its people
     case 'industry': return 0.6; // any manufacture advances an industrialising port
     default: return 0;
   }

@@ -195,9 +195,10 @@ export function snapshotEconomy(world) {
       // (Food/Ale) carries only its identity. The client re-derives `produces` from ALL of these
       // (workshops is the source of truth) but shows only the industrial ones as slots/buildings —
       // Food/Ale ride the goods manifest. `st != null` is the client's industrial test.
-      workshops: (isl.workshops || []).map((w) => (industrialGoods.includes(w.good)
-        ? { good: w.good, cond: round2(w.condition != null ? w.condition : 1), st: workshopSt(w) }
-        : { good: w.good })),
+      // EVERY produced good is a mutable workshop now (Food/Ale included) — each with its 0..1 condition
+      // and a precomputed status byte (0 running / 1 idle / 2 derelict). Drawn as buildings on the map +
+      // rows in the panel; the client re-derives `produces` from this. No good is special-cased.
+      workshops: (isl.workshops || []).map((w) => ({ good: w.good, cond: round2(w.condition != null ? w.condition : 1), st: workshopSt(w) })),
       slotCap: slotCap(isl, world.rules), // max industrial workshops (pop-tiered base + development) → vacant berths
       tax: round2(isl.tax || 0),            // income-tax rate the magistrate levies (0..TAX_MAX) → panel + tax overlay
       tariff: round2(isl.tariff || 0),      // duty on foreign trade (0..TARIFF_MAX) → panel

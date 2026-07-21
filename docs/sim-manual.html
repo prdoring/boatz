@@ -143,6 +143,12 @@ td .ref{display:block; margin-top:3px;}
 .sev.med{background:var(--warn-bg); color:var(--warn); border:1px solid var(--warn);}
 .sev.low{background:var(--panel-2); color:var(--ink-soft); border:1px solid var(--rule);}
 .actorcell{font-weight:700; white-space:nowrap;}
+.sev.done{background:var(--ok-bg); color:var(--ok); border:1px solid var(--ok);}
+tr.done td{background:linear-gradient(90deg,var(--ok-bg),transparent 60%);}
+tr.done:hover td{background:var(--ok-bg);}
+tr.done .find{text-decoration:line-through; text-decoration-color:var(--ink-faint); color:var(--ink-faint);}
+.fix{display:block; margin-top:6px; font-family:var(--mono); font-size:11px; line-height:1.5; color:var(--ok); letter-spacing:.01em; text-decoration:none;}
+.fix::before{content:"✓ RESOLVED  "; font-weight:700; letter-spacing:.06em;}
 /* ---- footer ---- */
 footer{border-top:2px solid var(--ink); padding:26px 0 60px; font-family:var(--mono); font-size:12px; color:var(--ink-faint); letter-spacing:.02em;}
 footer b{color:var(--ink-soft);}
@@ -160,12 +166,13 @@ footer b{color:var(--ink-soft);}
   <h1 class="title">BOATZ — the <em>Simulation</em> Field Manual</h1>
   <p class="dek">Every actor in this sea, every decision it makes, the numbers behind those decisions — and where the machinery deadlocks, starves, or quietly does nothing.</p>
   <div class="mast-meta">
-    <span class="chip"><b>21</b> systems · fixed order</span>
+    <span class="chip"><b>22</b> systems · fixed order</span>
     <span class="chip">tick <b>20 Hz</b> · substep <b>0.05 s</b></span>
     <span class="chip">1 sim-day = <b>60 s</b></span>
     <span class="chip">server-authoritative · client renders only</span>
-    <span class="chip"><b>30</b> issues catalogued</span>
+    <span class="chip"><b>30</b> issues catalogued · <b style="color:var(--ok)">9 resolved</b></span>
   </div>
+  <p class="dek" style="font-family:var(--mono); font-size:12.5px; line-height:1.5; color:var(--warn); background:var(--warn-bg); border-left:3px solid var(--warn); border-radius:0 3px 3px 0; padding:10px 14px; margin-top:20px; max-width:78ch;">⚠ <b>Living document.</b> Re-sync this manual after <em>any</em> change to the sim — systems, tuning, or bug fixes. A stale field manual is worse than none: it encodes decisions the code no longer makes. When you touch <code>game/sim/*</code> or <code>data/economy.json</code>, update the relevant section (and Figures) here in the same change, and reconcile the issue register.</p>
   <button class="themebtn" id="themebtn" aria-label="Toggle light or dark theme">◐ Theme</button>
 </header>
 
@@ -177,14 +184,14 @@ footer b{color:var(--ink-soft);}
     <li><a class="num" href="#actors">The actors, at a glance</a></li>
     <li><a class="num" href="#port">The Port — economy engine</a></li>
     <li><a class="num" href="#hulls">The Port — buying hulls</a></li>
-    <li><a class="num" href="#magistrate">The Magistrate — governance</a></li>
+    <li><a class="num" href="#magistrate">The Magistrate — policy loop &amp; industry</a></li>
     <li><a class="num" href="#planner">The Merchant Captain — planning a voyage</a></li>
     <li><a class="num" href="#statemachine">The Ship — states &amp; motion</a></li>
     <li><a class="num" href="#crew">The Crew — morale &amp; mutiny</a></li>
     <li><a class="num" href="#pirate">The Pirate — the hunt</a></li>
     <li><a class="num" href="#combat">Combat — how a fight resolves</a></li>
     <li><a class="num" href="#navy">The Navy — danger, bounty, privateers</a></li>
-    <li><a class="num" href="#haven">The Haven — a port gone rogue</a></li>
+    <li><a class="num" href="#haven">The Haven &amp; the Pirate Lord</a></li>
     <li><a class="num" href="#diplomacy">The Diplomatic layer</a></li>
     <li><a class="num" href="#weather">The Weather</a></li>
     <li><a class="num" href="#info">The Information layer</a></li>
@@ -206,7 +213,7 @@ footer b{color:var(--ink-soft);}
 <section id="pipeline">
   <h2><span class="roman">I.</span>The tick &amp; the pipeline</h2>
   <div class="decides"><b>Decides:</b> nothing — this is the clockwork the actors run inside. Order is load-bearing.</div>
-  <p>The server owns the whole world. Every real tick (<code>20 Hz</code>), a <em class="term">clock</em> turns real elapsed time × the speed dial into <code>dtSim</code> sim-seconds (<code>0</code> when paused). The <em class="term">sim</em> then advances the world in fixed <code>0.05 s</code> substeps — so 10× fast-forward is literally ten 1× steps, identical dynamics at every speed <span class="ref">world.js:182</span>. A single ordered list of <b>21 systems</b> runs once per substep <span class="ref">systems.js:27</span>; the order below is exact, and it matters — production happens before pricing, pricing before dispatch, and every fleet moves before the shore guns and the collision solver read final positions.</p>
+  <p>The server owns the whole world. Every real tick (<code>20 Hz</code>), a <em class="term">clock</em> turns real elapsed time × the speed dial into <code>dtSim</code> sim-seconds (<code>0</code> when paused). The <em class="term">sim</em> then advances the world in fixed <code>0.05 s</code> substeps — so 10× fast-forward is literally ten 1× steps, identical dynamics at every speed <span class="ref">world.js:182</span>. A single ordered list of <b>22 systems</b> runs once per substep <span class="ref">systems.js:27</span>; the order below is exact, and it matters — production happens before pricing, pricing before dispatch, every fleet moves before the shore guns and the collision solver read final positions, and the magistrate's daily <code>policy</code> loop runs after <code>governance</code> (reading fresh loyalty/civ) and before <code>havens</code>.</p>
   <p>The client is a pure viewer: it merges server snapshots by id and never simulates <span class="ref">SimClient.js:7</span>. The only authoritative thing a viewer can change today is the clock.</p>
 
   <div class="chart">
@@ -239,12 +246,12 @@ flowchart TB
     CFL --> SOC
     subgraph SOC["⑤ Society"]
       direction LR
-      CR["crew&lt;br/&gt;morale · mutiny"] --> UP["upkeep&lt;br/&gt;gold in/out"] --> RE["reputation"] --> EV["events&lt;br/&gt;blight · plague"] --> GV["governance&lt;br/&gt;loyalty · rebellion"] --> HV["havens"]
+      CR["crew&lt;br/&gt;morale · mutiny"] --> UP["upkeep&lt;br/&gt;gold in/out · skim · workshop drift"] --> RE["reputation"] --> EV["events&lt;br/&gt;blight · plague"] --> GV["governance&lt;br/&gt;loyalty · rebellion"] --> PO["policy&lt;br/&gt;magistrate levers · daily"]:::good --> HV["havens&lt;br/&gt;fall · pirate lord"]
     end
     SOC --> GRW
     subgraph GRW["⑥ Growth — daily-gated"]
       direction LR
-      DV["development&lt;br/&gt;build hulls"] --> CT["contracts"] --> VY["reckonVoyages&lt;br/&gt;presume lost"]
+      CT["contracts"] --> VY["reckonVoyages&lt;br/&gt;presume lost"]
     end
   end
   LOOP --> CHR["CHRONICLE — drain events → SQLite&lt;br/&gt;write-only, never read back"]:::good
@@ -264,8 +271,8 @@ flowchart TB
   <table>
     <thead><tr><th>Actor</th><th>Trigger</th><th>Chief decisions</th><th>Owns / mutates</th></tr></thead>
     <tbody>
-      <tr><td class="actorcell">Port / Island</td><td>every substep</td><td>produce, price, spend income, post contracts, order hulls</td><td>stock, gold, price, population, targets</td></tr>
-      <tr><td class="actorcell">Magistrate</td><td>substep + daily</td><td>set economic ambition (retargets demand), hold or lose loyalty, quell rebellions</td><td>loyalty, unrest, lawlessness, grievance, targets</td></tr>
+      <tr><td class="actorcell">Port / Island</td><td>every substep</td><td>produce (via mutable workshops), price, spend income, post contracts</td><td>stock, gold, price, population, workshops, targets</td></tr>
+      <tr><td class="actorcell">Magistrate</td><td>substep + daily</td><td>set ambition (retargets demand); run a daily <b>policy loop</b> over 5 levers — build/switch/demolish/repair workshops, set tax &amp; tariff, garrison, public works &amp; naval expansion, export holds; skim a corrupt hoard; hold or lose loyalty</td><td>loyalty, lawlessness, grievance, workshops, tax, tariff, development, _approval, hoard, targets</td></tr>
       <tr><td class="actorcell">Populace</td><td>every substep</td><td>eat, grow/starve, migrate, rebel</td><td>population, civ score</td></tr>
       <tr><td class="actorcell">Merchant Captain</td><td>when ship idle</td><td>plan the whole voyage basket (food→aid→exports→migration→scout)</td><td>ship.voyage, cargo plan</td></tr>
       <tr><td class="actorcell">Ship</td><td>every substep</td><td>sail, steer round land, dock, flee, shelter, tack</td><td>x/y/heading, state, hull, rig</td></tr>
@@ -274,6 +281,7 @@ flowchart TB
       <tr><td class="actorcell">Privateer</td><td>every substep</td><td>hunt pirates, break off a losing fight, patrol, besiege havens, resupply</td><td>_prey, _guard, _breakoff, position, combat</td></tr>
       <tr><td class="actorcell">Shore battery</td><td>every 12 s</td><td>shell the nearest pirate (port) or besieger (haven)</td><td>target hull/rig/guns</td></tr>
       <tr><td class="actorcell">Haven</td><td>daily</td><td>entrench, build pirates, fence plunder, resist assault</td><td>havenStrength, lawlessness</td></tr>
+      <tr><td class="actorcell">Pirate Lord</td><td>daily</td><td>the dark mirror of the magistrate — run a war-economy loop: skim fenced plunder to a hoard, convert derelict civilian works into gun-foundries, entrench, build raiders</td><td>pirateLord (traits/agenda/hoard), workshops, havenStrength</td></tr>
       <tr><td class="actorcell">Diplomacy</td><td>on trade + daily</td><td>warm/cool opinions, form blocs, embargo, betray, send aid</td><td>reputation matrix</td></tr>
       <tr><td class="actorcell">Weather</td><td>substep + daily</td><td>swing seasonal production, spawn/steer storms, drift the wind</td><td>_prodMult, storms, wind vector</td></tr>
       <tr><td class="actorcell">The record (beliefs)</td><td>on dock / at sea</td><td>carry imperfect prices &amp; facts port→ship→port; forget the stale</td><td>island.beliefs, ship.knows, intel</td></tr>
@@ -287,11 +295,11 @@ flowchart TB
   <h2><span class="roman">III.</span>The Port — the economy engine</h2>
   <div class="decides"><b>Decides:</b> what a port makes, what it charges, and whether its people eat or breed. Runs blind (no will) — pure functions of stock and population.</div>
   <ul class="tight">
-    <li><b>Produce.</b> Each island mines its primary raw at <code>10/s</code> and secondary at <code>×0.25</code>, with a logistic taper toward a <code>2000</code> stockpile cap <span class="ref">production.js:17</span>. Recipe goods scale to population (<code>0.07 × pop</code>) but are clamped so ≥25% of any local raw survives as exportable surplus — this is what <em class="term">forces trade</em> <span class="ref">production.js:46-62</span>.</li>
+    <li><b>Produce.</b> Each island mines its primary raw at <code>10/s</code> and secondary at <code>×0.25</code>, with a logistic taper toward a <code>2000</code> stockpile cap <span class="ref">production.js:17</span>. Recipe goods scale to population (<code>0.07 × pop</code>) but are clamped so ≥25% of any local raw survives as exportable surplus — this is what <em class="term">forces trade</em> <span class="ref">production.js:46-62</span>. Finished <em class="term">industrial</em> goods (Weapons, Clothing, Luxury, Ships) now flow from <b>mutable workshops</b> — their output is further scaled by each workshop's <code>condition × staffing</code>, so a squeezed port's manufacturing visibly rots (see §V). <b>Food and Ale are excluded</b> — survival goods stay always-on, never workshop-gated, so a poor port can never starve itself into a famine spiral <span class="ref">production.js:37-56</span>.</li>
     <li><b>Consume.</b> Population eats <code>0.011 food/head</code>, plus comfort goods (Ale, Clothing, Weapons, Luxury) burned as demand sinks so every port keeps importing <span class="ref">population.js:28-41</span>.</li>
     <li><b>Live or die.</b> Starvation deaths are rate-bounded and floored at <code>pop 5</code>; growth is <em class="term">gated on food security</em> (2+ days stored) so population can never outrun its larder <span class="ref">population.js:44-57</span>. There is no true death-spiral here.</li>
     <li><b>Price.</b> Mid price = <code>base × clamp((target÷stock)^1, 0.33, 3.0)</code>, eased toward target by a non-overshooting 10%/s limiter; bid/ask are ±5% <span class="ref">pricing.js:13-26</span>.</li>
-    <li><b>Bank.</b> Income = <code>2.4 × pop × (0.4 + 0.6·civ)</code>; sinks are ship upkeep + a per-capita admin cost, and any gold above <code>40 × pop</code> overflows and is destroyed. <b>Gold is deliberately not conserved</b> <span class="ref">upkeep.js:38-41</span>.</li>
+    <li><b>Bank.</b> Income = <code>2.4 × pop × (0.4 + 0.6·civ)</code>, scaled by <code>(1 + tax·TAX_INCOME_W)</code>; sinks are ship upkeep + a <b>per-workshop upkeep</b> bill (<code>WORKSHOP_UPKEEP_PER_DAY·pop</code> each — this <em>replaces</em> the old flat <code>PROD_UPKEEP</code> aggregate, so a farm with no industrial works now pays zero factory upkeep), and any gold above <code>40 × pop</code> overflows and is destroyed. A corrupt magistrate also <b>skims</b> a slice of income into a hidden hoard here. <b>Gold is deliberately not conserved</b> <span class="ref">upkeep.js:25-92</span>.</li>
   </ul>
 
   <div class="chart">
@@ -327,49 +335,48 @@ flowchart LR
 
 <!-- ============ 4. BUYING HULLS ============ -->
 <section id="hulls">
-  <h2><span class="roman">IV.</span>The Port — buying hulls <span style="font-size:.5em; color:var(--crit); font-family:var(--mono); letter-spacing:.1em;">◆ mostly broken</span></h2>
-  <div class="decides"><b>Decides:</b> how a port replaces lost ships. Two independent paths — and both are throttled by a mispriced constant.</div>
-  <p>A port grows its fleet two ways: opportunistically, by sending an idle hull to a shipyard on a voyage; or reliably, via <code>development</code>, which spawns a hull at home each day if the treasury is fat. The intent is sound. The execution is undermined by a pricing bug that makes the true cost of a ship <b>~3× what every gate assumes</b>.</p>
+  <h2><span class="roman">IV.</span>The Port — buying hulls <span style="font-size:.5em; color:var(--ok); font-family:var(--mono); letter-spacing:.1em;">✓ repriced &amp; unblocked</span></h2>
+  <div class="decides"><b>Decides:</b> how a port replaces lost ships. The old ~3× mispricing is fixed, and the parallel fleet-buyer is folded into the magistrate's policy budget.</div>
+  <p>A port grows its fleet two ways: opportunistically, by sending an idle hull to a shipyard on a voyage; or deliberately, via the magistrate's <b>naval-expansion lever</b> — fleet-buying is no longer a split-brain <code>development</code> system but one ambition-scored action inside the single treasury-budgeted <code>policy</code> loop (<code>development.js</code> is retained only as the executor the lever calls). <b>The pricing bug (#1) is fixed:</b> <code>TARGET_OVERRIDES.Ships = 3</code> matches the yard's <code>stock cap 3</code>, so the ratio is <code>3÷3 = 1</code> and the multiplier sits near <code>1×</code> — a hull asks its named base (~<code>1200g</code>) instead of the old pinned ~<code>3780g</code>. That drops the buy threshold from <b>pop ≈ 120 down to pop ≈ 57</b>, and the magistrate's tax + public-works levers give a modest port an emergent path to accumulate toward a hull (#2).</p>
 
   <div class="chart">
 <pre class="mermaid" id="fig3">
 %%{init:{'theme':'base','themeVariables':{'fontSize':'14px','primaryColor':'#15303a','primaryTextColor':'#e7eff1','primaryBorderColor':'#3c6f7c','lineColor':'#5f8a97','clusterBkg':'#0e2029','clusterBorder':'#295059','edgeLabelBackground':'#0e2029'}}}%%
 flowchart TB
-  ROOT["Shipyard stock.Ships capped at 3,&lt;br/&gt;but price target = 250 ⇒ ratio 3÷250&lt;br/&gt;⇒ price multiplier PINNED at 3×"]:::issue
-  ROOT --> PRICE["Real ask ≈ 1200 × 3 = 3780g&lt;br/&gt;(never the named base 1200)"]:::issue
+  ROOT["Shipyard stock.Ships capped at 3,&lt;br/&gt;price target = 3 (TARGET_OVERRIDES.Ships)&lt;br/&gt;⇒ ratio 3÷3 = 1 ⇒ multiplier ≈ 1×"]:::good
+  ROOT --> PRICE["Real ask ≈ base 1200g&lt;br/&gt;(the named price, at last)"]:::good
   PRICE --> PA & PB
   subgraph PATHA["Path A — buy-ship-on-voyage"]
     direction TB
-    PA["Demand gate: owned in 1..5&lt;br/&gt;and gold gt 1800"] --> PA2{"believes yard price?"}
-    PA2 -->|"never observed → thinks 1260"| PAF["Loads ~1512g,&lt;br/&gt;arrives, ask is 3780 → buys NOTHING"]:::issue
-    PA2 -->|"knows true price"| PA3{"gold ≥ 5040 ?&lt;br/&gt;(needs pop ≥ 126)"}
-    PA3 -->|"rare"| PAOK["Buys a hull"]:::good
-    PA3 -->|"usual"| PAF
+    PA["Demand gate: owned in 1..5&lt;br/&gt;and gold gt 1800"] --> PA2{"believes yard price?&lt;br/&gt;(via beliefMid / believedHaven —&lt;br/&gt;no live remote read)"}
+    PA2 -->|"loads ~1.5× belief"| PA3{"gold ≥ ~1800 ?&lt;br/&gt;(pop ≈ 57, not 126)"}
+    PA3 -->|"common now"| PAOK["Buys a hull"]:::good
+    PA3 -->|"lean port"| PAF["Waits, accumulates"]
   end
-  subgraph PATHB["Path B — development (daily)"]
+  subgraph PATHB["Path B — magistrate NAVAL lever (daily)"]
     direction TB
-    PB["gold ≥ 2400 (named)…"] --> PB2{"real gate:&lt;br/&gt;gold ≥ ask 3780 + reserve 1000"}
-    PB2 -->|"pop ≥ ~120"| PBOK["Spawn hull at home"]:::good
-    PB2 -->|"smaller port"| PBNO["No hull — fleet only DECAYS"]:::issue
+    PB["fleet-ambition (grow/wealth/industry)&lt;br/&gt;+ treasury clears the reserve"] --> PB2{"gold ≥ ask ~1200 + reserve&lt;br/&gt;(believed yard price/haven)"}
+    PB2 -->|"pop ≳ 57"| PBOK["Commission a hull"]:::good
+    PB2 -->|"tiny port"| PBNO["Tax + public works lift pop&lt;br/&gt;→ higher cap → afford one"]:::good
   end
-  CAP["Hoard cap 40 × pop&lt;br/&gt;pins treasury below the real price"]:::trap --> PA3
+  CAP["Hoard cap 40 × pop&lt;br/&gt;now clears the ~1200 ask by pop ≈ 57"]:::good --> PA3
   CAP --> PB2
   classDef issue fill:#3b1a22,stroke:#e0645a,color:#ffdad4,stroke-width:1.3px;
   classDef trap fill:#352c14,stroke:#e0a94a,color:#ffe9c2;
   classDef good fill:#173226,stroke:#63b98a,color:#cdeed9;
 </pre>
   </div>
-  <p class="chart-cap">Fig. IV — the fleet-replacement machine, and where it jams.</p>
+  <p class="chart-cap">Fig. IV — the fleet-replacement machine, now unjammed: the yard prices at base and both paths clear the hoard cap for a mid-sized port.</p>
 
-  <div class="note crit"><span class="tag">Bug · high</span><p><b>Ships never cost their base price.</b> <code>SHIP_STOCK_CAP = 3</code> caps a yard's <code>stock.Ships</code>, but the price target for Ships defaults to <code>250</code>, so <code>(250÷3)</code> saturates the multiplier at the <code>3.0</code> ceiling <em>always</em> <span class="ref">economy.json:88 · pricing.js:14</span>. Ask ≈ <b>3780g</b>, not the advertised <code>1200</code>. Every downstream threshold keyed to 1200 is wrong by ~3×.</p></div>
-  <div class="note crit"><span class="tag">Deadlock · high</span><p><b>Small ports can never replace a hull.</b> Healthy treasuries pin at the <code>40 × pop</code> hoard cap. Buying needs ~<code>4780g</code> ⇒ <b>pop ≥ ~120</b>; starting pop is 80. So a port must nearly <em>double its population</em> before it can afford one ship — while pirates and storms take its starting hulls in the meantime. This is the structural engine behind the known "starving tail." <span class="ref">upkeep.js:40 · trade.js:33 · development.js:40</span></p></div>
+  <div class="note ok"><span class="tag">Fixed · #1</span><p><b>Ships now cost their base price.</b> <code>TARGET_OVERRIDES.Ships = 3</code> was added so the Ships price target matches <code>SHIP_STOCK_CAP = 3</code>: the ratio is <code>3÷3 = 1</code> and the multiplier no longer pins at the <code>3.0</code> ceiling <span class="ref">economy.json:49 · pricing.js:14</span>. Ask ≈ the advertised <b>1200g</b>, not the old ~<code>3780g</code>. Every downstream threshold keyed to 1200 is now honest. (<code>simStability</code> held on all three seeds without re-deriving bounds.)</p></div>
+  <div class="note ok"><span class="tag">Fixed · #2</span><p><b>Mid-sized ports can replace a hull; the tail has a growth path.</b> At the corrected ~<code>1200g</code> ask, the buy threshold falls from pop ≈ 120 to <b>pop ≈ 57</b> — below the <code>40 × pop</code> hoard cap for most ports. The genuinely tiny (pop 40–57) tail is now relieved by the magistrate's <b>tax + public-works</b> levers: a modest port raises tax, funds public works that lift civ → population → a higher hoard cap, and accumulates toward a hull, rather than decaying forever. <span class="ref">upkeep.js:25 · policy.js:245-276</span></p></div>
 </section>
 
 <!-- ============ 5. MAGISTRATE ============ -->
 <section id="magistrate">
-  <h2><span class="roman">V.</span>The Magistrate — governance, loyalty &amp; rebellion</h2>
-  <div class="decides"><b>Decides:</b> a port's economic <em>ambition</em> (which becomes its import/export demand), and whether the populace stays loyal or burns the docks.</div>
-  <p>Each island is ruled by a named magistrate with three traits (<code>firmness, generosity, integrity</code>) and one of six agendas — <code>grow, industry, wealth, fortify, splendor, order</code> — chosen by the island's nature <span class="ref">magistrate.js:69-85</span>. The agenda <b>retargets the economy</b>: it rewrites the port's <code>targets[]</code> (fortify boosts Weapons ×2.4, splendor Luxury ×2.2, etc.), and those targets <em>are</em> the port's dynamic demand that the trade planner reads. Food is always floored at base — no agenda can starve the port <span class="ref">magistrate.js:114-125</span>.</p>
+  <h2><span class="roman">V.</span>The Magistrate — the policy loop &amp; mutable industry</h2>
+  <div class="decides"><b>Decides:</b> a port's economic <em>ambition</em> — which now drives real <b>actions</b> across five levers (industry, tax, garrison, infrastructure, trade), not just a demand curve — plus whether the populace stays loyal or burns the docks, and how much a corrupt ruler quietly skims.</div>
+  <p>Each island is ruled by a named magistrate with three traits (<code>firmness, generosity, integrity</code>) and one of six agendas — <code>grow, industry, wealth, fortify, splendor, order</code> — chosen by the island's nature <span class="ref">magistrate.js:69-85</span>. The agenda <b>retargets the economy</b>: it rewrites the port's <code>targets[]</code> (fortify boosts Weapons ×2.4, splendor Luxury ×2.2, etc.), and those targets <em>are</em> the port's dynamic demand that the trade planner reads. Food is always floored at base — no agenda can starve the port <span class="ref">magistrate.js:114-125</span>. <b>New:</b> the magistrate is no longer a one-decision-per-regime actor. A daily <code>policy</code> loop (below) turns that ambition into concrete decrees — building works, setting taxes and tariffs, garrisoning, funding public works — reasoning about the wider world only through the island's own stale <b>beliefs/intel</b> (no omniscience), so a governor can be as wrong as any captain.</p>
   <p>Loyalty eases toward a steady value set by civ, skill, generosity and lawlessness, dragged down by famine, plague, crowding and graft, buoyed by "bread &amp; circuses" (Ale+Luxury in stock) <span class="ref">magistrate.js:258-266</span>. Below loyalty <code>0.25</code>, unrest accrues; once it passes a skill-scaled grace window, the island <b>rebels</b> — halting all production and income for exactly one day — then resolves to a <em class="term">quell</em> or an <em class="term">overthrow</em> <span class="ref">magistrate.js:272-318</span>.</p>
 
   <div class="chart">
@@ -391,8 +398,8 @@ flowchart TB
   QUELL --> GRIEV["Grievance ratchet ↑&lt;br/&gt;→ lawlessness ↑&lt;br/&gt;→ shorter next grace"]:::trap
   GRIEV --> HAVEN{"lawlessness ≥ 0.58&lt;br/&gt;and civ ≤ 0.34, 5 days ?"}
   OVER --> HAVEN
-  HAVEN -->|"yes and slot free"| FALL["Port FALLS to a haven →"]:::issue
-  HAVEN -->|"cap full"| LOOP2["No exit — churns overthrow&lt;br/&gt;every 5 days forever"]:::issue
+  HAVEN -->|"yes and slot free"| FALL["Port FALLS to a haven → §XII"]
+  HAVEN -->|"cap full"| LOOP2["Can't fall — HAVEN_CAP_RELIEF eases&lt;br/&gt;lawlessness 0.03/day → exits the churn"]:::good
   classDef actor fill:#123c3f,stroke:#4fcdd4,color:#d6faf9,stroke-width:1.4px;
   classDef issue fill:#3b1a22,stroke:#e0645a,color:#ffdad4,stroke-width:1.3px;
   classDef trap fill:#352c14,stroke:#e0a94a,color:#ffe9c2;
@@ -402,8 +409,58 @@ flowchart TB
   <p class="chart-cap">Fig. V — the mirror of crew mutiny at island scale. Grievance is the one-way ratchet toward a haven.</p>
 
   <div class="note ok"><span class="tag">Sound</span><p>Rebellions always start when warranted and <b>always end</b> after exactly one day (resolution is unconditional). Overthrow vents grievance (×0.4) and haven-redemption caps it at 0.25, so an island is never <em>permanently</em> ungovernable — though the recovery road may run through becoming a haven first. The lawlessness↔civ loop converges (L≈0.27) rather than running away; it only tips to haven territory under an external shock (piracy danger).</p></div>
-  <div class="note warn"><span class="tag">Trap · med</span><p><b>Some agendas are structurally unwinnable and quietly bleed loyalty.</b> A pure shipyard makes only "special" goods, so <code>industry</code>'s signal is pinned at <code>−1</code> forever — yet the agenda-chooser actively pushes shipyards toward <code>industry</code> <span class="ref">magistrate.js:75,142-145</span>. Likewise <code>order</code> takes a loyalty penalty for the very lawlessness it was installed to fix, and <code>wealth</code> is unreachable for a shrunken port (needs 2000g vs a hoard cap that may be 200).</p></div>
-  <div class="note crit"><span class="tag">Deadlock · med</span><p><b>Haven-cap rebellion loop.</b> When havens sit at their <code>8%</code> cap, a fully-failed island <em>cannot</em> fall — but the haven is its only reset for grievance/lawlessness. It stays in an endless overthrow-every-5-days churn, shedding civ and gold each cycle, with no exit until a haven slot frees up <span class="ref">havens.js:96</span>.</p></div>
+  <div class="note ok"><span class="tag">Fixed · #13 / #29</span><p><b>The formerly-unwinnable agendas are winnable.</b> Industry is redefined <em>by</em> workshops: <code>ambitionSignal('industry')</code> now scores the count × condition of built works against <code>slotCap</code> — a port raising more, healthier workshops is <em>succeeding</em>, so a shipyard is no longer pinned at <code>−1</code> <span class="ref">magistrate.js:157</span>. <code>wealth</code> is now scored <b>treasury-relative</b> (gold per cap, not an absolute 2000g against a low hoard cap), so a shrunken port can still satisfy it <span class="ref">magistrate.js:168</span>. And <code>order</code> is functional — the tax/public-works/garrison levers give it real tools to buy down the lawlessness it was installed to fix.</p></div>
+  <div class="note ok"><span class="tag">Fixed · #14</span><p><b>The haven-cap rebellion loop has an exit.</b> When the pirate budget is full and a fully-failed island <em>cannot</em> fall to a haven, <code>maybeFall</code> now eases its lawlessness by <code>HAVEN_CAP_RELIEF</code> (0.03/day) and caps the pressure — so instead of churning overthrow-every-5-days forever, an at-cap port bleeds pressure back down and climbs out of the churn <span class="ref">havens.js · economy.json:489</span>.</p></div>
+
+  <h3>Mutable industry — workshops, slots &amp; condition</h3>
+  <p>An island's finished-goods industry is no longer fixed at world-gen. A port's <b>industrial</b> goods (<code>Weapons, Clothing, LuxuryGoods, Ships</code>) now live in <b>mutable workshops</b> that can be built, switched, demolished and repaired. <code>island.workshops = [{good, condition}]</code> is the <b>single source of truth</b>; the old <code>island.produces[]</code> is now a derived cache rebuilt by the one mutator <code>mutateWorkshops()</code> that every path routes through <span class="ref">island.js · production.js:37-56</span>. <b>Food and Ale are deliberately excluded</b> — survival goods stay always-on (never gated by labour or funding), so a poor port can never decay its own food supply into a famine spiral.</p>
+  <ul class="tight">
+    <li><b>Slots bound the works.</b> <code>slotCap = min(6, 2 + popTiers + development)</code>, floored by what's already built — a seed port (pop 80) starts at <code>SLOT_BASE = 2</code> with vacant berths to industrialise into; passing <code>150 / 400 / 900 / 1800</code> population each grants one more, and the magistrate can buy <code>development</code> slots <span class="ref">economy.json:102-105</span>.</li>
+    <li><b>Workshops need labour + upkeep, and rot when starved.</b> Each demands <code>LABOR_PER_WORKSHOP = 10</code> from a labour pool of <code>pop × WORKFORCE_FRAC(0.5)</code>, so <code>staffing = min(1, pool ÷ Σdemand)</code> — an over-built or famine-shrunk port can't crew them all. Each bills <code>WORKSHOP_UPKEEP_PER_DAY(0.05)·pop</code> (this <em>replaced</em> the flat <code>PROD_UPKEEP</code> aggregate); ship upkeep is paid first, the rest funds the works. A workshop's <code>condition</code> eases toward <code>min(staffing, funding)</code> at <code>0.15/day</code> (like morale/loyalty), and its output scales <code>condition × staffing</code>. Derelict (condition ≈ 0) it makes nothing but holds its slot until repaired or demolished <span class="ref">upkeep.js:62-92</span>.</li>
+    <li><b>Three status bytes drive the UI + silhouette.</b> <code>st ∈ {running, idle, derelict}</code> is precomputed server-side (idle = unstaffed/unfunded or input-starved; derelict = condition ≈ 0), streamed with each workshop, and drives the InfoPanel status gauge and the map building sprite (disrepair changes the <em>silhouette</em>, not just tint) <span class="ref">snapshot.js · WorldRenderer.js</span>.</li>
+  </ul>
+
+  <h3>The daily policy loop — five levers</h3>
+  <div class="decides"><b>Decides:</b> once per day, the single capital action (plus a few cheap standing knobs) a magistrate takes to serve its ambition, its treasury, and its people. All cross-island reasoning runs on the island's own stale beliefs/intel — the loop honours the no-omniscience contract.</div>
+  <p>A new <code>policy</code> system (<code>policy.js</code>, daily-gated, runs after <code>governance</code>) skips any island that's a haven, in rebellion, or lacking a magistrate. For the rest it first turns the <b>continuous knobs</b> — tax, garrison, tariff, export holds — then, once off a per-island cooldown and above a treasury reserve, takes <b>at most one capital action</b> down a strict priority ladder. <code>scoreGood</code> ranks a candidate workshop as <code>1.0·margin + 0.9·ambition-fit + 0.2·welfare − 0.6·import-risk − 0.5·saturation + 0.3·diversity</code>; ambition is a <em>strong</em> steer (weight 0.9 — the feature thesis), while the saturation term (how many known ports already make the good) keeps industry from homogenising into all-Luxury/all-Weapons <span class="ref">policy.js:87-370 · economy.json:562-581</span>.</p>
+
+  <div class="chart">
+<pre class="mermaid" id="fig4b">
+%%{init:{'theme':'base','themeVariables':{'fontSize':'14px','primaryColor':'#15303a','primaryTextColor':'#e7eff1','primaryBorderColor':'#3c6f7c','lineColor':'#5f8a97','clusterBkg':'#0e2029','clusterBorder':'#295059','edgeLabelBackground':'#0e2029'}}}%%
+flowchart TB
+  DAY["Once/day per island&lt;br/&gt;skip haven · rebellion · no magistrate"]:::actor --> CONT
+  subgraph CONT["Continuous knobs — every eligible day"]
+    direction LR
+    TAX["TAX ±0.05&lt;br/&gt;hysteresis band"] --> GAR["GARRISON&lt;br/&gt;Weapons target"] --> TAR["TARIFF&lt;br/&gt;foreign duty"] --> HLD["HOLDS&lt;br/&gt;export bans"]
+  end
+  CONT --> GATE{"off _policyCd AND&lt;br/&gt;treasury &gt; reserve ?"}
+  GATE -->|no| WAIT["accumulate"]
+  GATE -->|yes| ONE["ONE capital action, first that fires:"]
+  ONE --> A1["① DEMOLISH a workshop idle/derelict ≥ 8d&lt;br/&gt;(free slot, stop the bleed)"]
+  A1 --> A2["② BUILD best good into an open slot&lt;br/&gt;(800g + 30 Wood + 15 Iron; staffing ≥ 0.8)"]:::good
+  A2 --> A3["③ NAVAL — commission a hull (fleet-ambition)"]
+  A3 --> A4["④ PUBLIC WORKS 600g → +civ −lawless +approval"]
+  A4 --> A5["⑤ DEVELOP +1 slot 1500g (full &amp; industrial)"]
+  A5 --> A6["⑥ SWITCH worst workshop to a much better good"]
+  A6 --> A7["⑦ REPAIR a below-0.4 workshop it can crew (250g)"]
+  A2 -. "scoreGood via BELIEFS/INTEL&lt;br/&gt;profit + 0.9·ambition − saturation" .-> BEL["stale reports only —&lt;br/&gt;the governor can be wrong"]:::good
+  classDef actor fill:#123c3f,stroke:#4fcdd4,color:#d6faf9,stroke-width:1.4px;
+  classDef good fill:#173226,stroke:#63b98a,color:#cdeed9;
+</pre>
+  </div>
+  <p class="chart-cap">Fig. Va — the magistrate's daily decision. Cheap knobs always; then one throttled capital action, first-match-wins. <code>development.js</code>'s old fleet-buyer is now rung ③, budgeted alongside everything else.</p>
+
+  <ul class="tight">
+    <li><b>Industry</b> — build / switch / demolish / repair workshops (rungs ①②⑥⑦). Build cost is <code>800g + 30 Wood + 15 Iron</code>; a <code>WORKSHOP_COOLDOWN_DAYS(12)</code> stops build↔demolish thrashing one good; input-starvation (Idle for lack of inputs) is its own demolish trigger, so an import-starved money-pit doesn't live forever.</li>
+    <li><b>Taxation</b> — <code>island.tax ∈ [0, 0.4]</code> scales income <code>×(1 + tax)</code>, but also raises lawlessness (<code>LAWLESS_TAX·tax</code>, closing the gold→civ back-door so tax has an <em>interior</em> optimum) and sours <code>_approval</code>. Nudged ±0.05 inside a hysteresis band (cut below loyalty 0.35, raise above 0.6) so no approval limit-cycle forms.</li>
+    <li><b>Garrison</b> — a fortify/order mayor, or any port in dangerous waters, lifts its Weapons target to <code>GARRISON_WEAPONS_TARGET(80)</code> so trade imports guns for the shore batteries.</li>
+    <li><b>Infrastructure</b> — buy a <code>+1</code> slot (<code>1500g</code>), or fund <b>public works</b> (<code>600g</code> → <code>+0.05</code> civ, <code>−0.04</code> lawlessness/grievance, <code>+0.25</code> approval) — the welfare spend a flush grow/order mayor makes, and the emergent relief path for the small-port tail (#2).</li>
+    <li><b>Trade</b> — set a <b>tariff</b> (<code>0..0.3</code> duty the host adds to a foreign trader's ask via <code>tariffMult</code>, composed alongside reputation, fleet-mates exempt); add strategic <b>export holds</b> (withhold Food/Weapons in distress); and steer the good the port <b>contracts</b> for toward its ambition's key input.</li>
+  </ul>
+
+  <h3>Taxation, approval &amp; corruption</h3>
+  <p>Corruption is now a concrete <em>flow</em>, not just a static integrity penalty. A low-integrity magistrate <b>skims</b> <code>max(0, 0.5 − integrity)·SKIM_RATE·income</code> each substep into a hidden <code>magistrate.hoard</code> (bounded ≤30% of gross, so the income floor still protects civ) — starving the treasury, so gold → civ → loyalty all sag under the leak. Every policy spend is <b>grafted</b> <code>×(1 + (0.5 − integrity)·GRAFT_RATE)</code>, the excess pocketed, so a corrupt regime gets less per gold <span class="ref">upkeep.js:56 · policy.js:36-50</span>. Meanwhile <code>island._approval</code> — a signed, daily-decaying memory of recent policy — biases the loyalty attractor by <code>_approval·0.09</code> (kept small so an unpopular streak alone can't manufacture a rebellion); tax hikes and exposed graft push it down, tax cuts and public works push it up.</p>
+  <div class="note ok"><span class="tag">Depth</span><p><b>Who you overthrow now matters.</b> The hoard is <em>seized by the people</em> on an <b>overthrow</b> (<code>island.gold += hoard·HOARD_RECOVERY(0.7)</code>, a distinct <code>graft</code> handover cause + the grafter's self-justifying last line + a <code>graftseized</code> beat) — so toppling a corrupt hoarder returns wealth, while toppling an honest-but-failed ruler is pure loss. A <b>quell</b> lets the tyrant keep skimming (the doom loop deepens). Past <code>HOARD_EXPOSE(4000g)</code> the hoard surfaces as a public <b>scandal</b> that craters approval — the one at-a-glance tell, since the hidden hoard never leaks to the client until exposed <span class="ref">magistrate.js:294-298,341-366</span>.</p></div>
 </section>
 
 <!-- ============ 6. VOYAGE PLANNER ============ -->
@@ -550,7 +607,7 @@ flowchart TB
 <section id="pirate">
   <h2><span class="roman">IX.</span>The Pirate — the hunt</h2>
   <div class="decides"><b>Decides:</b> a pirate's every move via a strict priority ladder, coloured by a fearsome captain's traits and sharpened by hunger.</div>
-  <p>Any hull can raise the black flag — a <b>seeded</b> raider, a <b>haven's forge</b>, a <b>prize</b> capture, a <b>mutiny</b> that turns rogue, a fallen haven's <b>home fleet</b>, or an honest <b>captain's own turn</b> to piracy (<code>maybeTurnRogue</code>, weighed each substep for a genuinely bold + greedy master) — always gated by <code>canTurnPirate</code>, which caps pirates at <code>8%</code> of the fleet <span class="ref">piracy.js:99-115</span>. How she came to it decides <em>who commands</em>: the crew either keep their captain as their pirate leader (a <b>rogue</b> turn — he's hardened bold+greedy but keeps his name, portrait, and log-voice, an unbroken fall from honest trade) or throw him over for a fresh, fearsome master (a <b>seizure</b>). A <em>seeded/built</em> raider and a <em>mutiny</em> are always a new master; an <em>organic</em> turn rolls lead-vs-cast-out from the captain's boldness + greed + crew morale — so the self-turn, born of that same boldness+greed, comes up <em>rogue</em> almost always <span class="ref">piracy.js:104-171</span>. A pirate then runs the ladder below every substep. Hunger is the master dial: a hungry pirate never rests, uses full hunting range even mid-blockade, and drops its greedy captain's minimum-prize bar to zero.</p>
+  <p>Any hull can raise the black flag — a <b>seeded</b> raider, a <b>haven's forge</b>, a <b>prize</b> capture, a <b>mutiny</b> that turns rogue, a fallen haven's <b>home fleet</b>, or an honest <b>captain's own turn</b> to piracy (<code>maybeTurnRogue</code>, weighed each substep for a genuinely bold + greedy master) — always gated by <code>canTurnPirate</code> against a single unified <code>pirateBudget</code> (base <code>8%</code> of the fleet, lifted by active havens — see §XII #5) <span class="ref">piracy.js:99-115</span>. How she came to it decides <em>who commands</em>: the crew either keep their captain as their pirate leader (a <b>rogue</b> turn — he's hardened bold+greedy but keeps his name, portrait, and log-voice, an unbroken fall from honest trade) or throw him over for a fresh, fearsome master (a <b>seizure</b>). A <em>seeded/built</em> raider and a <em>mutiny</em> are always a new master; an <em>organic</em> turn rolls lead-vs-cast-out from the captain's boldness + greed + crew morale — so the self-turn, born of that same boldness+greed, comes up <em>rogue</em> almost always <span class="ref">piracy.js:104-171</span>. A pirate then runs the ladder below every substep. Hunger is the master dial: a hungry pirate never rests, uses full hunting range even mid-blockade, and drops its greedy captain's minimum-prize bar to zero.</p>
 
   <div class="chart">
 <pre class="mermaid" id="fig9a">
@@ -620,8 +677,8 @@ flowchart TB
   C3 -->|no| C4{"assessFlee: hull AND odds&lt;br/&gt;both turned against her?&lt;br/&gt;(nerve = boldness+skill;&lt;br/&gt;fearless never · dismasted can't)"}
   C4 -->|yes| BREAK["Break off / sheer away&lt;br/&gt;(→ run for a haven to mend)"]
   C4 -->|no| ENG
-  BOARD --> TAKE{"take as prize?&lt;br/&gt;hull ≥ 0.15, p = f(gunnery,boldness),&lt;br/&gt;under 8% pirate cap"}
-  TAKE -->|yes| PRIZE["Crew the hull → new pirate&lt;br/&gt;(keeps homeId — see §XV)"]:::issue
+  BOARD --> TAKE{"take as prize?&lt;br/&gt;hull ≥ 0.15, p = f(gunnery,boldness),&lt;br/&gt;under the unified pirateBudget"}
+  TAKE -->|yes| PRIZE["Crew the hull → new pirate&lt;br/&gt;(re-homed to the captor — see §XV)"]:::good
   TAKE -->|no| SCUT{"scuttle 6% ?"}
   SCUT -->|yes| SINK
   SCUT -->|no| FREE["Freed to limp home"]
@@ -674,17 +731,17 @@ flowchart TB
 
 <!-- ============ 12. HAVEN ============ -->
 <section id="haven">
-  <h2><span class="roman">XII.</span>The Haven — a port gone rogue</h2>
-  <div class="decides"><b>Decides:</b> when a failed island stops being governed and becomes a pirate base — and how it's eventually retaken.</div>
-  <p>A port that stays lawless (≥0.58) and uncivilised (civ ≤0.34) for five days <b>falls</b>: it drops its magistrate, seeds three of its own idle crews as pirates, and starts a strength meter at 0.85. Thereafter it entrenches daily, forges fresh pirates when it can afford the wood and iron, fences plundered goods from visiting pirates, and refits them for free. It's redeemed only when a privateer's repeated assaults grind its strength to zero <span class="ref">havens.js</span>.</p>
+  <h2><span class="roman">XII.</span>The Haven &amp; the Pirate Lord</h2>
+  <div class="decides"><b>Decides:</b> when a failed island stops being governed and becomes a pirate base — who then <em>rules</em> that base, and how it's eventually retaken.</div>
+  <p>A port that stays lawless (≥0.58) and uncivilised (civ ≤0.34) for five days <b>falls</b>: it drops its magistrate, seeds three of its own idle crews as pirates, and starts a strength meter at 0.85. A named <b>Pirate Lord</b> — the dark mirror of the magistrate — seizes the den (§XII.b). Its workshops split: <b>civilian works rot</b> (their condition target drops to 0) while <b>war works</b> (Weapons + Ships) are kept and repaired from fenced plunder — so <em>which</em> island falls now matters, a fallen shipyard mass-produces raiders. Thereafter the den entrenches daily, forges fresh pirates when it can afford the wood and iron, fences plundered goods from visiting pirates, and refits them for free. It's redeemed only when a privateer's repeated assaults grind its strength to zero — and a redeemed port gets a <b>reconstruction grant</b> (condition restored to 0.45 + a 6-day upkeep holiday) so it isn't a revolving-door wreck <span class="ref">havens.js · pirateLord.js</span>.</p>
 
   <div class="chart">
 <pre class="mermaid" id="fig12">
 %%{init:{'theme':'base','themeVariables':{'fontSize':'14px','primaryColor':'#15303a','primaryTextColor':'#e7eff1','primaryBorderColor':'#3c6f7c','lineColor':'#5f8a97','clusterBkg':'#0e2029','clusterBorder':'#295059','edgeLabelBackground':'#0e2029'}}}%%
 flowchart LR
-  FAIL["Lawless ≥ 0.58 + civ ≤ 0.34,&lt;br/&gt;5 days, and a haven slot free"]:::actor --> FALL["FALL: drop magistrate,&lt;br/&gt;seed 3 pirates, strength = 0.85"]
-  FALL --> DRIVE["Entrench +0.01/day;&lt;br/&gt;lawlessness pinned = 1"]
-  DRIVE --> BUILD{"build a pirate?&lt;br/&gt;based lt 5 · gold/wood/iron ok&lt;br/&gt;· pirateCount lt 20% (lifted cap)"}:::trap
+  FAIL["Lawless ≥ 0.58 + civ ≤ 0.34,&lt;br/&gt;5 days, and a haven slot free"]:::actor --> FALL["FALL: drop magistrate, seat a Pirate Lord,&lt;br/&gt;seed 3 pirates, strength = 0.85&lt;br/&gt;civilian works ROT · war works KEPT"]
+  FALL --> DRIVE["Lord's war-economy loop: entrench +0.01/day;&lt;br/&gt;skim to hoard · convert a derelict slot → gun-foundry"]
+  DRIVE --> BUILD{"build a raider?&lt;br/&gt;based lt 5 · gold/wood/iron ok&lt;br/&gt;· under the UNIFIED pirateBudget&lt;br/&gt;(faster with a live Ships works)"}:::good
   BUILD -->|yes| DRIVE
   DRIVE --> HARBOUR["Harbour pirates within 900u:&lt;br/&gt;fence gold+goods, feed, refit free"]
   HARBOUR --> DRIVE
@@ -696,9 +753,18 @@ flowchart LR
   classDef good fill:#173226,stroke:#63b98a,color:#cdeed9;
 </pre>
   </div>
-  <p class="chart-cap">Fig. XII — fall → entrench → redeem. The build cap fights the global pirate budget.</p>
+  <p class="chart-cap">Fig. XII — fall → the Lord's war-economy → redeem. Builds now draw from one unified pirate budget, so havens and sea-rogues share it.</p>
 
-  <div class="note crit"><span class="tag">Cap conflict · high</span><p><b>Two pirate caps that don't know about each other.</b> Haven <em>builds</em> are allowed up to <code>20%</code> of the fleet, but every <em>other</em> pirate source (mutiny, rogue-floor refill, prize capture) is capped at <code>8%</code> by <code>canTurnPirate</code>. Once haven-built pirates fill ≥8%, all the character-rich sources silently stop — a couple of busy havens can monopolise the entire pirate budget, and the mutineers and captain-led <em>rogue</em> turns (mutiny→pirate, the haven-fall crew, and <code>maybeTurnRogue</code>) the design leans on for its Story-tab drama can't spawn <span class="ref">havens.js:133 · piracy.js:100</span>.</p></div>
+  <div class="note ok"><span class="tag">Fixed · #5</span><p><b>One pirate budget, not two conflicting caps.</b> A single <code>pirateBudget(world)</code> now governs every source: <code>ships·PIRATE_MAX_FRAC(0.08)·min(1 + havens·HAVEN_PIRATE_LIFT(0.5), 2.5)</code>. Haven builds, sea-risen rogues, mutineers and captured prizes all draw from the <em>same</em> lifted ceiling — the old separate <code>20%</code> haven cap vs <code>8%</code> global cap is gone, so busy havens can no longer monopolise the budget and silently starve out the mutiny → pirate and <code>maybeTurnRogue</code> turns the Story-tab drama leans on <span class="ref">piracy.js (pirateBudget) · havens.js · economy.json:486-488</span>.</p></div>
+
+  <h3 id="piratelord">§XII.b — The Pirate Lord (dark mirror of the magistrate)</h3>
+  <p>A fallen den has no lawful levers (tax, tariff, public works are inert — the policy loop skips havens), so it gets a <b>Pirate Lord</b> that runs a symmetric <em>war</em>-economy loop in <code>driveHaven</code>. Seated in <code>fall()</code>, cleared on <code>redeem()</code> (its hoard scattered as a <b>sink</b>, never banked to the treasury). It mirrors the magistrate's shape — a named ruler with a portrait, an opaque <code>voiceSeed</code> (so the haven chapter narrates in its own pirate hand in the Story tab), an xp/skill curve, three traits and a war agenda <span class="ref">pirateLord.js · havens.js:117-141,262</span>.</p>
+  <ul class="tight">
+    <li><b>Traits</b> (the pirate echo of firmness/integrity/generosity): <b>cruelty</b> (brutal raiding — more plunder, faster-rising heat), <b>cunning</b> (smart entrenchment — the den survives sieges longer), <b>avarice</b> (skims fenced plunder into a private hoard via <code>PIRATELORD_SKIM_RATE(0.25)</code> instead of reinvesting — the corruption echo).</li>
+    <li><b>Agenda</b> (the war analog of ambition): <code>plunder</code> (raid hard), <code>armada</code> (build the biggest raider fleet — a fallen shipyard leans here), <code>fortress</code> (dig in, bank <code>havenStrength</code>), <code>hoard</code> (amass fenced wealth). One is rolled to suit the den.</li>
+    <li><b>The loop</b>: skim fenced gold to the hoard (by avarice); <b>convert</b> a derelict civilian slot into a war workshop for <code>PIRATELORD_CONVERT_GOLD(300)</code> — the cooperage becomes a gun-foundry; keep/repair Weapons + Ships works from fenced plunder while the rest rots; and build raiders faster when a live Ships works feeds the slipway (build cooldown <code>× PIRATELORD_SHIPYARD_BUILD_MULT(0.5)</code>).</li>
+  </ul>
+  <div class="note ok"><span class="tag">By design</span><p>Fall and redeem are now real <b>handovers</b> with their own causes (<code>piratefall</code> captures the outgoing magistrate; <code>redeem</code> reinstates a fresh one) — the haven period reads as a distinct dark chapter in the Lord's voice, and redemption's reconstruction grant keeps a retaken port from immediately re-failing.</p></div>
 </section>
 
 <!-- ============ 13. DIPLOMACY ============ -->
@@ -714,21 +780,21 @@ flowchart TB
   INIT["Seed each pair in ±0.15"]:::actor --> TRADE["Trade completes → both +0.02×volume&lt;br/&gt;+ association pulls bystanders into blocs"]
   TRADE --> DAILY["Daily: decay 3%;&lt;br/&gt;same-primary rivals cool 0.02/day"]
   DAILY --> BETRAY{"trusted pair (≥0.55)&lt;br/&gt;rolls betrayal 0.12%/day ?"}
-  BETRAY -->|yes| EMB["Both crash by 1.4 → instant embargo"]
+  BETRAY -->|yes| EMB["Both crash by 1.7 → instant embargo&lt;br/&gt;(the SOLE route past −0.62)"]
   BETRAY -->|no| BLOC{"cross a bloc threshold?"}
   EMB --> BLOC
   BLOC -->|"≥ 0.32"| ALLY["Ally: aid convoys, price break"]:::good
   BLOC -->|"≤ −0.32"| RIVAL["Rival"]
   BLOC -->|"≤ −0.62"| EMBARGO["Embargo: ALL trade barred"]
-  RIVAL --> ATTR["Same-primary pairs with no active trade&lt;br/&gt;settle at −0.667 — BELOW embargo line —&lt;br/&gt;and trade is then barred, so they lock&lt;br/&gt;there PERMANENTLY"]:::issue
+  RIVAL --> ATTR["Same-primary pairs with no active trade&lt;br/&gt;now settle at −0.50 — ABOVE the −0.62 line —&lt;br/&gt;so they stay rivals, thawable, never&lt;br/&gt;a permanent embargo"]:::good
   classDef actor fill:#123c3f,stroke:#4fcdd4,color:#d6faf9,stroke-width:1.4px;
   classDef issue fill:#3b1a22,stroke:#e0645a,color:#ffdad4,stroke-width:1.3px;
   classDef good fill:#173226,stroke:#63b98a,color:#cdeed9;
 </pre>
   </div>
-  <p class="chart-cap">Fig. XIII — opinions warm slowly and can lock cold. The −0.667 attractor is the clearest runaway in the sim.</p>
+  <p class="chart-cap">Fig. XIII — opinions warm slowly and cool to a rivalry floor, but no longer lock cold: the former −0.667 attractor now rests at −0.50, above the embargo line.</p>
 
-  <div class="note crit"><span class="tag">Runaway · high</span><p><b>Same-primary ports lock into permanent mutual embargo.</b> For two ports sharing a primary with no active trade, the daily rule is <code>v = v×0.97 − 0.02</code>, whose fixed point is <code>−0.667</code> — <em>below</em> the −0.62 embargo threshold. Once past it, the embargo removes the only positive force (trade), so the pair is frozen at −0.667 forever. With only 6 raw types, each port shares its primary with ~N/6 others and permanently embargoes each one it isn't actively trading with — severing a large slice of cross-good trade at scale. It's a pure tuning artifact of <code>competition 0.02</code> vs <code>decay 0.03</code> <span class="ref">reputation.js:113-115</span>.</p></div>
+  <div class="note ok"><span class="tag">Fixed · #3</span><p><b>The permanent-embargo attractor is gone.</b> Lowering <code>REP_COMPETITION_PER_DAY</code> from <code>0.02</code> to <code>0.015</code> moves the same-primary fixed point of <code>v = v×0.97 − 0.015</code> from <code>−0.667</code> up to <code>−0.50</code> — now <em>above</em> the <code>−0.62</code> embargo threshold, so rivalrous pairs settle into a thawable rivalry instead of freezing into mutual embargo. To keep betrayal meaningful as <em>the sole route to a true embargo</em>, <code>REP_BETRAY_DROP</code> was raised <code>1.4 → 1.7</code> so a betrayal still crosses the line (from ~0.9 down to ~−0.8) <span class="ref">reputation.js · economy.json:521,542</span>.</p></div>
 </section>
 
 <!-- ============ 14. WEATHER ============ -->
@@ -782,7 +848,7 @@ flowchart TB
   LEDGER --> OVER{"overdue?"}
   OVER -->|"returned"| CLEAR["Clear entry"]
   OVER -->|"gone + past due"| LOST["Presume lost — fire 'lost' event"]
-  OVER -->|"captured merchant"| GHOST["Kept as owned FOREVER —&lt;br/&gt;home under-counts losses,&lt;br/&gt;never orders a replacement"]:::issue
+  OVER -->|"captured merchant"| GHOST["RE-HOMED to the captor on capture —&lt;br/&gt;origin's census drops it, ledger hopes&lt;br/&gt;until overdue → THEN presumed lost"]:::good
   classDef actor fill:#123c3f,stroke:#4fcdd4,color:#d6faf9,stroke-width:1.4px;
   classDef issue fill:#3b1a22,stroke:#e0645a,color:#ffdad4,stroke-width:1.3px;
   classDef good fill:#173226,stroke:#63b98a,color:#cdeed9;
@@ -790,23 +856,23 @@ flowchart TB
   </div>
   <p class="chart-cap">Fig. XV — knowledge travels by hull. The belief layer drives decisions; only dock settlement is omniscient.</p>
 
-  <div class="note crit"><span class="tag">Leak · high</span><p><b>A captured merchant inflates its home's believed fleet forever.</b> When a pirate takes a prize it sets <code>pirate = true</code> but keeps the ship's <code>homeId</code> and id. So the home's fleet census counts the turned-pirate hull as a still-owned trader — no "lost" event ever fires, and the port stops ordering replacements for ships it thinks it still owns (which are now the raiders attacking it). A port bled by <em>capture</em> rather than sinking silently withers <span class="ref">piracy.js:429 · voyages.js:57 · fleet.js:15</span>.</p></div>
+  <div class="note ok"><span class="tag">Fixed · #4</span><p><b>A captured merchant no longer inflates its home's fleet forever.</b> <code>tryTakePrize</code> now <b>re-homes</b> the prize to the captor (<code>victim.homeId = pirate.homeId</code>) the moment it's taken, so the origin's fleet census stops counting the turned-pirate hull as a still-owned trader — and the port resumes ordering replacements. The <em>belief</em> ledger still hopes for the ship until it's overdue (information-by-sea is preserved — the home doesn't magically know it was taken), then fires the normal <code>lost</code> presumption. A port bled by capture now recovers like one bled by sinking <span class="ref">piracy.js (tryTakePrize) · voyages.js · fleet.js</span>.</p></div>
   <div class="note warn"><span class="tag">Dead agency · low</span><p>The <code>setVoyage</code> intent path is fully wired and validated — but <b>no client message reaches it</b>. In "pass 1" a viewer can only change the clock; the ownership/idle checks in <code>intents.js</code> are exercised only by a unit test. Real player agency over ships needs a new protocol message. <span class="ref">simHost.js:146-154</span></p></div>
 </section>
 
 <!-- ============ 16. REGISTER ============ -->
 <section id="register">
   <h2><span class="roman">XVI.</span>Issue register</h2>
-  <div class="decides"><b>Decides:</b> where to look first. 30 findings, severity-ranked. "High" = distorts core behaviour or deadlocks an actor; "Med" = a real but bounded failure; "Low" = cosmetic, dead, or a perf/tuning smell.</div>
+  <div class="decides"><b>Decides:</b> where to look first. 30 findings, severity-ranked; <b style="color:var(--ok)">9 now resolved</b> by the policy-loop / mutable-industry feature (struck green). "High" = distorts core behaviour or deadlocks an actor; "Med" = a real but bounded failure; "Low" = cosmetic, dead, or a perf/tuning smell.</div>
   <div class="twrap">
   <table>
     <thead><tr><th>#</th><th>Sev</th><th>Actor</th><th>Finding</th><th>Where</th></tr></thead>
     <tbody>
-      <tr><td>1</td><td><span class="sev high">high</span></td><td>Port</td><td>Ships never cost base price — <code>stock cap 3</code> vs <code>target 250</code> pins the multiplier at 3× (ask ≈3780, not 1200)</td><td><span class="ref">economy.json:88 · pricing.js:14</span></td></tr>
-      <tr><td>2</td><td><span class="sev high">high</span></td><td>Port</td><td>Small ports can never replace a hull: buy needs pop ≥ ~120 vs the <code>40×pop</code> hoard cap — the "starving tail" engine</td><td><span class="ref">upkeep.js:40 · trade.js:33</span></td></tr>
-      <tr><td>3</td><td><span class="sev high">high</span></td><td>Diplomacy</td><td>Same-primary ports lock in permanent mutual embargo at −0.667 (below the −0.62 bar)</td><td><span class="ref">reputation.js:113</span></td></tr>
-      <tr><td>4</td><td><span class="sev high">high</span></td><td>Info</td><td>Captured merchant keeps homeId → counted as owned forever → home stops ordering replacements</td><td><span class="ref">piracy.js:429 · voyages.js:57</span></td></tr>
-      <tr><td>5</td><td><span class="sev high">high</span></td><td>Haven</td><td>Haven build cap (20%) fights the global 8% pirate cap → havens starve out mutineers/rogues</td><td><span class="ref">havens.js:133 · piracy.js:100</span></td></tr>
+      <tr class="done"><td>1</td><td><span class="sev done">fixed</span></td><td>Port</td><td><span class="find">Ships never cost base price — <code>stock cap 3</code> vs <code>target 250</code> pins the multiplier at 3× (ask ≈3780, not 1200)</span><span class="fix"><code>TARGET_OVERRIDES.Ships = 3</code> matches the stock cap → ratio 1 → ask ≈ base 1200. §IV</span></td><td><span class="ref">economy.json:49 · pricing.js:14</span></td></tr>
+      <tr class="done"><td>2</td><td><span class="sev done">fixed</span></td><td>Port</td><td><span class="find">Small ports can never replace a hull: buy needs pop ≥ ~120 vs the <code>40×pop</code> hoard cap — the "starving tail" engine</span><span class="fix">#1 drops the threshold to pop ≈ 57; the magistrate's tax + public-works levers give the pop-40–57 tail a growth path. §IV</span></td><td><span class="ref">upkeep.js:25 · policy.js:245-276</span></td></tr>
+      <tr class="done"><td>3</td><td><span class="sev done">fixed</span></td><td>Diplomacy</td><td><span class="find">Same-primary ports lock in permanent mutual embargo at −0.667 (below the −0.62 bar)</span><span class="fix"><code>REP_COMPETITION_PER_DAY</code> 0.02→0.015 lifts the attractor to −0.50 (above the bar, thawable); <code>REP_BETRAY_DROP</code> 1.4→1.7 keeps betrayal the sole embargo route. §XIII</span></td><td><span class="ref">reputation.js · economy.json:521,542</span></td></tr>
+      <tr class="done"><td>4</td><td><span class="sev done">fixed</span></td><td>Info</td><td><span class="find">Captured merchant keeps homeId → counted as owned forever → home stops ordering replacements</span><span class="fix"><code>tryTakePrize</code> re-homes the prize to the captor on capture, so the origin's census drops it (belief ledger still presumes-lost when overdue). §XV</span></td><td><span class="ref">piracy.js (tryTakePrize) · voyages.js</span></td></tr>
+      <tr class="done"><td>5</td><td><span class="sev done">fixed</span></td><td>Haven</td><td><span class="find">Haven build cap (20%) fights the global 8% pirate cap → havens starve out mutineers/rogues</span><span class="fix">One unified <code>pirateBudget(world)</code> governs every source (haven / rogue / mutiny / prize) — no separate 20% vs 8% caps. §XII</span></td><td><span class="ref">piracy.js (pirateBudget) · economy.json:486</span></td></tr>
       <tr><td>6</td><td><span class="sev med">med</span></td><td>Pirate</td><td>Timid/bold/greed pirate branches are dead — trait floors make every pirate "always aggressive"</td><td><span class="ref">captains.js:69 · piracy.js:142</span></td></tr>
       <tr><td>7</td><td><span class="sev med">med</span></td><td>Crew</td><td>Skilled captain's crew starves (2.2d) before its mutiny grace (~2.29d) — survival reset unreachable</td><td><span class="ref">crew.js:156</span></td></tr>
       <tr><td>8</td><td><span class="sev med">med</span></td><td>Pirate</td><td>Hungry pirate prefers a distant haven over an adjacent raid — no reachability guard, can starve en route</td><td><span class="ref">piracy.js:231</span></td></tr>
@@ -814,8 +880,8 @@ flowchart TB
       <tr><td>10</td><td><span class="sev med">med</span></td><td>Ship</td><td>Privateer stand-down/resupply moves skip island avoidance → sail through land</td><td><span class="ref">antipiracy.js:146,162</span></td></tr>
       <tr><td>11</td><td><span class="sev med">med</span></td><td>Ship</td><td>Separation has no island awareness, runs after avoidance → can shove hulls onto land near crowded ports</td><td><span class="ref">separation.js:97</span></td></tr>
       <tr><td>12</td><td><span class="sev med">med</span></td><td>Navy</td><td>Lone-privateer haven siege is borderline non-converging (0.11/day assault vs shore-fire refit cycle + entrench)</td><td><span class="ref">havens.js:195</span></td></tr>
-      <tr><td>13</td><td><span class="sev med">med</span></td><td>Magistrate</td><td><code>industry</code> ambition pinned at −1 for a pure shipyard — unwinnable agenda bleeds loyalty</td><td><span class="ref">magistrate.js:142</span></td></tr>
-      <tr><td>14</td><td><span class="sev med">med</span></td><td>Magistrate</td><td>Haven-cap rebellion loop: a failed island at cap churns overthrow every 5 days with no exit</td><td><span class="ref">havens.js:96</span></td></tr>
+      <tr class="done"><td>13</td><td><span class="sev done">fixed</span></td><td>Magistrate</td><td><span class="find"><code>industry</code> ambition pinned at −1 for a pure shipyard — unwinnable agenda bleeds loyalty</span><span class="fix">Redefined <em>by</em> workshops: <code>ambitionSignal('industry')</code> now scores workshop count × condition vs <code>slotCap</code> — raising healthy works is winning. §V</span></td><td><span class="ref">magistrate.js:157</span></td></tr>
+      <tr class="done"><td>14</td><td><span class="sev done">fixed</span></td><td>Magistrate</td><td><span class="find">Haven-cap rebellion loop: a failed island at cap churns overthrow every 5 days with no exit</span><span class="fix"><code>HAVEN_CAP_RELIEF</code> (0.03/day) eases the lawlessness of an at-cap failing port that can't fall — an exit from the churn. §V</span></td><td><span class="ref">havens.js · economy.json:489</span></td></tr>
       <tr><td>15</td><td><span class="sev med">med</span></td><td>Navy</td><td>Piracy oscillates (spawn→commission→kill→standdown) rather than settling to a stable population</td><td><span class="ref">antipiracy.js · havens.js:62</span></td></tr>
       <tr><td>16</td><td><span class="sev low">low</span></td><td>Port</td><td>Food spoiled twice per substep (population + upkeep) → ~2.3× decay of any other good</td><td><span class="ref">population.js:32 · upkeep.js:45</span></td></tr>
       <tr><td>17</td><td><span class="sev low">low</span></td><td>Ship</td><td>Three <code>moveToward</code>/<code>sail</code> copies kept in sync by hand — structural desync risk</td><td><span class="ref">ship.js:88 · piracy.js:45</span></td></tr>
@@ -827,10 +893,10 @@ flowchart TB
       <tr><td>23</td><td><span class="sev low">low</span></td><td>Captains</td><td><code>awardCommandXp</code> never called on quelling a mutiny despite its docstring — missed feedback loop</td><td><span class="ref">captains.js:220 · crew.js:176</span></td></tr>
       <tr><td>24</td><td><span class="sev low">low</span></td><td>Crew</td><td>Foreign crews strip a port's Food to a flat 10-unit reserve that doesn't scale with fleet size</td><td><span class="ref">crew.js:82</span></td></tr>
       <tr><td>25</td><td><span class="sev low">low</span></td><td>—</td><td>Dead constants: <code>PORT_STANDOFF</code>, <code>PIRATE_SINK_ON_FEND</code>, <code>PRIVATEER_LOSS_SINK</code>; <code>DANGER_FIGHT</code> branch unreachable</td><td><span class="ref">economy.json · bounty.js:26</span></td></tr>
-      <tr><td>26</td><td><span class="sev low">low</span></td><td>Port</td><td>Contract "fulfilled" usually means the 65-unit purse emptied, not stock replenished — misleading log</td><td><span class="ref">contracts.js:15,34</span></td></tr>
+      <tr class="done"><td>26</td><td><span class="sev done">fixed</span></td><td>Port</td><td><span class="find">Contract "fulfilled" usually means the 65-unit purse emptied, not stock replenished — misleading log</span><span class="fix">The end-of-contract beat now distinguishes "the reward purse is spent" (claimed) from "holds replenished" (stocked → withdrawn). §XIII</span></td><td><span class="ref">contracts.js:30-36</span></td></tr>
       <tr><td>27</td><td><span class="sev low">low</span></td><td>Info</td><td><code>sightAtSea</code> runs every substep per moving ship — O(N·S) redundant work (once/day would suffice)</td><td><span class="ref">ship.js:138</span></td></tr>
       <tr><td>28</td><td><span class="sev low">low</span></td><td>Info</td><td><code>estimateReturnDay</code> fixed at departure, ignores detours → live-but-delayed ships silently un-expected</td><td><span class="ref">voyages.js:20</span></td></tr>
-      <tr><td>29</td><td><span class="sev low">low</span></td><td>Magistrate</td><td><code>order</code> ambition self-defeating on the lawless ports it's assigned to; <code>wealth</code> unreachable for shrunken ports</td><td><span class="ref">magistrate.js:79,147</span></td></tr>
+      <tr class="done"><td>29</td><td><span class="sev done">fixed</span></td><td>Magistrate</td><td><span class="find"><code>order</code> ambition self-defeating on the lawless ports it's assigned to; <code>wealth</code> unreachable for shrunken ports</span><span class="fix"><code>wealth</code> is now scored treasury-<em>relative</em> (gold/cap, not an absolute 2000g); <code>order</code> is functional — the tax/public-works/garrison levers buy down lawlessness. §V</span></td><td><span class="ref">magistrate.js:168</span></td></tr>
       <tr><td>30</td><td><span class="sev low">low</span></td><td>Ship</td><td>Separation reads raw <code>ship.speed</code>, ignoring faction multipliers → give-way slightly wrong for pirates/privateers</td><td><span class="ref">separation.js:42</span></td></tr>
     </tbody>
   </table>
@@ -839,7 +905,7 @@ flowchart TB
 </section>
 
 <footer>
-  <p><b>BOATZ Simulation Field Manual</b> — mapped from <code>game/sim/*</code> (≈6,400 LOC across 40 systems) + <code>data/economy.json</code> tuning. All file:line anchors are clickable in your editor. Six subsystem sweeps + independent spot-checks of every "dead code" claim. Diagrams render on a fixed chart-table ground in both themes; document chrome follows your light/dark preference.</p>
+  <p><b>BOATZ Simulation Field Manual</b> — mapped from <code>game/sim/*</code> (≈7,000 LOC across 42 systems, incl. the new <code>policy.js</code> + <code>pirateLord.js</code>) + <code>data/economy.json</code> tuning. All file:line anchors are clickable in your editor. Six subsystem sweeps + independent spot-checks of every "dead code" claim. Diagrams render on a fixed chart-table ground in both themes; document chrome follows your light/dark preference.</p>
 </footer>
 </main>
 </div>

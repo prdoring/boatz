@@ -4,7 +4,7 @@
 // PURE. Reads tuning from world.rules; no engine/config import.
 
 import { clamp } from './resources.js';
-import { effectiveRate, producesRaw } from './island.js';
+import { effectiveRate, producesRaw, workshopStaffing } from './island.js';
 
 /** Base-resource production. dS = rate * (1 - S/Cap) * h ; secondary rate = 1/4 primary. */
 export function produceBase(world, h) {
@@ -34,16 +34,27 @@ function resolveInput(island, input) {
   return localPick || best;
 }
 
-/** Goods production for one island's recipes. */
+/** Goods production for one island's recipes. Iterates the CANONICAL `island.workshops` (not the
+ *  derived `produces`), so a workshop's operating condition scales its output directly. */
 export function produceGoods(world, h) {
   const t = world.rules;
+  const industrial = t.INDUSTRIAL_GOODS || [];
   for (const island of world.islands) {
-    for (const out of island.produces) {
+    const staffing = workshopStaffing(island, t); // how much of its industry the population can crew
+    for (const shop of island.workshops || []) {
+      const out = shop.good;
       const recipe = world.economy._recipeByOut[out];
       if (!recipe) continue;
 
       // Desired output rate scales with population (more artisans).
       let rate = t.POP_GOODS_COEFF * island.population;
+      // A mutable INDUSTRIAL workshop scales output by its 0..1 operating condition AND its staffing
+      // (a squeezed or over-built port's manufacturing visibly falls; derelict/unstaffed → ~0).
+      // Survival goods (Food/Ale) are NOT workshop-gated and always run at full rate. Labour gates
+      // OUTPUT only — it never kills population.
+      const isInd = industrial.includes(out);
+      if (isInd) rate *= (shop.condition != null ? shop.condition : 1) * staffing;
+      const potential = rate; // what the workshop COULD make before input limits — for the starvation flag
 
       // Cap by every input. Locally-produced inputs cap at 75% of their production
       // rate (guarantees raw surplus); imported inputs cap at a throughput of their
@@ -60,6 +71,11 @@ export function produceGoods(world, h) {
         const capByStock = (island.stock[res] || 0) / input.qty / h;
         rate = Math.min(rate, capByInput, capByStock);
       }
+
+      // INPUT-STARVATION flag (for the policy demolish trigger, v2 #9): a workshop that is crewed and
+      // in good repair but whose INPUTS choke output to ~nothing is an undying money-pit — it bills
+      // upkeep while making nothing. Flag it (potential = pre-input-cap rate) so policy.js can retire it.
+      if (isInd) shop._starved = potential > 0.01 && rate < 0.1 * potential;
 
       // Don't overfill a full warehouse. Ships (a SPECIAL good) stockpile only a few
       // hulls — a shipyard builds to a small buffer and refills as they're bought,

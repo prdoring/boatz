@@ -31,15 +31,27 @@ const EMPTY = Object.freeze([]);
  *  the roster, so the per-good producer lists are built once and cached on the world (rebuilt only on
  *  an island-count change / after a load — never serialized). Lets soughtSupply weigh only real
  *  producers of a good instead of scanning all N islands per needed good. */
-function producersOf(world, res) {
+export function producersOf(world, res) {
   let idx = world._producers;
+  // Rebuild on island-count change (as before) OR when a workshop mutation dirtied the index
+  // (mutateWorkshops sets world._producersDirty). Callers that mutate en masse (the daily policy /
+  // haven pass) should NOT let this rebuild per-mutation — they call flushProducers() ONCE at pass
+  // end so the next producersOf here rebuilds a single time (see flushProducers).
   if (!idx || idx._n !== world.islands.length) {
     idx = new Map(); idx._n = world.islands.length;
+    world._producersDirty = false;
     const goods = tradeables(world.economy);
     for (const p of world.islands) for (const g of goods) if (makesRes(p, g)) { const b = idx.get(g); if (b) b.push(p); else idx.set(g, [p]); }
     world._producers = idx;
   }
   return idx.get(res) || EMPTY;
+}
+
+/** Coalesced invalidation of the per-good producer index: null it (so the next producersOf rebuilds
+ *  ONCE) iff a workshop mutation dirtied it this pass. Called at the END of the systems that mutate
+ *  workshops in a per-island loop (policy, havens) — NOT per mutation, which would be O(N²) thrash. */
+export function flushProducers(world) {
+  if (world._producersDirty) { world._producers = null; world._producersDirty = false; }
 }
 
 /** Goods the home needs but whose cheapest KNOWN producer is DEAR (or that it knows no producer of
@@ -92,6 +104,7 @@ function collectExports(world, home, ratio, perGoodCap, travelMult = 1) {
   const out = [];
   for (const res of tradeables(world.economy)) {
     if (t.SPECIAL_GOODS.includes(res)) continue;
+    if ((home._holds || []).includes(res)) continue; // a good under a strategic export hold isn't shipped out
     if (home.stock[res] < ratio * home.targets[res]) continue;
     const excess = home.stock[res] - home.targets[res];
     if (excess < 1) continue;

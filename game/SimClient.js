@@ -13,6 +13,15 @@ import { M, PROTOCOL_VERSION } from './protocol.js';
 import { SHIP_LERP, SHIP_ANGLE, SHIP_COPY } from './sim/snapshot.js';
 import { OCEAN, RENDER_DELAY } from './config.js';
 
+/** `workshops` (streamed each econ frame) is the SOURCE OF TRUTH for what a port makes; `produces`
+ *  arrives once in the static WELCOME layout and would otherwise go stale when a magistrate builds /
+ *  switches / demolishes a workshop at runtime. Re-derive it from the live workshops on every merge so
+ *  every client reader (hover, panel, overlays) sees the current industry. Falls back to the WELCOME
+ *  `produces` until the first econ frame carries `workshops`. */
+function deriveProduces(o) {
+  if (Array.isArray(o.workshops)) o.produces = o.workshops.map((w) => w.good);
+}
+
 export class SimClient {
   constructor({ url } = {}) {
     this.net = new NetworkClient(url);
@@ -143,8 +152,10 @@ export class SimClient {
 
   _mergeIsland(isl) {
     const cur = this.islandsById.get(isl.id);
-    if (cur) { Object.assign(cur, isl); return; }
-    this.islandsById.set(isl.id, { ...isl });
+    if (cur) { Object.assign(cur, isl); deriveProduces(cur); return; }
+    const created = { ...isl };
+    deriveProduces(created);
+    this.islandsById.set(isl.id, created);
     this.islands = Array.from(this.islandsById.values());
   }
 

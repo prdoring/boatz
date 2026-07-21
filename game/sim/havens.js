@@ -13,12 +13,19 @@ import { logEvent } from './events.js';
 import { transfer, GOLD, PEOPLE, clamp } from './resources.js';
 import { createShip } from './ship.js';
 import { repairAtPort, damageHull, damageRig } from './repair.js';
-import { turnPirate, pirateCount, canTurnPirate } from './piracy.js';
+import { turnPirate, pirateCount, canTurnPirate, pirateBudget } from './piracy.js';
 import { shipName } from './naming.js';
-import { installMagistrate } from './magistrate.js';
+import { installMagistrate, magRank } from './magistrate.js';
+import { installPirateLord } from './pirateLord.js';
+import { regimeData } from './captains.js';
+import { mutateWorkshops } from './island.js';
+import { flushProducers } from './goals.js';
 import { computeFleetByHome, fleetAt } from './fleet.js';
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+/** Pick one phrasing for a chronicle beat — from a DEDICATED cosmetic 'narrate' stream, so it never
+ *  perturbs the 'lord'/'rogue'/'combat' streams (keeps the sim reproducible). */
+function pickText(world, arr) { return arr[Math.min(arr.length - 1, Math.floor(streamFloat(world, 'narrate') * arr.length))]; }
 
 export function havenCount(world) { let n = 0; for (const i of world.islands) if (i.haven) n++; return n; }
 
@@ -40,6 +47,7 @@ export function havens(world, h) {
   }
   if (havenList.length) harbourPirates(world, havenList, dDay);
   if (daily) maybeRaiseRogue(world);
+  flushProducers(world); // coalesced: a pirate-lord workshop conversion dirtied the producer index (v2 #3)
 }
 
 /** Keep a BASELINE of raiders at large: if the seas fall below MIN_PIRATES_AT_LARGE, a fresh rogue
@@ -93,8 +101,16 @@ function maybeFall(world, isl) {
   const failing = (isl.lawlessness || 0) >= t.HAVEN_LAWLESS && (isl.civ || 0) <= t.HAVEN_MAX_CIV && isl.population > t.POP_FLOOR * 2;
   if (failing) {
     isl._havenPressure = (isl._havenPressure || 0) + 1;
-    if (isl._havenPressure >= t.HAVEN_FALL_DAYS && havenCount(world) < Math.max(1, Math.floor(world.islands.length * t.HAVEN_MAX_FRAC))) {
+    const atCap = havenCount(world) >= Math.max(1, Math.floor(world.islands.length * t.HAVEN_MAX_FRAC));
+    if (isl._havenPressure >= t.HAVEN_FALL_DAYS && !atCap) {
       fall(world, isl);
+    } else if (atCap) {
+      // FM #14 — no room at the black-flag inn: with the haven cap full, a failing port CAN'T collapse into
+      // a den, so without this it churns rebellion → overthrow every few days forever. Give it an EXIT: a
+      // tenuous order slowly reasserts (lawlessness eases just enough to eventually break the loop), and its
+      // pressure stops building past the fall threshold so it tips over promptly if a cap slot ever frees.
+      isl.lawlessness = Math.max(0, (isl.lawlessness || 0) - (t.HAVEN_CAP_RELIEF || 0.03));
+      isl._havenPressure = Math.min(isl._havenPressure, t.HAVEN_FALL_DAYS);
     }
   } else {
     isl._havenPressure = Math.max(0, (isl._havenPressure || 0) - t.HAVEN_PRESSURE_RECOVER);
@@ -103,15 +119,22 @@ function maybeFall(world, isl) {
 
 function fall(world, isl) {
   const t = world.rules;
+  const outMag = isl.magistrate ? { name: isl.magistrate.name, voiceSeed: isl.magistrate.voiceSeed, rank: magRank(isl.magistrate) } : null; // capture before clearing
   isl.haven = true;
   isl.havenStrength = t.HAVEN_START_STRENGTH;
   isl._havenPressure = 0;
   isl._havenBuildCd = world.simTime + t.HAVEN_FIRST_BUILD_GRACE_DAYS * t.SIM_DAY_SECONDS; // a short grace before the first hull
   isl.rebellion = null;  // the disorder curdled into a pirate regime rather than an open blaze
   isl.contract = null;   // no lawful WANTED postings from a den of thieves
-  isl.magistrate = null; // no lawful ruler — a pirate lord holds the wharves (governance auto-skips a magistrate-less isle)
+  isl.magistrate = null; // no lawful ruler — a Pirate Lord holds the wharves (governance/policy auto-skip a magistrate-less isle)
+  isl.tax = 0; isl.tariff = 0; isl._holds = []; // lawful fiscal/trade policy is void under the black flag
   isl.wantsShip = false;
-  logEvent(world, 'haven', `${isl.name} has fallen to the black flag — a lawless pirate haven now, its wharves ruled by cutthroats.`, { islandId: isl.id });
+  const lord = installPirateLord(world, isl); // a named Pirate Lord seizes the den — the dark mirror of the magistrate
+  logEvent(world, 'haven', pickText(world, [
+    `${isl.name} has fallen to the black flag — ${lord.name} seizes the wharves; a lawless pirate den now, ruled by cutthroats.`,
+    `The last of the law is drowned at ${isl.name}: ${lord.name} raises the black flag over its harbour and declares it a pirate den.`,
+    `${isl.name} is lost to the cutthroats — ${lord.name} takes the port by the throat, and honest ships give its waters a wide berth now.`,
+  ]), { islandId: isl.id, data: regimeData(outMag, { name: lord.name, voiceSeed: lord.voiceSeed, rank: 'Pirate Lord' }, 'piratefall') });
   // Its own idle merchant crews are the first to turn: instant raiders at no build cost — how a haven
   // bootstraps its fleet before fenced plunder funds new hulls.
   let turned = 0;
@@ -125,12 +148,39 @@ function driveHaven(world, isl, dDay, daily) {
   const t = world.rules;
   isl.lawlessness = 1;   // a haven is wholly lawless
   isl.loyalty = 0;       // and holds no lawful order
-  isl.havenStrength = clamp((isl.havenStrength || 0) + t.HAVEN_ENTRENCH_PER_DAY * dDay, 0, 1); // digs in the longer it stands
+  const lord = isl.pirateLord;
+  // ENTRENCH — the den digs in the longer it stands; a CUNNING / FORTRESS lord entrenches faster.
+  const entrenchMult = lord ? Math.max(0.3, 1 + (lord.traits.cunning - 0.5) + (lord.agenda.kind === 'fortress' ? 0.5 : 0)) : 1;
+  isl.havenStrength = clamp((isl.havenStrength || 0) + t.HAVEN_ENTRENCH_PER_DAY * entrenchMult * dDay, 0, 1);
+
+  if (lord && daily) {
+    lord.xp = (lord.xp || 0) + (t.MAG_XP_PER_DAY || 6); // a day holding the den bloods the lord (its skill shapes decisions)
+    // AVARICE SKIM — the lord diverts a cut of the den's fenced gold into a private hoard (a SINK on redeem).
+    const skim = (lord.traits.avarice || 0) * (t.PIRATELORD_SKIM_RATE || 0) * (isl.gold || 0) * 0.2;
+    if (skim > 0) { lord.hoard = (lord.hoard || 0) + skim; isl.gold = Math.max(0, isl.gold - skim); }
+    // CONVERT — a den without a shipyard (and an ARMADA bent, or simply flush) tears out a derelict CIVILIAN
+    // works and rebuilds it as a raider slipway: "the cooperage becomes a gun-foundry". Which island fell matters.
+    const warGoods = t.HAVEN_WAR_GOODS || [], industrial = t.INDUSTRIAL_GOODS || [];
+    const makesShips = (isl.workshops || []).some((s) => s.good === 'Ships');
+    if (!makesShips && (lord.agenda.kind === 'armada' || (isl.gold || 0) > (t.PIRATELORD_CONVERT_GOLD || 0) * 3)
+        && (isl.gold || 0) >= (t.PIRATELORD_CONVERT_GOLD || 0)) {
+      const derelict = (isl.workshops || []).find((s) => industrial.includes(s.good) && warGoods.indexOf(s.good) < 0 && (s.condition || 0) <= 0.1);
+      if (derelict) {
+        isl.gold -= (t.PIRATELORD_CONVERT_GOLD || 0);
+        mutateWorkshops(world, isl, (isl.workshops || []).map((s) => (s === derelict ? { good: 'Ships', condition: 0.5 } : s)));
+        logEvent(world, 'workshop', pickText(world, [
+          `${isl.name}'s cold works are torn out and rebuilt as a raider slipway.`,
+          `The den at ${isl.name} guts an idle workshop and lays down a slipway for raiders.`,
+          `Where honest goods were once made, ${isl.name} now hammers together pirate hulls.`,
+        ]), { islandId: isl.id, tier: 'log', data: { good: 'Ships' } });
+      }
+    }
+  }
 
   // BUILD a pirate from fenced plunder + hull timber and iron (a real cost — nothing free).
   if (daily && world.simTime >= (isl._havenBuildCd || 0)) {
     const based = fleetAt(world, isl.id).pirate;
-    const roomInSeas = pirateCount(world) < Math.max(2, Math.floor(world.ships.length * t.PIRATE_MAX_FRAC * 2.5)); // havens lift the ceiling a touch
+    const roomInSeas = pirateCount(world) < pirateBudget(world); // the ONE unified pirate budget (FM #5 — no separate haven ceiling)
     if (based < t.HAVEN_MAX_PIRATES_EACH && roomInSeas
         && (isl.gold || 0) >= t.HAVEN_BUILD_GOLD + t.HAVEN_BUILD_RESERVE
         && (isl.stock.Wood || 0) >= t.HAVEN_SHIP_WOOD && (isl.stock.Iron || 0) >= t.HAVEN_SHIP_IRON) {
@@ -138,7 +188,11 @@ function driveHaven(world, isl, dDay, daily) {
       isl.stock.Wood -= t.HAVEN_SHIP_WOOD;
       isl.stock.Iron -= t.HAVEN_SHIP_IRON;
       buildPirate(world, isl);
-      isl._havenBuildCd = world.simTime + t.HAVEN_BUILD_COOLDOWN_DAYS * t.SIM_DAY_SECONDS;
+      // A working SHIPS workshop (a fallen shipyard) feeds the slipway — raiders roll out on a far shorter
+      // cooldown, so a fallen shipyard is a FAR more dangerous den than a fallen plantation.
+      const shipWks = (isl.workshops || []).find((s) => s.good === 'Ships');
+      const mult = (shipWks && (shipWks.condition || 0) > 0.3) ? (t.PIRATELORD_SHIPYARD_BUILD_MULT || 1) : 1;
+      isl._havenBuildCd = world.simTime + t.HAVEN_BUILD_COOLDOWN_DAYS * mult * t.SIM_DAY_SECONDS;
     }
   }
 
@@ -217,6 +271,9 @@ export function assaultHaven(world, striker, haven) {
  *  their base (they keep raiding but now starve like any rogue — self-limiting). */
 function redeem(world, isl) {
   const t = world.rules;
+  const outLord = isl.pirateLord ? { name: isl.pirateLord.name, voiceSeed: isl.pirateLord.voiceSeed, rank: 'Pirate Lord' } : null; // capture before clearing
+  if (isl.pirateLord) isl.pirateLord.hoard = 0; // the fenced hoard scatters with the broken den — a SINK, never banked (v2 #11)
+  isl.pirateLord = null;
   isl.haven = false;
   isl.havenStrength = 0;
   isl._havenPressure = 0;
@@ -225,6 +282,14 @@ function redeem(world, isl) {
   isl.unrest = 0;
   isl.grievance = Math.min(isl.grievance || 0, t.HAVEN_REDEEM_GRIEVANCE); // the pirate regime is gone — the worst resentment vents, so it doesn't instantly relapse
   isl._rebelCd = world.simTime + t.REBEL_COOLDOWN_DAYS * t.SIM_DAY_SECONDS;
-  installMagistrate(world, isl); // a lawful regime retakes the port with a fresh agenda + re-targeted economy
-  logEvent(world, 'redeemed', `The black flag is struck at ${isl.name} — privateers have retaken the haven; a lawful magistrate restores order.`, { islandId: isl.id });
+  // RECONSTRUCTION GRANT — the works are patched up and given an upkeep holiday (upkeep.js reads
+  // _reconstructUntil), so a retaken port isn't a revolving-door wreck that instantly re-falls.
+  for (const w of isl.workshops || []) w.condition = Math.max(w.condition || 0, t.HAVEN_RECONSTRUCT_COND || 0.45);
+  isl._reconstructUntil = world.simTime + (t.HAVEN_RECONSTRUCT_DAYS || 6) * t.SIM_DAY_SECONDS;
+  const newMag = installMagistrate(world, isl); // a lawful regime retakes the port with a fresh agenda + re-targeted economy
+  logEvent(world, 'redeemed', pickText(world, [
+    `The black flag is struck at ${isl.name} — privateers retake the haven; ${newMag.name} restores lawful order over the ruins.`,
+    `${isl.name} is redeemed at last: the den is broken, the pirates scattered, and ${newMag.name} raises the lawful colours over its wharves again.`,
+    `Privateers storm the den at ${isl.name} and put the cutthroats to flight; ${newMag.name} takes up the seal and the hard work of rebuilding.`,
+  ]), { islandId: isl.id, data: regimeData(outLord, { name: newMag.name, voiceSeed: newMag.voiceSeed, rank: magRank(newMag) }, 'redeemed') });
 }

@@ -17,6 +17,7 @@ setEffectResolver((id) => VFX_DEFS[id]);
 
 import islandArt from '/data/island-art.json' with { type: 'json' };
 import shipArt from '/data/ship-art.json' with { type: 'json' };
+import workshopArt from '/data/workshop-art.json' with { type: 'json' };
 import portraitArt from '/data/portrait-art.json' with { type: 'json' };
 
 import { WorldRenderer } from './WorldRenderer.js';
@@ -37,7 +38,9 @@ const effects = new EffectsManager();
 const effectsRenderer = new EffectsRenderer(ctx, camera);
 // islandArt is registered for the art editor/preview only — the live map draws islands
 // PROCEDURALLY (WorldRenderer.drawIsleTerrain), so it reacts to sim state a static asset can't.
-const art = buildArtRegistry({ islands: islandArt, ships: shipArt });
+// `workshops` (Weapons/Clothing/LuxuryGoods/Ships) ARE drawn on the map — little industrial
+// buildings whose art state (running/idle/disrepair) reads each island's live workshop status.
+const art = buildArtRegistry({ islands: islandArt, ships: shipArt, workshops: workshopArt });
 const worldRenderer = new WorldRenderer(ctx, camera, art, VFX_DEFS, effectsRenderer);
 const sea = new SeaRenderer(camera, ctx, background); // painterly water; owns the glitter now
 const portraits = new PortraitRenderer(portraitArt); // captain head-and-shoulders portraits

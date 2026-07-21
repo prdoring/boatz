@@ -95,9 +95,21 @@ export function combatStrength(world, ship) {
   return Math.max(0.05, s * cmult * hullFactor);
 }
 
-/** Whether the seas can bear another pirate (fleet-fraction cap → self-limiting). */
+/** The ONE pirate budget (FM #5): the base fleet-fraction cap, LIFTED while pirate HAVENS stand (each den
+ *  can sustain a few raiders). Haven-built raiders, sea-risen rogues, and captured prizes ALL draw from
+ *  this single budget — reconciling the old split between the haven build-cap and the global rogue cap. */
+export function pirateBudget(world) {
+  const t = world.rules;
+  let havens = 0;
+  for (const i of world.islands) if (i.haven) havens++;
+  const lift = Math.min(1 + havens * (t.HAVEN_PIRATE_LIFT || 0.5), t.HAVEN_PIRATE_LIFT_MAX || 2.5);
+  const frac = t.PIRATE_MAX_FRAC != null ? t.PIRATE_MAX_FRAC : 0.08; // NB: keep a literal 0 as 0 (tests force it)
+  return Math.max(1, Math.floor(world.ships.length * frac * lift)); // floor 1 (matches the old canTurnPirate)
+}
+
+/** Whether the seas can bear another pirate (the unified budget → self-limiting). */
 export function canTurnPirate(world) {
-  return pirateCount(world) < Math.max(1, world.ships.length * world.rules.PIRATE_MAX_FRAC);
+  return pirateCount(world) < pirateBudget(world);
 }
 
 /** Raise the black flag. WHO commands under it depends on how she came to it:
@@ -526,6 +538,10 @@ function tryTakePrize(world, pirate, victim) {
   if (streamFloat(world, 'combat') >= p) return false;
   const prevCap = victim.captain ? { name: victim.captain.name, voiceSeed: victim.captain.voiceSeed, rank: rankOf(victim.captain) } : null;
   victim.pirate = true;
+  // FM #4 — she flies the black flag now, no longer the origin's hull: RE-HOME her to the captor so the
+  // origin's live fleet census stops counting her forever (and it re-orders a replacement). Its belief
+  // ledger still HOPES for her until overdue, then presumes her lost — information-by-sea preserved.
+  if (pirate.homeId) victim.homeId = pirate.homeId;
   victim.captain = makePirateCaptain(world);
   victim.morale = t.PRIZE_CREW_MORALE != null ? t.PRIZE_CREW_MORALE : 0.4; // a green prize crew, low spirits
   victim.unrest = 0; victim.uprising = null; victim.hunger = 0;

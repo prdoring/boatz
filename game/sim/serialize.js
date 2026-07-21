@@ -20,6 +20,7 @@ export function serializeWorld(world) {
     _devDay: world._devDay,
     _contractDay: world._contractDay,
     _havenDay: world._havenDay,
+    _policyDay: world._policyDay,
     _rogueCd: world._rogueCd,
     _voyageDay: world._voyageDay,
     _evSeq: world._evSeq,
@@ -48,6 +49,11 @@ export function deserializeWorld(data, economy) {
   prepareEconomy(economy);
   const d = JSON.parse(JSON.stringify(data));
   scaleTuningForCount(economy.tuning, d.islands.length); // match the count-scaled caps buildWorld applied
+  // SAVE-COMPAT: a save written before mutable industry has no `island.workshops`. Seed it lazily from
+  // the legacy `produces` (order preserved → same capability list), so old saves load unchanged.
+  for (const isl of d.islands) {
+    if (!Array.isArray(isl.workshops)) isl.workshops = (isl.produces || []).map((g) => ({ good: g, condition: 1 }));
+  }
   return {
     seed: d.seed,
     rngStreams: d.rngStreams,
@@ -61,6 +67,7 @@ export function deserializeWorld(data, economy) {
     _devDay: d._devDay,
     _contractDay: d._contractDay,
     _havenDay: d._havenDay,
+    _policyDay: d._policyDay,
     _rogueCd: d._rogueCd,
     _voyageDay: d._voyageDay,
     _evSeq: d._evSeq || 0,

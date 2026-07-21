@@ -68,6 +68,7 @@ export class InfoPanel extends Panel {
     this.visible = false;
     this._tab = 'stats';       // 'stats' | 'log' | 'story'
     this._scroll = new ScrollBox(); // the Story tab's chronicle scroller
+    this._statScroll = new ScrollBox(); // the stats tab's scroller (a tall island/ship readout overflows)
     this._filter = 'all';      // active Story category filter (see eventKinds.js)
     this._subject = null;      // last-drawn story subject (kind:id) → resets scroll/filter on change
     this._chipRects = [];      // filter-chip hit rects (rebuilt each draw; pinned, so screen-space)
@@ -110,7 +111,10 @@ export class InfoPanel extends Panel {
   onWheel(px, py, dy) {
     if (!this.contains(px, py)) return false;
     const sel = this.getSelection();
-    if (sel && sel.data && this._tab === 'story') this._scroll.wheel(dy);
+    if (sel && sel.data) {
+      if (this._tab === 'story') this._scroll.wheel(dy);
+      else if (this._tab === 'stats') this._statScroll.wheel(dy); // the stats readout scrolls too (v2 #4)
+    }
     return true;
   }
 
@@ -119,12 +123,25 @@ export class InfoPanel extends Panel {
     if (!sel || !sel.data) return;
     this._drawTabs(ctx);
     const cx = this.x + PAD, cw = this.w - PAD * 2;
-    const c = { y: this.y + 40, cx, cw, max: this.y + this.h - 10 };
+    const top = this.y + 40, bottom = this.y + this.h - 10;
     if (this._tab === 'log' && sel.kind !== 'ship') this._tab = 'stats'; // Log is a ship-only tab
-    if (this._tab === 'story') this._story(ctx, sel, c);
-    else if (this._tab === 'log' && sel.kind === 'ship') this._shipLog(ctx, sel.id, sel.data, c);
-    else if (sel.kind === 'island') this._island(ctx, sel.data, c);
-    else this._ship(ctx, sel.id, sel.data, c);
+    if (this._tab === 'story') {
+      this._story(ctx, sel, { y: top, cx, cw, max: bottom });
+    } else if (this._tab === 'log' && sel.kind === 'ship') {
+      this._shipLog(ctx, sel.id, sel.data, { y: top, cx, cw, max: bottom });
+    } else {
+      // STATS tab — a full island/ship readout (magistrate, workshops, market, relations, docked…)
+      // overflows the panel, so it SCROLLS: sections never self-truncate (c.max = Infinity), the
+      // ScrollBox clips + offsets the body and paints a thumb. Without this the lower sections (the
+      // MARKET price table) were silently dropped when new content pushed them off (v2 #4).
+      const sb = this._statScroll;
+      sb.reset(sel.kind + ':' + sel.id + ':stats');
+      sb.begin(ctx, this.x, top, this.w, bottom - top);
+      const c = { y: top, cx, cw, max: Infinity };
+      if (sel.kind === 'island') this._island(ctx, sel.data, c);
+      else this._ship(ctx, sel.id, sel.data, c);
+      sb.end(ctx, c.y + 10);
+    }
   }
 
   _drawTabs(ctx) {
@@ -390,8 +407,9 @@ export class InfoPanel extends Panel {
     if (isl.danger > 0.25) this._banner(ctx, `Pirate danger — ${dangerWord(isl.danger)} waters`, '#c0392b', c, 'pennant');
     if (isl.contract) this._banner(ctx, `WANTED: ${isl.contract.good} · ${fmt(isl.contract.reward)} g reward`, '#97781a', c, 'scroll');
 
-    // Magistrate + the populace's loyalty (a haven has no lawful magistrate).
+    // Magistrate + the populace's loyalty — or, for a fallen port, its Pirate Lord (the dark mirror).
     if (isl.magistrate) this._magistrate(ctx, isl, ctxt, c);
+    else if (isl.pirateLord) this._pirateLord(ctx, isl, ctxt, c);
 
     // Population + civilization gauges.
     const popFrac = isl.k ? Math.min(1, isl.population / isl.k) : 0;
@@ -406,11 +424,13 @@ export class InfoPanel extends Panel {
     if (isl.facts) this._kv(ctx, 'World intel', `${isl.facts.known} known · ${isl.facts.fresh} fresh`, c, '#5f47a0');
     if (isl.awaiting > 0) this._kv(ctx, 'At sea', `${isl.awaiting} ship${isl.awaiting > 1 ? 's' : ''} awaited`, c, '#1f7f8c');
 
-    // What it makes.
+    // What it makes — the goods manifest (its full trade profile, incl. survival goods).
     if (isl.produces && isl.produces.length) {
       this._section(ctx, 'PRODUCES', c);
       this._chipRow(ctx, isl.produces, c);
     }
+    // The mutable INDUSTRY: each workshop's operating status + condition (survival goods excluded).
+    this._workshops(ctx, isl, c);
 
     // Relations (reputation).
     if ((isl.allies && isl.allies.length) || (isl.rivals && isl.rivals.length)) {
@@ -639,6 +659,63 @@ export class InfoPanel extends Panel {
       this._gauge(ctx, 'Generosity', '', tr.generosity, '#2f7d45', c);
       this._gauge(ctx, 'Integrity', '', tr.integrity, '#356291', c);
     }
+    // Fiscal + populace mood (Phase 3). Hide-when-trivial. Tax is normalised to its OWN domain (not the
+    // 0..1 gauge default) and named (light/moderate/heavy). Mood reads off the signed approval memory.
+    const tax = isl.tax || 0;
+    if (tax > 0.005) {
+      const tw = tax < 0.12 ? 'light' : tax < 0.28 ? 'moderate' : 'heavy';
+      const tc = tax < 0.12 ? '#2f7d45' : tax < 0.28 ? '#9a6b1f' : '#b23a2e';
+      this._gauge(ctx, 'Tax', `${tw} · ${Math.round(tax * 100)}%`, Math.min(1, tax / 0.4), tc, c);
+    }
+    if ((isl.tariff || 0) > 0.005) this._kv(ctx, 'Tariff', `${Math.round(isl.tariff * 100)}% duty`, c, '#9a6b1f');
+    if ((isl.development || 0) > 0) this._kv(ctx, 'Development', `${isl.development} berth${isl.development > 1 ? 's' : ''} cleared`, c, PALETTE.panelAccent);
+    const mood = isl.approval || 0;
+    if (Math.abs(mood) > 0.08) {
+      const mw = mood > 0.15 ? 'pleased' : mood > 0 ? 'content' : mood > -0.15 ? 'restive' : 'souring';
+      this._kv(ctx, 'Public mood', mw, c, mood >= 0 ? PALETTE.good : PALETTE.bad);
+    }
+    // Graft EXPOSED → an alarm banner (not a gauge): the hidden hoard has become a public scandal; the
+    // sum shown is what the people would seize on an overthrow. Nothing is shown before exposure.
+    if (m.exposed && m.hoard) this._banner(ctx, `GRAFT EXPOSED — ${fmt(m.hoard)} g hoarded`, '#b23a2e', c, 'warning');
+  }
+
+  /** The dark mirror of `_magistrate`: the Pirate Lord who holds a fallen port. Dark-themed — a black-flag
+   *  banner + the den's grip, and cruelty/cunning/avarice where a magistrate has firmness/generosity/integrity. */
+  _pirateLord(ctx, isl, ctxt, c) {
+    const p = isl.pirateLord;
+    this._section(ctx, 'PIRATE LORD', c);
+    const size = 66, top = c.y + 4, px = c.cx;
+    if (ctxt.portraits && p.portrait != null) {
+      ctx.save();
+      roundRect(ctx, px, top, size, size, 10);
+      ctx.fillStyle = '#2a1416'; ctx.fill();
+      ctx.clip();
+      ctxt.portraits.draw(ctx, px + size / 2, top + size * 0.53, size * 0.40, p.portrait, 0, 'pirate');
+      ctx.restore();
+      roundRect(ctx, px, top, size, size, 10);
+      ctx.strokeStyle = PALETTE.pirateDeep || '#7a1420'; ctx.lineWidth = 1; ctx.stroke();
+    }
+    const tx = px + size + 12;
+    ctx.save();
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    ctx.font = font('heading'); ctx.fillStyle = PALETTE.pirate || '#e04a5a';
+    ctx.fillText(clip(ctx, p.name, c.cw - size - 12), tx, top + 22);
+    ctx.font = font('body'); ctx.fillStyle = PALETTE.panelDim;
+    ctx.fillText('Pirate Lord', tx, top + 42);
+    if (p.agenda && p.agenda.label) {
+      drawIcon(ctx, 'skull', tx + 6, top + 56, 11, PALETTE.pirate || '#e04a5a');
+      ctx.fillStyle = PALETTE.pirate || '#e04a5a';
+      ctx.fillText(clip(ctx, p.agenda.label, c.cw - size - 24), tx + 15, top + 60);
+    }
+    ctx.restore();
+    c.y = top + size + 2;
+    this._banner(ctx, `BLACK FLAG — grip ${Math.round(((isl.haven && isl.haven.strength) || 0) * 100)}%`, '#b0242e', c, 'skull');
+    const tr = p.traits;
+    if (tr) {
+      this._gauge(ctx, 'Cruelty', '', tr.cruelty, '#b23a2e', c);
+      this._gauge(ctx, 'Cunning', '', tr.cunning, '#7a4f9a', c);
+      this._gauge(ctx, 'Avarice', '', tr.avarice, '#9a7d16', c);
+    }
   }
 
   _crew(ctx, s, c) {
@@ -652,6 +729,28 @@ export class InfoPanel extends Panel {
     const ale = Math.round((s.cargo && s.cargo.Ale) || 0);
     if (ale > 0) this._kv(ctx, 'Grog', `${ale} Ale (lifts morale)`, c, '#7a4f1e');
     this._kv(ctx, 'Mood', st.label, c, st.color);
+  }
+
+  /** The mutable industry section: one row per INDUSTRIAL workshop (survival goods ride the PRODUCES
+   *  manifest, so they carry no status byte `st` and are filtered out here). Each row is the good, a
+   *  status word (Running / Idle / Derelict), and a condition bar coloured by that status. */
+  _workshops(ctx, isl, c) {
+    const shops = (isl.workshops || []).filter((w) => w.st != null);
+    if (!shops.length) return;
+    const STATUS = [
+      { label: 'Running', color: PALETTE.good },   // 0 — staffed, funded, in good repair
+      { label: 'Idle', color: PALETTE.warn },      // 1 — understaffed / unfunded / cold
+      { label: 'Derelict', color: PALETTE.bad },   // 2 — rotted to nothing; holds its slot
+    ];
+    const cap_ = isl.slotCap != null ? isl.slotCap : shops.length;
+    this._section(ctx, `WORKSHOPS ${shops.length}/${cap_}`, c);
+    for (const w of shops) {
+      if (c.y > c.max - 14) break; // harmless under the ScrollBox; guards any non-scrolled caller
+      const s = STATUS[w.st] || STATUS[0];
+      this._gauge(ctx, cap(w.good), s.label, w.cond != null ? w.cond : 1, s.color, c);
+    }
+    const vacant = cap_ - shops.length;
+    if (vacant > 0 && c.y < c.max - 12) this._line(ctx, `+ ${vacant} vacant berth${vacant > 1 ? 's' : ''}`, PALETTE.panelDim, c);
   }
 
   // ─── building blocks ─────────────────────────────────────────────

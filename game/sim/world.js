@@ -42,6 +42,13 @@ export function scaleTuningForCount(tuning, n) {
   // rather than a linear swarm that would grind trade down (piracy friction rises with pirate-count).
   tuning.START_PIRATES = Math.round((tuning.START_PIRATES || 0) * f);
   tuning.MIN_PIRATES_AT_LARGE = Math.round((tuning.MIN_PIRATES_AT_LARGE || 0) * Math.sqrt(f));
+  // The daily EVENT burst (governance / reputation / events / policy beats all fire on the
+  // day-rollover substep — the magistrate policy loop alone logs ~N/cooldown builds/demolishes a day)
+  // grows with the sea. The chronicle drains once per server tick from a ring hard-capped at
+  // EVENT_LOG_MAX, so the ring must hold at least a tick's burst or history is silently lost before it
+  // reaches SQLite (the wire slice is separately fixed at the last 60 — snapshot.js). Scale ∝N with
+  // headroom; a few hundred extra tiny event objects is trivial. (No-op at N≤60 → tests unchanged.)
+  tuning.EVENT_LOG_MAX = Math.max(tuning.EVENT_LOG_MAX || 60, Math.round(n * 1.5));
 }
 
 /** A starting hull for a port's fleet, reflecting its size: big ports launch brigs and the odd

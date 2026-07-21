@@ -74,6 +74,15 @@ export function repPriceMult(host, homeId, swing, isBuy) {
   return isBuy ? (1 - swing * r) : (1 + swing * r);
 }
 
+/** TARIFF — a duty a protectionist magistrate levies on FOREIGN traders, composed ALONGSIDE repPriceMult
+ *  in the deal path (v2 #13). The ship's own fleet (same home) trades duty-free. The inflated ask already
+ *  flows wholly to the host's treasury through the normal `transfer`, so there is NO separate 'take' to
+ *  credit — a second one would double-count. */
+export function tariffMult(host, homeId) {
+  if (!host || host.id === homeId) return 1; // your own fleet pays no duty at its home port
+  return 1 + (host.tariff || 0);
+}
+
 /** EMBARGO — reputation with teeth: past mere gouging, a host that HATES a trader shuts its
  *  port to them entirely (no deal at any price). Either side's hostility blocks the trade, so a
  *  feud actually severs a trade line (its economic bite). Checked in partner search + at the dock. */

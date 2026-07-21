@@ -19,8 +19,8 @@ import { upkeep } from './upkeep.js';
 import { reputation } from './reputation.js';
 import { events } from './events.js';
 import { governance } from './magistrate.js';
+import { policy } from './policy.js';
 import { havens } from './havens.js';
-import { development } from './development.js';
 import { contracts } from './contracts.js';
 import { reckonVoyages } from './voyages.js';
 
@@ -43,8 +43,10 @@ export const SIM_SYSTEMS = [
   reputation, // daily decay of diplomatic opinions (trade itself updates them in ship.js)
   events,     // daily shocks: blight, plague lifecycle/mortality (wrecks fire in ship.js)
   governance, // island loyalty + magistrate + rebellion (production/income halt via effectiveRate/upkeep)
+  policy,     // magistrate acts on its ambition: builds/switches/demolishes/repairs workshops (industry lever), daily — after governance (reads loyalty/civ), before havens
   havens,     // failed islands fall to pirate havens (harbour/build pirates); privateers redeem them — after governance (reads lawlessness) + antipiracy (assaults land this tick)
-  development, // wealthy ports invest surplus gold into new hulls (fleet growth + a gold sink), daily
+  // (fleet growth is no longer its own system — the magistrate's naval-expansion lever in `policy` drives
+  //  it now, budgeted alongside every other treasury spend; development.js is retained as its executor.)
   contracts,   // ports post paid contracts for goods they acutely lack (directed relief), daily
   reckonVoyages, // the outstanding-voyage ledger: presume long-overdue ships lost at sea, daily
 ];

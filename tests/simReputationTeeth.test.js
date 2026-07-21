@@ -65,13 +65,19 @@ test('betrayal can shatter a close alliance into a feud (daily system, over time
   for (const a of w.islands) for (const b of w.islands) if (a !== b) a.rep[b.id] = 0.9;
   let betrayals = 0;
   const before = w.events.length;
+  // A betrayal SEVERS trade the moment it lands (it slams the pair past the embargo line); the grudge
+  // then HEALS over the following days, because passive same-primary rivalry no longer sticks at
+  // embargo depth — it settles at v*≈-0.5 (thawable), the -0.667 permanent-embargo attractor having
+  // been fixed. So we prove "a betrayal drove a pair to embargo depth" the day it happens, not at the
+  // end of the run (by when it has thawed back toward rivalry). Passive drift alone never crosses the
+  // embargo line (it converges monotonically to -0.5), so this can only be a betrayal's doing.
+  let everEmbargoed = false;
   for (let d = 0; d < 120; d++) {
     w.simTime += w.rules.SIM_DAY_SECONDS;
     reputation(w);
+    if (w.islands.some((a) => a.rep && Object.values(a.rep).some((v) => v <= w.rules.REP_EMBARGO_THRESHOLD))) everEmbargoed = true;
   }
   for (const e of w.events.slice(before)) if (e.kind === 'betray') betrayals++;
   assert.ok(betrayals >= 1, 'at least one betrayal occurred among many close allies over 120 days');
-  // A betrayed pair is slammed into deep hostility (embargo territory).
-  const shattered = w.islands.some((a) => a.rep && Object.values(a.rep).some((v) => v <= w.rules.REP_EMBARGO_THRESHOLD));
-  assert.ok(shattered, 'a betrayal drove a pair into embargo-deep hostility');
+  assert.ok(everEmbargoed, 'a betrayal slammed a pair into embargo-deep hostility (the moment it lands, before the grudge heals)');
 });

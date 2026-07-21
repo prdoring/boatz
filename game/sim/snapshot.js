@@ -5,12 +5,13 @@
 
 import { bidAsk } from './pricing.js';
 import { GOLD, cargoUnits } from './resources.js';
-import { foodDays } from './island.js';
+import { foodDays, slotCap } from './island.js';
 import { intelSummary, currentDay } from './beliefs.js';
 import { factSummary } from './intel.js';
 import { rankOf, skill01, totalXp } from './captains.js';
 import { foodDaysAboard } from './crew.js';
 import { magRank, magSkill, ambitionLabel } from './magistrate.js';
+import { pirateLordSkill, pirateLordAgendaLabel } from './pirateLord.js';
 
 // StateBuffer field descriptors for ships (the interpolated `entities` map). Only the HOT fields
 // ride the ~10 Hz channel (position lerps; the art/marker fields copy). Everything else — the panel
@@ -128,6 +129,7 @@ export function snapshotShipsCold(world) {
 export function snapshotEconomy(world) {
   const spread = world.rules.SPREAD;
   const day = currentDay(world);
+  const industrialGoods = world.rules.INDUSTRIAL_GOODS || [];
   const docked = {};
   const fleet = new Map(); // per-home census {total,pirate,privateer} → the naval-strength overlay
   let pirates = 0, privateers = 0;
@@ -188,6 +190,23 @@ export function snapshotEconomy(world) {
       embargoes: embargoBy[isl.id] || [], // ports this island has severed trade with → blocs overlay
 
       contract: isl.contract ? { good: isl.contract.good, reward: Math.round(isl.contract.reward) } : null, // open WANTED posting
+      // Mutable industry. An INDUSTRIAL workshop carries its 0..1 condition + a precomputed status
+      // byte (0 running / 1 idle / 2 derelict) so the client never re-thresholds; a survival good
+      // (Food/Ale) carries only its identity. The client re-derives `produces` from ALL of these
+      // (workshops is the source of truth) but shows only the industrial ones as slots/buildings —
+      // Food/Ale ride the goods manifest. `st != null` is the client's industrial test.
+      workshops: (isl.workshops || []).map((w) => (industrialGoods.includes(w.good)
+        ? { good: w.good, cond: round2(w.condition != null ? w.condition : 1), st: workshopSt(w) }
+        : { good: w.good })),
+      slotCap: slotCap(isl, world.rules), // max industrial workshops (pop-tiered base + development) → vacant berths
+      tax: round2(isl.tax || 0),            // income-tax rate the magistrate levies (0..TAX_MAX) → panel + tax overlay
+      tariff: round2(isl.tariff || 0),      // duty on foreign trade (0..TARIFF_MAX) → panel
+      development: isl.development || 0,     // infrastructure levels bought (extra workshop slots) → panel
+      approval: round2(isl._approval || 0), // signed public mood toward recent policy (biases loyalty) → panel + mood overlay
+      // EXPOSED graft intensity for the corruption overlay — 0 unless the hoard has become a public
+      // scandal, so the hidden hoard is NEVER leaked to the client before it breaks (info-by-sea + UX).
+      corruption: isl.magistrate && isl.magistrate.exposed
+        ? Math.min(1, Math.round(((isl.magistrate.hoard || 0) / (world.rules.HOARD_MAX || 20000)) * 100) / 100) : 0,
       magistrate: isl.magistrate ? {
         name: isl.magistrate.name, rank: magRank(isl.magistrate),
         skill: round2(magSkill(isl.magistrate, world.rules)),
@@ -195,7 +214,18 @@ export function snapshotEconomy(world) {
         portrait: isl.magistrate.portrait,
         voiceSeed: isl.magistrate.voiceSeed, // opaque seed → the client picks this ruler's writing style for the Story tab
         ambition: isl.magistrate.ambition ? { kind: isl.magistrate.ambition.kind, label: ambitionLabel(isl.magistrate), progress: round2(isl.magistrate.ambition.progress || 0) } : null,
+        // Graft becomes visible only once EXPOSED (a scandal broke) — then the size of the hoard the
+        // people would seize on an overthrow is shown. The HIDDEN hoard never crosses the wire.
+        exposed: !!isl.magistrate.exposed,
+        hoard: isl.magistrate.exposed ? Math.round(isl.magistrate.hoard || 0) : undefined,
       } : null,
+      // The PIRATE LORD who holds a fallen port (the dark mirror of the magistrate) — name, war agenda,
+      // and cruelty/cunning/avarice, so the panel shows a den's ruler in place of a magistrate.
+      pirateLord: isl.pirateLord ? {
+        name: isl.pirateLord.name, skill: round2(pirateLordSkill(isl.pirateLord, world.rules)),
+        traits: isl.pirateLord.traits, portrait: isl.pirateLord.portrait, voiceSeed: isl.pirateLord.voiceSeed,
+        agenda: isl.pirateLord.agenda ? { kind: isl.pirateLord.agenda.kind, label: pirateLordAgendaLabel(isl.pirateLord) } : null,
+      } : undefined,
     };
   });
   return {
@@ -251,6 +281,16 @@ function repSummary(world, isl, day) {
   const entry = { allies, rivals, day };
   cache.set(isl.id, entry);
   return entry;
+}
+
+/** A workshop's status byte for the wire: 0 running / 1 idle (struggling) / 2 derelict. Precomputed
+ *  server-side (upkeep.js writes `_st` from staffing+funding) so the client renders a discrete state
+ *  with no re-thresholding — the bake key is this byte. Non-industrial workshops (Food/Ale) never
+ *  drift, so they carry no `_st`; fall back to condition (always running for a survival good). */
+function workshopSt(w) {
+  if (w._st != null) return w._st;
+  const c = w.condition != null ? w.condition : 1;
+  return c <= 0.03 ? 2 : c < 0.5 ? 1 : 0;
 }
 
 function round2(v) { return Math.round(v * 100) / 100; }

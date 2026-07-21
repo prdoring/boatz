@@ -50,6 +50,30 @@ const COMBAT_ACTS = new Set(['hunt', 'defend', 'assault', 'raid', 'flee']);
 /** Small stable string hash → a per-ship phase offset so broadsides don't fire in lockstep. */
 function hashId(id) { let x = 0; const s = String(id); for (let i = 0; i < s.length; i++) x = (x * 31 + s.charCodeAt(i)) >>> 0; return x; }
 
+// ─── Workshops (mutable island industry, drawn as little buildings) ─────────────────────
+// The server streams each island's works as isl.workshops = [{ good, cond, st }, …]. An INDUSTRIAL
+// workshop carries a status byte `st` (0 running / 1 idle / 2 derelict); a survival good (Food/Ale)
+// streams as just { good } with NO `st`, so `w.st != null` is the "is this a building to draw" test.
+// Each industrial good has an upright art asset in data/workshop-art.json (art.workshops.<Good>); the
+// status byte maps to the art STATE — running is full-ink with a chimney puff, idle is ghosted/greyed,
+// disrepair CAVES the roof in (a SHAPE change, so status reads for colour-blind viewers, not a tint).
+const WORKSHOP_STATE = ['running', 'idle', 'disrepair']; // st byte 0/1/2 → art state
+const WORKSHOP_R = 0.26;      // building draw radius as a fraction of the island's screen radius R
+const WORKSHOP_LOD_MIN = 14;  // hide buildings below this island screen radius (mirrors _town)
+// The silhouettes are frame-STABLE per (good, state), so each is baked ONCE into a dedicated tiny
+// sprite cache (this._workshopCache — never the LRU-pressured terrain cache) and blitted. Baked at a
+// fixed reference radius, then scaled on blit (like terrain tiles scale by zoom). The running-state
+// chimney smoke is FROZEN into the bake at this clock, so a building is a plain blit — no live FX.
+const WORKSHOP_BAKE_R = 40;     // reference radius (px) the building is rasterised at
+const WORKSHOP_BAKE_NOW = 900;  // animation clock (ms) frozen into the bake — a mid-rise smoke puff + warm forge
+// Baked-tile geometry (reference px). Origin = the art's (0,0), which lands on the building's anchor at
+// blit. The plume rises well ABOVE the origin (to ~y=-1.55·r), the base/shadow sit just below (~+0.65·r),
+// and the walls span ~±0.8·r — pad each side for stroke/shadow bleed.
+const WORKSHOP_BAKE_OX = WORKSHOP_BAKE_R * 0.95 + 3;                 // art-origin x inside the tile
+const WORKSHOP_BAKE_OY = WORKSHOP_BAKE_R * 1.60 + 3;                 // art-origin y (smoke reaches near the top)
+const WORKSHOP_BAKE_W = WORKSHOP_BAKE_OX + WORKSHOP_BAKE_R * 0.95 + 3;
+const WORKSHOP_BAKE_H = WORKSHOP_BAKE_OY + WORKSHOP_BAKE_R * 0.72 + 3;
+
 export class WorldRenderer {
   constructor(ctx, camera, art, vfx, effectsRenderer) {
     this.ctx = ctx;
@@ -60,6 +84,7 @@ export class WorldRenderer {
     this._transitions = new Map();   // ship id -> per-entity transition (keyframe clock + blend)
     this._islands = new Map();       // island id -> cached procedural layout (seeded)
     this._isleCache = new SpriteCache({ max: 128, dprCap: 2 }); // baked island terrain tiles (static per id)
+    this._workshopCache = new SpriteCache({ max: 32, dprCap: 2 }); // baked workshop building silhouettes (per good+state); NEVER the terrain cache (it would evict tiles)
     this._berths = new Map();        // ship id -> { x, y } berth slot for a docked ship (recomputed each frame)
     this._seen = new Set();
     this._warned = new Set();
@@ -127,8 +152,10 @@ export class WorldRenderer {
       this._markers(ctx, isl, L, sx, sy, R);
       // Town: building count grows with civilisation.
       this._town(ctx, isl, L, sx, sy, R);
-      // Manufactured-goods badges in a row along the shore.
+      // Manufactured-goods badges in a row along the shore (the status-independent goods manifest).
       this._badges(ctx, isl, sx, sy, R);
+      // Mutable-industry buildings drawn on the land, their art state reading each workshop's status.
+      this._workshops(ctx, isl, L, sx, sy, R);
       // Dock.
       drawDock(ctx, sx, sy, R, L.dockAngle);
 
@@ -418,6 +445,33 @@ export class WorldRenderer {
     for (const g of goods) { drawGoodBadge(ctx, g, x, y, s); x += gap; }
   }
 
+  /** Mutable-industry buildings: draw each INDUSTRIAL workshop (survival goods ride the shore manifest
+   *  `_badges`, carrying no status byte `st`, so they're skipped) as a little building whose art STATE
+   *  reads its live status — running / idle / disrepair, the last a BROKEN silhouette (a shape change, so
+   *  it reads for colour-blind viewers, not just a tint). Each (good,state) silhouette is baked ONCE into
+   *  a dedicated sprite cache and blitted (with the running-state chimney smoke frozen into the bake), so
+   *  hundreds of works cost a handful of cached tiles + a blit each. LODs away with the town below R<14. */
+  _workshops(ctx, isl, L, sx, sy, R) {
+    if (R < WORKSHOP_LOD_MIN) return;
+    const wsArt = this.art.workshops;
+    if (!wsArt || !L.workshops) return;
+    const shops = (isl.workshops || []).filter((w) => w.st != null); // industrial works only
+    if (!shops.length) return;
+    const scale = (R * WORKSHOP_R) / WORKSHOP_BAKE_R; // baked-at-40 → this island's screen radius
+    for (let i = 0; i < shops.length && i < L.workshops.length; i++) {
+      const w = shops[i];
+      const def = wsArt[w.good];
+      if (!def) continue;
+      const state = WORKSHOP_STATE[w.st] || 'running';
+      const p = L.workshops[i];
+      const wx = sx + p.dx * R, wy = sy + p.dy * R;
+      const tile = this._workshopCache.get(`ws:${w.good}:${state}:${PALETTE_VERSION}`, WORKSHOP_BAKE_W, WORKSHOP_BAKE_H,
+        (cctx) => { cctx.translate(WORKSHOP_BAKE_OX, WORKSHOP_BAKE_OY); drawUnifiedArt(cctx, WORKSHOP_BAKE_R, PALETTE.ink, def, state, WORKSHOP_BAKE_NOW, null); });
+      if (!tile) continue; // no-canvas (Node) — workshops are browser-only cosmetics
+      ctx.drawImage(tile.canvas, wx - WORKSHOP_BAKE_OX * scale, wy - WORKSHOP_BAKE_OY * scale, tile.w * scale, tile.h * scale);
+    }
+  }
+
   _label(text, sx, sy, R) {
     const ctx = this.ctx;
     ctx.save();
@@ -482,11 +536,18 @@ export class WorldRenderer {
       const a = rng() * Math.PI * 2, rr = 0.32 + rng() * 0.26;
       markers.push({ dx: Math.cos(a) * rr * ax * 0.85, dy: Math.sin(a) * rr * ay * 0.85 });
     }
+    // Workshop anchor spots (one per possible slot) — scattered on the interior like the town, but
+    // fewer and larger; the mutable-industry buildings draw at these, filled slots up to slotCap.
+    const workshops = [];
+    for (let i = 0; i < 6; i++) {
+      const a = rng() * Math.PI * 2, rr = 0.16 + rng() * 0.34;
+      workshops.push({ dx: Math.cos(a) * rr * ax * 0.82, dy: (Math.sin(a) * rr * ay) * 0.82 - 0.06 });
+    }
     // Max silhouette extent (unit-radius) → sizes the baked terrain tile tightly per island.
     let ext = 0.9;
     for (const p of shape) ext = Math.max(ext, Math.abs(p.dx), Math.abs(p.dy));
     // Dock sits on the bay if there is one, else anywhere on the coast.
-    L = { shape, ext, town, markers, dockAngle: bay ? bay.at : rng() * Math.PI * 2 };
+    L = { shape, ext, town, markers, workshops, dockAngle: bay ? bay.at : rng() * Math.PI * 2 };
     this._islands.set(id, L);
     return L;
   }

@@ -84,6 +84,21 @@
         "The old order is finished and {place} answers to me. I am {name}{rankc}, come to power on the shoulders of a mob.",
         "The rising put the seal of {place} in my hand. I am {name}{rankc}, and I keep its chronicle now, for better or worse."
       ],
+      "graft": [
+        "The people dragged the old grafter from office and seized the hoard he'd bled from the treasury; the seal — and this record — pass to me. I am {name}{rankc}, and {place} will be kept honestly now.",
+        "They found the coffers emptied into one man's coffer and cast him out. I am {name}{rankc}; I take up {place} and its chronicle, resolved to keep clean hands.",
+        "The graft is laid bare, the hoarder gone, his coin returned to {place}. It is mine to govern now — I am {name}{rankc}, and I'll not repeat his theft."
+      ],
+      "piratefall": [
+        "I took these wharves at the sword's point. I am {name}{rankc}, and {place} is a pirate den now — its black book is mine to keep.",
+        "No lawful hand holds {place} any longer — I do, {name}{rankc}, and the black flag flies above it. This log runs red from here.",
+        "The magistrate is cast out and the seal broken; {place} answers to me now, {name}{rankc}. Let the record tell of plunder."
+      ],
+      "redeemed": [
+        "The black flag is struck and the cutthroats scattered. I am {name}{rankc}, come to restore lawful order over the ruins of {place} and keep its chronicle honestly again.",
+        "Privateers broke the den, and {place} returns to the law — under me, {name}{rankc}. I take up its record where the pirates left it bloodied.",
+        "The pirate lord is gone, his hoard scattered on the tide. I am {name}{rankc}; {place} is a lawful port once more, and this book is mine."
+      ],
       "successor": [
         "The rule of {place} passes to me — {name}{rankc}. I keep its chronicle from here.",
         "{place} comes into my keeping after another. I am {name}{rankc}, and its record goes on under me.",

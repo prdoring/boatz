@@ -15,10 +15,11 @@ export const EVENT_CATEGORY = {
   boom: 'trade', launch: 'trade', migrate: 'trade', reroute: 'trade', shun: 'trade',
   lost: 'trade', contract: 'trade', contractdone: 'trade', refit: 'trade', refitshort: 'trade',
   maiden: 'trade', voyages: 'trade', goldenage: 'trade', popmilestone: 'trade', longpeace: 'trade',
-  // Rule — governance, loyalty, crews, uprisings
+  // Rule — governance, loyalty, crews, uprisings, magistrate policy (industry/fiscal)
   mutiny: 'rule', defect: 'rule', quell: 'rule', unrest: 'rule',
   rebellion: 'rule', overthrow: 'rule', quellReb: 'rule', ambition: 'rule', overreach: 'rule',
-  promotion: 'rule', neworder: 'rule',
+  promotion: 'rule', neworder: 'rule', workshop: 'rule', derelict: 'rule',
+  taxup: 'rule', taxcut: 'rule', corruption: 'rule', graftseized: 'rule', publicworks: 'rule', tariff: 'rule',
   // Doom — nature and disaster
   blight: 'doom', plague: 'doom', recover: 'doom', wreck: 'doom', starve: 'doom',
   famine: 'doom', storm: 'doom', stormloss: 'doom', season: 'doom', adrift: 'doom', bearings: 'doom',
@@ -45,7 +46,8 @@ export const EVENT_COLOR = {
   aid: '#2d8060', rescue: '#2d8060', betray: '#b0342a', embargo: '#b5601e',
   contract: '#97781a', contractdone: '#2f7d45',
   storm: '#4a5a78', stormloss: '#566b78', season: '#5f47a0', adrift: '#566b78', bearings: '#2f7d45',
-  ambition: '#97781a', overreach: '#b5601e',
+  ambition: '#97781a', overreach: '#b5601e', workshop: '#8a6220', derelict: '#9a6b1f',
+  taxup: '#9a6b1f', taxcut: '#2f7d45', corruption: '#9a2e6a', graftseized: '#2f7d45', publicworks: '#2d8060', tariff: '#97781a',
   haven: '#9a2028', redeemed: '#2f7d45', assault: '#b06a1a', battery: '#b5731a',
   lost: '#566b78', shun: '#b5601e', reroute: '#1f7f8c',
   brokeoff: '#566b78', sunk: '#9a2028', refit: '#2f7d45', refitshort: '#b5601e',
@@ -83,7 +85,8 @@ const KIND_ICON = {
   ally: 'chevronUp', rival: 'chevronDown', betray: 'chevronDown',
   boom: 'spark', goldenage: 'spark', ambition: 'coin', aid: 'coin', rescue: 'shield',
   maiden: 'anchor', voyages: 'anchor', popmilestone: 'chevronUp', longpeace: 'shield',
-  promotion: 'chevronUp', neworder: 'pennant',
+  promotion: 'chevronUp', neworder: 'pennant', workshop: 'spark', derelict: 'warning',
+  taxup: 'coin', taxcut: 'coin', corruption: 'warning', graftseized: 'coin', publicworks: 'sprout', tariff: 'coin',
   launch: 'anchor', migrate: 'anchor', lost: 'anchor', wreck: 'anchor', reroute: 'caret', refit: 'anchor', refitshort: 'warning',
   contract: 'scroll', contractdone: 'scroll',
   mutiny: 'flame', defect: 'flame', rebellion: 'flame', overthrow: 'flame',

@@ -13,7 +13,8 @@ test('isHeadline: legacy/news events are headlines, log beats are not', () => {
 });
 
 test('every new beat kind resolves a category, colour, and icon', () => {
-  const NEW = ['maiden', 'voyages', 'promotion', 'goldenage', 'popmilestone', 'longpeace', 'neworder'];
+  const NEW = ['maiden', 'voyages', 'promotion', 'goldenage', 'popmilestone', 'longpeace', 'neworder', 'workshop', 'derelict',
+    'taxup', 'taxcut', 'corruption', 'graftseized', 'publicworks', 'tariff'];
   for (const k of NEW) {
     assert.notEqual(categoryOf(k), 'other', `${k} has a category`);
     assert.ok(k in EVENT_COLOR, `${k} has an explicit colour`);

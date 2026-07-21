@@ -371,8 +371,10 @@ test('a pirate takes a struck merchant as a PRIZE — the hull changes flag and 
   victim.pirate = false; victim.state = 'outbound'; victim.morale = 0.04; victim.hull = 1; victim.rig = 1;
   victim.cargo = { Gold: 100, People: 0, Food: 10, Weapons: 1 };
   victim.captain.xp = { sea: 0, gun: 0, cmd: 0 };
+  victim.homeId = w.islands.find((i) => i.id !== pirate.homeId).id; // a DIFFERENT origin, so the re-home is observable
   for (let i = 0; i < 12 && !victim.pirate && !victim._sunk; i++) { piracy(w, w.rules.SIM_STEP); w.simTime += w.rules.COMBAT_ROUND_SEC; }
   assert.ok(victim.pirate, 'she struck, was boarded, and now flies the black flag as a prize');
+  assert.equal(victim.homeId, pirate.homeId, 'FM #4: the prize is RE-HOMED to the captor — the origin stops counting her in its census');
 });
 
 test('prize capture respects the fleet-fraction cap — at the cap, the struck merchant is not taken', () => {

@@ -7,7 +7,7 @@ import { transfer, cargoUnits, GOLD, PEOPLE } from './resources.js';
 import { bidAsk } from './pricing.js';
 import { planVoyage } from './goals.js';
 import { buildPartnerIndex, clearPartnerIndex } from './queries.js';
-import { recordTrade, repPriceMult, tradeBarred, bumpRep } from './reputation.js';
+import { recordTrade, repPriceMult, tradeBarred, bumpRep, tariffMult } from './reputation.js';
 import { logEvent, logEventThrottled } from './events.js';
 import { contractPayout } from './contracts.js';
 import { fleetBelievedByHome } from './voyages.js';
@@ -144,7 +144,11 @@ export function executeStop(world, island, ship, stop) {
   // BUY leg: island SELLS the requested goods to the ship at its ask (rep-adjusted; a
   // friendly port discounts, a rival gouges). Bounded by ship gold, stock, hold space.
   for (const good in stop.buy) {
-    const ask = bidAsk(island.price[good].mid, t.SPREAD).ask * repPriceMult(island, homeId, swing, true);
+    // EXPORT HOLD: a magistrate in distress withholds strategic goods (e.g. Food/Weapons) from FOREIGN
+    // buyers — its own fleet (homeId === island.id) may still load them. TARIFF: a protectionist host
+    // adds a duty to a foreigner's ask (composed alongside the reputation multiplier; fleet-mates exempt).
+    if (homeId !== island.id && (island._holds || []).includes(good)) continue;
+    const ask = bidAsk(island.price[good].mid, t.SPREAD).ask * repPriceMult(island, homeId, swing, true) * tariffMult(island, homeId);
     const stockAvail = island.stock[good] || 0;
     const affordable = ask > 0 ? (ship.cargo[GOLD] || 0) / ask : 0;
     const space = Math.max(0, ship.capacity - cargoUnits(ship, t.GOLD_PER_CARGO_UNIT));

@@ -15,7 +15,7 @@
 //                     integrity — the opposite of graft (corruption drags loyalty down).
 
 import { streamFloat } from './rng.js';
-import { foodDays } from './island.js';
+import { foodDays, slotCap } from './island.js';
 import { logEvent, logEventThrottled } from './events.js';
 import { voiceSeedFrom, regimeData } from './captains.js';
 import { GIVEN, SURNAME, composeUniqueName } from './names.js';
@@ -33,6 +33,9 @@ const RANKS = [
 
 function pick(list, r) { return list[Math.min(list.length - 1, Math.floor(r * list.length))]; }
 function trait(world) { return (streamFloat(world, 'mag') + streamFloat(world, 'mag')) / 2; } // triangular → moderates common
+/** Pick one phrasing from a pool for a chronicle beat — from a DEDICATED cosmetic 'narrate' stream, so it
+ *  never perturbs the 'mag'/'rebel' streams that generate rulers (keeps the golden seed reproducible). */
+function pickText(world, arr) { return arr[Math.min(arr.length - 1, Math.floor(streamFloat(world, 'narrate') * arr.length))]; }
 
 /** Names of the magistrates currently in office — the set a fresh magistrate prefers to dodge. */
 function livingMagistrateNames(world) {
@@ -103,7 +106,7 @@ export function makeMagistrate(world, island = null, taken) {
   const traits = { firmness: trait(world), generosity: trait(world), integrity: trait(world) };
   const portrait = Math.floor(streamFloat(world, 'mag') * 0x7fffffff) >>> 0;
   const ambition = { kind: chooseAmbition(world, island), progress: 0.35, milestone: false };
-  return { name, xp: 0, traits, personality: magPersonality(traits), portrait, voiceSeed: voiceSeedFrom(portrait), ambition };
+  return { name, xp: 0, traits, personality: magPersonality(traits), portrait, voiceSeed: voiceSeedFrom(portrait), ambition, hoard: 0 };
 }
 
 /** The raw resources that feed the goods this island manufactures (industry's import focus). */
@@ -154,11 +157,23 @@ function ambitionSignal(world, isl) {
   switch (kind) {
     case 'grow':     return clamp(isl.population / Math.max(1, isl.k) - 0.5, -0.5, 0.5) * 2;
     case 'industry': {
-      let s = 0, n = 0;
-      for (const g of isl.produces || []) { if ((t.SPECIAL_GOODS || []).includes(g)) continue; s += ratio(g); n++; }
-      return clamp((n ? s / n : 0) - 1, -1, 1);
+      // Industry now succeeds by RAISING WORKS, not by hoarding output. Score the count + condition of
+      // the island's INDUSTRIAL workshops against its slot capacity (a port that builds more/healthier
+      // workshops — a shipyard's Ships INCLUDED — is progressing). Fixes #13: the old stock-ratio
+      // average pinned a pure shipyard at -1 forever (it makes only the SPECIAL good Ships → n=0).
+      const industrial = t.INDUSTRIAL_GOODS || [];
+      const cap = slotCap(isl, t);
+      let health = 0;
+      for (const wsp of isl.workshops || []) if (industrial.includes(wsp.good)) health += (wsp.condition != null ? wsp.condition : 1);
+      return clamp(safeDiv(health, cap, 0) * 2 - 1, -1, 1); // all slots full + in good repair → +1
     }
-    case 'wealth':   return clamp(isl.gold / Math.max(1, t.START_ISLAND_GOLD * 2) - 1, -1, 1);
+    case 'wealth': {
+      // Treasury-RELATIVE, not an absolute 2000g against a hoard cap that may be far lower for a small
+      // port (#29): score gold as a fraction of THIS port's own cap, so "getting rich" is reachable at
+      // any size. Half-cap → neutral, at-cap → +1.
+      const cap = (t.GOLD_MAX_PER_POP || 40) * isl.population;
+      return clamp(safeDiv(isl.gold, cap, 0) * 2 - 1, -1, 1);
+    }
     case 'fortify':  return clamp(ratio('Weapons') - 0.6, -1, 1);
     case 'splendor': return clamp(isl.civ - 0.5, -0.5, 0.5) * 2;
     case 'order':    return clamp(0.5 - (isl.lawlessness || 0), -0.5, 0.5) * 2;
@@ -174,7 +189,8 @@ function steadyLawlessness(isl, t) {
   let s = t.LAWLESS_BASE
     + (1 - (isl.civ || 0)) * t.LAWLESS_POVERTY
     + (isl.danger || 0) * t.LAWLESS_DANGER
-    + (isl.grievance || 0) * t.LAWLESS_GRIEVANCE;
+    + (isl.grievance || 0) * t.LAWLESS_GRIEVANCE
+    + (isl.tax || 0) * (t.LAWLESS_TAX || 0); // heavy taxation breeds unrest — closes the tax→gold→civ back-door
   if (foodDays(isl, t) < t.FAMINE_FOOD_DAYS) s += t.LAWLESS_FAMINE;
   if (m) {
     s -= magSkill(m, t) * t.LAWLESS_ORDER_SKILL;
@@ -199,7 +215,10 @@ function rebelCause(isl, rules) {
   if (foodDays(isl, rules) < rules.FAMINE_FOOD_DAYS) return 'famine in the streets';
   if (isl.plague) return 'plague and death';
   if (isl.blight) return 'a blighted, failing economy';
-  if (isl.magistrate && isl.magistrate.traits.integrity < 0.4) return "the magistrate's corruption";
+  const mag = isl.magistrate;
+  if (mag && mag.exposed) return 'years of brazen graft';
+  if (mag && mag.traits.integrity < 0.4) return "the magistrate's corruption";
+  if ((isl.tax || 0) >= (rules.TAX_MAX || 0.4) * 0.75) return 'crushing taxes';
   if (isl.civ < 0.3) return 'grinding poverty';
   return 'years of hard misrule';
 }
@@ -212,7 +231,8 @@ function steadyLoyalty(isl, rules) {
     + magSkill(m, rules) * rules.LOYALTY_SKILL_WEIGHT
     + tr.generosity * rules.LOYALTY_GEN_WEIGHT
     - tr.firmness * rules.LOYALTY_FIRM_RESENT
-    - (isl.lawlessness || 0) * rules.LAWLESS_LOYALTY_DRAG; // a lawless port trusts its ruler less
+    - (isl.lawlessness || 0) * rules.LAWLESS_LOYALTY_DRAG   // a lawless port trusts its ruler less
+    + (isl._approval || 0) * (rules.APPROVAL_LOYALTY_W || 0); // the populace's decaying memory of recent policy
   return clamp(s, 0.05, 0.95);
 }
 
@@ -268,6 +288,24 @@ export function governance(world, h) {
       }
     }
 
+    // POPULACE MEMORY + a CORRUPTION SCANDAL (daily). The people's memory of recent policy fades toward
+    // 0 (so in normal operation _approval decays out and no limit-cycle forms); and a hoard grown fat
+    // enough to be NOTICED breaks as a public scandal — a one-time blow to approval + an `exposed` latch
+    // (surfaced in the UI, and it makes an overthrow pay off). The steady graft→loyalty drag rides the
+    // existing integrity penalty below; this is the moment it becomes PUBLIC.
+    if (daily) {
+      isl._approval = (isl._approval || 0) * (1 - (t.APPROVAL_DECAY || 0));
+      if ((mag.hoard || 0) > (t.HOARD_EXPOSE || Infinity) && !mag.exposed) {
+        mag.exposed = true;
+        isl._approval = clamp((isl._approval || 0) + (t.APPROVAL_HOARD_EXPOSED || 0), -1, 1);
+        logEvent(world, 'corruption', pickText(world, [
+          `Word spreads through ${isl.name} that ${mag.name} has bled the treasury into a private hoard — the port seethes.`,
+          `A clerk's ledger is leaked, and ${isl.name} learns ${mag.name} has been skimming its coffers for years. Fury takes the streets.`,
+          `${mag.name}'s hidden hoard is the talk of every tavern in ${isl.name} now; the port's temper turns ugly.`,
+        ]), { islandId: isl.id });
+      }
+    }
+
     // LOYALTY drift toward the steady state, plus hardship drags and comfort boosts.
     const skill = magSkill(mag, t), tr = mag.traits;
     let dm = t.LOYALTY_RECOVER * (steadyLoyalty(isl, t) - isl.loyalty) + ambitionDm;
@@ -316,12 +354,40 @@ function resolveRebellion(world, isl) {
     isl.grievance = clamp((isl.grievance || 0) + t.GRIEVANCE_PER_QUELL, 0, 1); // put down by force → resentment festers
     logEvent(world, 'quellReb', `${mag.name} crushed the rebellion on ${isl.name} and clung to power — but the grievances deepen.`, { islandId: isl.id });
   } else {
+    const hoard = mag.hoard || 0;
+    const corrupt = !!mag.exposed || mag.traits.integrity < 0.4 || hoard > (t.HOARD_EXPOSE || Infinity) * 0.5;
+    const cause = corrupt ? 'graft' : 'overthrow';                  // a distinct handover cause for a toppled grafter
     const from = { name: mag.name, voiceSeed: mag.voiceSeed, rank: magRank(mag) }; // capture the cast-out ruler before installMagistrate overwrites isl.magistrate
+    // The deposed grafter's self-justifying last words land as the reign's final beat, in their own hand.
+    if (corrupt) logEvent(world, 'corruption', pickText(world, [
+      `${mag.name} is dragged from office still protesting that every coin was spent for ${isl.name}'s own good.`,
+      `They haul ${mag.name} from the counting-house; even now the old grafter swears the hoard was for ${isl.name} all along.`,
+      `${mag.name} goes to the cells cursing the mob and clutching the ledger, insisting ${isl.name} owed the coin to the office.`,
+    ]), { islandId: isl.id, tier: 'log' });
     const newMag = installMagistrate(world, isl);     // a fresh regime takes over, with a fresh agenda + re-targeted economy
-    logEvent(world, 'overthrow', `${isl.name} rose up and cast out ${mag.name}; ${newMag.name} seizes the ruined port with a mind to ${((AMBITION_META[newMag.ambition.kind] || {}).verb) || 'rebuild'} it.`,
-      { islandId: isl.id, data: regimeData(from, { name: newMag.name, voiceSeed: newMag.voiceSeed, rank: magRank(newMag) }, 'overthrow') });
+    const verb = ((AMBITION_META[newMag.ambition.kind] || {}).verb) || 'rebuild';
+    logEvent(world, 'overthrow', pickText(world, [
+      `${isl.name} rose up and cast out ${mag.name}; ${newMag.name} seizes the ruined port with a mind to ${verb} it.`,
+      `The streets of ${isl.name} turned on ${mag.name} at last; ${newMag.name} takes the seal, vowing to ${verb} what's left.`,
+      `${mag.name} is gone, torn down by ${isl.name}'s own people; ${newMag.name} inherits the wreckage and a plan to ${verb} it.`,
+    ]), { islandId: isl.id, data: regimeData(from, { name: newMag.name, voiceSeed: newMag.voiceSeed, rank: magRank(newMag) }, cause) });
     isl.civ *= (1 - t.OVERTHROW_CIV_HIT);            // the old order's works scattered
     isl.gold = Math.floor(isl.gold * (1 - t.OVERTHROW_GOLD_HIT)); // treasury looted
+    // The people SEIZE the tyrant's hidden hoard — so toppling a CORRUPT hoarder returns wealth (offsetting
+    // the looting), while toppling an honest-but-failed ruler is pure loss. WHO you overthrow matters.
+    if (hoard > 0) {
+      const seized = Math.floor(hoard * (t.HOARD_RECOVERY || 0));
+      isl.gold += seized;
+      if (seized > 50) {
+        const g = seized.toLocaleString('en-US');
+        logEvent(world, 'graftseized', pickText(world, [
+          `${isl.name}'s people seize ${g} g from ${from.name}'s hidden hoard.`,
+          `The mob breaks into ${from.name}'s strong-room and hauls ${g} g of skimmed coin back to ${isl.name}'s treasury.`,
+          `${g} g of ${from.name}'s stolen hoard is recovered and poured back into ${isl.name}'s coffers.`,
+        ]), { islandId: isl.id, data: { hoard: seized } });
+      }
+    }
+    isl.gold = clamp(Math.floor(isl.gold), 0, (t.GOLD_MAX_PER_POP || 40) * isl.population); // clamp after the injection (v2)
     isl.lawlessness = clamp((isl.lawlessness || 0) + t.LAWLESS_OVERTHROW_BUMP, 0, 1); // turmoil leaves the streets unruly
     isl.grievance = (isl.grievance || 0) * t.GRIEVANCE_OVERTHROW_KEEP; // the tyrant is gone — the worst resentment vents
   }

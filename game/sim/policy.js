@@ -28,10 +28,15 @@ import { streamFloat } from './rng.js';
  *  from a DEDICATED cosmetic 'narrate' stream so it never perturbs any economic/decision RNG. */
 function pick(world, arr) { return arr[Math.min(arr.length - 1, Math.floor(streamFloat(world, 'narrate') * arr.length))]; }
 
-// Nice prose names for a workshop of each industrial good (island-name-first `event.text` folds to
-// first-person in the ruling keeper's voice automatically — see chronicle-narrate.js).
+// Nice prose names for a workshop of each industrial good. NOTE for authoring event.text below: the
+// Story tab folds a beat to first person in the ruling keeper's voice ("Windward Skeinby raised…" →
+// "We raised…"). That fold ONLY works cleanly when the clause LEADS with `${isl.name}` and uses a
+// PAST-TENSE verb (firstPersonize conjugates just a small closed verb set, but past tense needs none);
+// a present-tense verb ("raises") or a name buried mid-sentence folds to garbage ("we raises", "us
+// builds"). So: name-first, past tense, and never a reflexive "itself". See chronicle-narrate.js.
 const WORKSHOP_NAME = {
   Weapons: 'gun-foundry', Clothing: 'weaving-house', LuxuryGoods: "jeweller's works", Ships: 'shipyard',
+  Food: 'granary', Ale: 'brewery',
 };
 function workshopName(g) { return WORKSHOP_NAME[g] || (g.toLowerCase() + ' works'); }
 
@@ -157,10 +162,10 @@ function tryDemolish(world, isl) {
   setCd(isl, victim.good, world.simTime + (t.WORKSHOP_COOLDOWN_DAYS || 12) * t.SIM_DAY_SECONDS); // don't re-raise it at once
   const wn = workshopName(victim.good);
   logEvent(world, 'derelict', pick(world, [
-    `${isl.name} pulls down its idle ${wn}; the cold works are cleared away.`,
-    `${isl.name} tears out its derelict ${wn} — better bare ground than a rotting shell.`,
-    `The shuttered ${wn} of ${isl.name} is demolished, its berth freed for something new.`,
-    `${isl.name} clears away a failed ${wn} — no sense feeding a works that makes nothing.`,
+    `${isl.name} pulled down its idle ${wn}; the cold works were cleared away.`,
+    `${isl.name} tore out its derelict ${wn} — better bare ground than a rotting shell.`,
+    `The shuttered ${wn} was demolished at ${isl.name}, its berth freed for something new.`,
+    `${isl.name} cleared away a failed ${wn} — no sense feeding a works that made nothing.`,
   ]), { islandId: isl.id, tier: 'log', data: { good: victim.good } });
   return true;
 }
@@ -191,10 +196,10 @@ function tryBuild(world, isl, day) {
   mutateWorkshops(world, isl, [...isl.workshops, { good: best.X, condition: 1 }]);
   const wn = workshopName(best.X);
   logEvent(world, 'workshop', pick(world, [
-    `${isl.name} raises a new ${wn} — the port takes up a fresh trade.`,
-    `A ${wn} rises on ${isl.name}'s wharves; its artisans set to work.`,
-    `${isl.name} lays the foundations of a ${wn}, broadening what it makes for the sea.`,
-    `Smoke and hammering where there was idle ground — ${isl.name} builds itself a ${wn}.`,
+    `${isl.name} raised a new ${wn} and took up a fresh trade.`,
+    `A ${wn} rose on ${isl.name}'s wharves; its artisans set to work.`,
+    `${isl.name} laid the foundations of a ${wn}, broadening its trade.`,
+    `${isl.name} broke fresh ground where idle earth had lain, and raised a new ${wn}.`,
   ]), { islandId: isl.id, tier: 'log', data: { good: best.X } });
   return true;
 }
@@ -227,9 +232,9 @@ function trySwitch(world, isl, day) {
   setCd(isl, worst.w.good, world.simTime + (t.WORKSHOP_COOLDOWN_DAYS || 12) * t.SIM_DAY_SECONDS);
   const from = workshopName(worst.w.good), to = workshopName(best.X);
   logEvent(world, 'workshop', pick(world, [
-    `${isl.name} retools its ${from} into a ${to}, chasing a better trade.`,
-    `The ${from} at ${isl.name} is gutted and made over into a ${to}.`,
-    `${isl.name} turns its hand from the ${from} to a ${to}, following the coin.`,
+    `${isl.name} retooled its ${from} into a ${to}, chasing a better trade.`,
+    `The ${from} at ${isl.name} was gutted and made over into a ${to}.`,
+    `${isl.name} turned its hand from the ${from} to a ${to}, following the coin.`,
   ]), { islandId: isl.id, tier: 'log', data: { good: best.X } });
   return true;
 }
@@ -248,9 +253,9 @@ function tryRepair(world, isl) {
   w._lowDays = 0;
   const wn = workshopName(w.good);
   logEvent(world, 'workshop', pick(world, [
-    `${isl.name} refits its ${wn}; the hammers ring out anew.`,
-    `${isl.name} pours coin into its run-down ${wn}, and the works come back to life.`,
-    `The ${wn} at ${isl.name} is patched up and set working again.`,
+    `${isl.name} refitted its ${wn}; the hammers rang out anew.`,
+    `${isl.name} poured coin into its run-down ${wn}, and the works came back to life.`,
+    `The ${wn} at ${isl.name} was patched up and set working again.`,
   ]), { islandId: isl.id, tier: 'log', data: { good: w.good } });
   return true;
 }
@@ -284,10 +289,10 @@ function tryPublicWorks(world, isl) {
   isl.grievance = Math.max(0, (isl.grievance || 0) - (t.PUBLIC_WORKS_ORDER || 0.04));
   isl._approval = clamp((isl._approval || 0) + (t.APPROVAL_PUBLICWORKS || 0.25), -1, 1);
   logEvent(world, 'publicworks', pick(world, [
-    `${isl.name} raises a public work — a fountain, a granary, a mended quay — and the people take heart.`,
-    `${isl.name} spends on the common good: a market roof, a paved lane, a well dug deep. The port brightens.`,
-    `A new almshouse, a repaired sea-wall — ${isl.name} tends to its people, and they warm to their ruler.`,
-    `${isl.name} puts idle hands to public works, and the mood of the streets lifts with the wages.`,
+    `${isl.name} raised a public work — a fountain, a granary, a mended quay — and the people took heart.`,
+    `${isl.name} spent on the common good: a market roof, a paved lane, a well dug deep, and the port brightened.`,
+    `${isl.name} tended to its people with a new almshouse and a repaired sea-wall, and they warmed to their ruler.`,
+    `${isl.name} put idle hands to public works, and the mood of the streets lifted with the wages.`,
   ]), { islandId: isl.id, tier: 'log' });
   return true;
 }
@@ -304,9 +309,9 @@ function tryDevelopSlot(world, isl) {
   spendWithGraft(world, isl, t.DEVELOP_SLOT_GOLD);
   isl.development = (isl.development || 0) + 1;
   logEvent(world, 'publicworks', pick(world, [
-    `${isl.name} clears fresh ground by its wharves — room for another works.`,
-    `${isl.name} drains a marsh and lays out a new works-yard, making space for its industry to grow.`,
-    `Surveyors mark out fresh ground at ${isl.name}; another workshop berth is opened.`,
+    `${isl.name} cleared fresh ground by its wharves — room for another works.`,
+    `${isl.name} drained a marsh and laid out a new works-yard, making space for its industry to grow.`,
+    `Surveyors marked out fresh ground at ${isl.name}; another workshop berth was opened.`,
   ]), { islandId: isl.id, tier: 'log' });
   return true;
 }
@@ -335,9 +340,9 @@ function tryTariff(world, isl) {
   if (next === tar) return;
   isl.tariff = next;
   if (tar < 0.15 && next >= 0.15) logEvent(world, 'tariff', pick(world, [
-    `${isl.name} throws up protective duties against foreign trade.`,
-    `${isl.name} shuts its purse to foreigners — a stiff tariff now greets outside traders.`,
-    `The magistrate of ${isl.name} levies duties on foreign hulls, favouring its own.`,
+    `${isl.name} threw up protective duties against foreign trade.`,
+    `${isl.name} shut its purse to foreigners; a stiff tariff now greeted outside traders.`,
+    `${isl.name} levied duties on foreign hulls, favouring its own.`,
   ]), { islandId: isl.id, tier: 'log', data: { tariff: next } });
 }
 
@@ -378,14 +383,14 @@ function tryTax(world, isl) {
     const word = ['light', 'moderate', 'heavy'][band(next)];
     logEvent(world, up ? 'taxup' : 'taxcut', up
       ? pick(world, [
-          `${isl.name} raises its taxes to a ${word} levy.`,
-          `The magistrate of ${isl.name} tightens the purse-strings — a ${word} levy now falls on the port.`,
-          `New tax-farmers walk ${isl.name}'s wharves; the levy is ${word} now, and the merchants grumble.`,
+          `${isl.name} raised its taxes to a ${word} levy.`,
+          `${isl.name} tightened the purse-strings — a ${word} levy now fell on the port.`,
+          `New tax-farmers walked ${isl.name}'s wharves; the levy was ${word} now, and the merchants grumbled.`,
         ])
       : pick(world, [
-          `${isl.name} eases its taxes to a ${word} levy.`,
-          `The magistrate of ${isl.name} lightens the burden — taxes fall to a ${word} levy.`,
-          `${isl.name}'s people breathe easier as the levy is cut to a ${word} rate.`,
+          `${isl.name} eased its taxes to a ${word} levy.`,
+          `${isl.name} lightened the burden — taxes fell to a ${word} levy.`,
+          `${isl.name}'s people breathed easier as the levy was cut to a ${word} rate.`,
         ]),
       { islandId: isl.id, tier: 'log', data: { tax: next } });
   }

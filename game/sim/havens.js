@@ -169,9 +169,9 @@ function driveHaven(world, isl, dDay, daily) {
         isl.gold -= (t.PIRATELORD_CONVERT_GOLD || 0);
         mutateWorkshops(world, isl, (isl.workshops || []).map((s) => (s === derelict ? { good: 'Ships', condition: 0.5 } : s)));
         logEvent(world, 'workshop', pickText(world, [
-          `${isl.name}'s cold works are torn out and rebuilt as a raider slipway.`,
-          `The den at ${isl.name} guts an idle workshop and lays down a slipway for raiders.`,
-          `Where honest goods were once made, ${isl.name} now hammers together pirate hulls.`,
+          `${isl.name}'s cold works were torn out and rebuilt as a raider slipway.`,
+          `The den at ${isl.name} gutted an idle workshop and laid down a slipway for raiders.`,
+          `${isl.name} turned from honest goods to hammering together pirate hulls.`,
         ]), { islandId: isl.id, tier: 'log', data: { good: 'Ships' } });
       }
     }

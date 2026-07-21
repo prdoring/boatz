@@ -299,9 +299,9 @@ export function governance(world, h) {
         mag.exposed = true;
         isl._approval = clamp((isl._approval || 0) + (t.APPROVAL_HOARD_EXPOSED || 0), -1, 1);
         logEvent(world, 'corruption', pickText(world, [
-          `Word spreads through ${isl.name} that ${mag.name} has bled the treasury into a private hoard — the port seethes.`,
-          `A clerk's ledger is leaked, and ${isl.name} learns ${mag.name} has been skimming its coffers for years. Fury takes the streets.`,
-          `${mag.name}'s hidden hoard is the talk of every tavern in ${isl.name} now; the port's temper turns ugly.`,
+          `${isl.name}'s streets seethed as word spread that ${mag.name} had bled the treasury into a private hoard.`,
+          `A leaked ledger laid ${mag.name}'s skimming bare, and ${isl.name}'s taverns boiled with talk of years of stolen coin.`,
+          `${mag.name}'s hidden hoard was the talk of every tavern in ${isl.name}; the port's temper turned ugly.`,
         ]), { islandId: isl.id });
       }
     }
@@ -360,9 +360,9 @@ function resolveRebellion(world, isl) {
     const from = { name: mag.name, voiceSeed: mag.voiceSeed, rank: magRank(mag) }; // capture the cast-out ruler before installMagistrate overwrites isl.magistrate
     // The deposed grafter's self-justifying last words land as the reign's final beat, in their own hand.
     if (corrupt) logEvent(world, 'corruption', pickText(world, [
-      `${mag.name} is dragged from office still protesting that every coin was spent for ${isl.name}'s own good.`,
-      `They haul ${mag.name} from the counting-house; even now the old grafter swears the hoard was for ${isl.name} all along.`,
-      `${mag.name} goes to the cells cursing the mob and clutching the ledger, insisting ${isl.name} owed the coin to the office.`,
+      `${mag.name} was dragged from office, still protesting that every coin had been spent for ${isl.name}'s own good.`,
+      `${mag.name} was hauled from the counting-house, still swearing the hoard had been for ${isl.name} all along.`,
+      `${mag.name} went to the cells cursing the mob, clutching the ledger and insisting the coin had been owed to the office.`,
     ]), { islandId: isl.id, tier: 'log' });
     const newMag = installMagistrate(world, isl);     // a fresh regime takes over, with a fresh agenda + re-targeted economy
     const verb = ((AMBITION_META[newMag.ambition.kind] || {}).verb) || 'rebuild';
@@ -381,9 +381,9 @@ function resolveRebellion(world, isl) {
       if (seized > 50) {
         const g = seized.toLocaleString('en-US');
         logEvent(world, 'graftseized', pickText(world, [
-          `${isl.name}'s people seize ${g} g from ${from.name}'s hidden hoard.`,
-          `The mob breaks into ${from.name}'s strong-room and hauls ${g} g of skimmed coin back to ${isl.name}'s treasury.`,
-          `${g} g of ${from.name}'s stolen hoard is recovered and poured back into ${isl.name}'s coffers.`,
+          `${isl.name}'s people seized ${g} g from ${from.name}'s hidden hoard.`,
+          `The mob broke into ${from.name}'s strong-room and hauled ${g} g of skimmed coin back to ${isl.name}'s treasury.`,
+          `${g} g of ${from.name}'s stolen hoard was recovered and poured back into ${isl.name}'s coffers.`,
         ]), { islandId: isl.id, data: { hoard: seized } });
       }
     }

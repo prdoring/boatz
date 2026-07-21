@@ -10,7 +10,7 @@
 
 import { PALETTE } from '../config.js';
 import { roundRect } from './UIStack.js';
-import { agePaper } from './parchment.js';
+import { agePaper, clipToBurntPaper, burnScorch } from './parchment.js';
 
 export { PALETTE, roundRect };
 
@@ -102,7 +102,13 @@ export function plate(ctx, x, y, w, h, opts = {}) {
   const r = opts.radius ?? RADIUS.card;
   const big = w > 150 && h > 66;
   const corners = opts.corners ?? big;
+  const aged = w >= 100 && h >= 40 && opts.aged !== false;
+  const doBurn = aged && (opts.burn ?? big);   // big cartouche panels read as burnt maps; small chips just age
+  const burnI = opts.burnIntensity ?? 0.85;
   ctx.save();
+  // Clip the burn-through bites out FIRST, so the paper is never painted there and the real sea/map
+  // shows through them (see clipToBurntPaper). Everything below is confined to paper-minus-bites.
+  if (doBurn) clipToBurntPaper(ctx, x, y, w, h, r, { burn: true, burnIntensity: burnI });
   // Body — a top-lit lacquer gradient (or an explicit translucent fill for overlays like the crawl).
   roundRect(ctx, x, y, w, h, r);
   if (opts.fill) ctx.fillStyle = opts.fill;
@@ -116,37 +122,45 @@ export function plate(ctx, x, y, w, h, opts = {}) {
   ctx.fill();
   // Worn-paper grain + aged edges, clipped to the body (skip tiny controls; go lighter on the
   // translucent overlay plates so text stays readable over the sea). Baked once — see parchment.js.
-  if (w >= 100 && h >= 40 && opts.aged !== false) {
-    const burn = opts.burn ?? big;   // big cartouche panels read as burnt maps; small chips just age
+  if (aged) {
     agePaper(ctx, x, y, w, h, r, {
       tex: opts.fill ? 0.42 : 0.55,
-      burn,
-      burnIntensity: opts.burnIntensity ?? 0.85,
+      burn: doBurn,
+      burnIntensity: burnI,
       edge: big ? 0.36 : 0.28,
     });
   }
+  // Frame strokes (outer rule + gilt frame/hairline + knots). On burnt panels these crisp lines are
+  // drawn inside a WIDER hole clip (bites inflated) so no rule/gilt hairline hugs a bite — the char
+  // lip then fills that gap. The body/grain above and the scorch below use the TIGHT hole.
+  ctx.save();
+  if (doBurn) clipToBurntPaper(ctx, x, y, w, h, r, { burn: true, burnIntensity: burnI, margin: 9 });
   // Outer bright rule.
   roundRect(ctx, x, y, w, h, r);
   ctx.lineWidth = 1.5; ctx.strokeStyle = opts.edge ?? PALETTE.panelEdge; ctx.stroke();
-  if (opts.inner === false) { ctx.restore(); return; }
-  if (big) {
-    // Set-in gilt frame + brass corner knots (the cartouche cue).
-    const gi = 5, ri = Math.max(2, r - 3);
-    roundRect(ctx, x + gi, y + gi, w - 2 * gi, h - 2 * gi, ri);
-    ctx.lineWidth = 1; ctx.strokeStyle = GOLD_LINE; ctx.stroke();
-    if (corners) {
-      ctx.fillStyle = PALETTE.panelAccent;
-      for (const [kx, ky] of [[x + gi, y + gi], [x + w - gi, y + gi], [x + gi, y + h - gi], [x + w - gi, y + h - gi]]) {
-        ctx.beginPath();
-        ctx.moveTo(kx, ky - 2.6); ctx.lineTo(kx + 2.6, ky); ctx.lineTo(kx, ky + 2.6); ctx.lineTo(kx - 2.6, ky);
-        ctx.closePath(); ctx.fill();
+  if (opts.inner !== false) {
+    if (big) {
+      // Set-in gilt frame + brass corner knots (the cartouche cue).
+      const gi = 5, ri = Math.max(2, r - 3);
+      roundRect(ctx, x + gi, y + gi, w - 2 * gi, h - 2 * gi, ri);
+      ctx.lineWidth = 1; ctx.strokeStyle = GOLD_LINE; ctx.stroke();
+      if (corners) {
+        ctx.fillStyle = PALETTE.panelAccent;
+        for (const [kx, ky] of [[x + gi, y + gi], [x + w - gi, y + gi], [x + gi, y + h - gi], [x + w - gi, y + h - gi]]) {
+          ctx.beginPath();
+          ctx.moveTo(kx, ky - 2.6); ctx.lineTo(kx + 2.6, ky); ctx.lineTo(kx, ky + 2.6); ctx.lineTo(kx - 2.6, ky);
+          ctx.closePath(); ctx.fill();
+        }
       }
+    } else {
+      // Small pills: a plain dark inner hairline for depth.
+      roundRect(ctx, x + 2, y + 2, w - 4, h - 4, Math.max(1, r - 2));
+      ctx.lineWidth = 1; ctx.strokeStyle = PALETTE.panelInk; ctx.stroke();
     }
-  } else {
-    // Small pills: a plain dark inner hairline for depth.
-    roundRect(ctx, x + 2, y + 2, w - 4, h - 4, Math.max(1, r - 2));
-    ctx.lineWidth = 1; ctx.strokeStyle = PALETTE.panelInk; ctx.stroke();
   }
+  ctx.restore();
+  // Scorch LAST, so the burn consumes the frame lines at the hot spots (no rule hugging a bite).
+  if (doBurn) burnScorch(ctx, x, y, w, h, r, { burn: true, burnIntensity: burnI });
   ctx.restore();
 }
 

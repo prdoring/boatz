@@ -156,35 +156,47 @@ export function inkDraw(ctx, r, colors, def, state, _now) {
   ctx.save();
   ctx.lineJoin = 'round';
 
-  // Opaque silhouette pre-pass: paint every fillable shape so the crisp ink (and
-  // everything below this part) is hidden inside the part's outline. Each shape fills
-  // with a FAINT tint of its own role colour mixed into the pale paper, so cloth/metal/
-  // skin/hair regions read as distinct coloured parchment (a hat won't blend into a
-  // head). Roleless shapes fill plain paper.
-  if (occlude) {
-    ctx.globalAlpha = 1;
-    for (const raw of def.shapes) {
-      const shape = effective(raw, state);
-      if (!shape) continue;
-      let poly = null;
-      if (shape.type === 'circle' && !shape.fill) {
-        const cx = S(shape.cx), cy = S(shape.cy);
-        const rad = shape.radiusAbs != null ? shape.radiusAbs : S(shape.radius);
-        poly = [];
-        const steps = Math.max(18, Math.round(rad));
-        for (let i = 0; i < steps; i++) { const t = (i / steps) * TAU; poly.push([cx + Math.cos(t) * rad, cy + Math.sin(t) * rad]); }
-      } else if (shape.type === 'path') {
-        let pts = (shape.points || []).map(Pa);
-        if (shape.smooth && pts.length >= 3) pts = smoothPts(pts, !!shape.closed);
-        if (pts.length >= 3) poly = pts;
-      } else if (shape.type === 'arc') {
-        const cx = S(shape.cx), cy = S(shape.cy), rad = S(shape.radius);
-        const a = evalAngle(shape.startAngle), b = evalAngle(shape.endAngle);
-        const steps = Math.max(8, Math.round(Math.abs(b - a) / (Math.PI / 16)));
-        poly = [];
-        for (let i = 0; i <= steps; i++) { const t = a + (b - a) * (i / steps); poly.push([cx + Math.cos(t) * rad, cy + Math.sin(t) * rad]); }
-      }
+  // The silhouette polygon for a fillable shape, matching its stroked geometry (so the opaque
+  // underlay lands exactly under the ink). `null` for shapes that don't enclose an area.
+  const polyOf = (shape) => {
+    if (shape.type === 'circle' && !shape.fill) {
+      const cx = S(shape.cx), cy = S(shape.cy);
+      const rad = shape.radiusAbs != null ? shape.radiusAbs : S(shape.radius);
+      const poly = [];
+      const steps = Math.max(18, Math.round(rad));
+      for (let i = 0; i < steps; i++) { const t = (i / steps) * TAU; poly.push([cx + Math.cos(t) * rad, cy + Math.sin(t) * rad]); }
+      return poly;
+    }
+    if (shape.type === 'path') {
+      let pts = (shape.points || []).map(Pa);
+      if (shape.smooth && pts.length >= 3) pts = smoothPts(pts, !!shape.closed);
+      return pts.length >= 3 ? pts : null;
+    }
+    if (shape.type === 'arc') {
+      const cx = S(shape.cx), cy = S(shape.cy), rad = S(shape.radius);
+      const a = evalAngle(shape.startAngle), b = evalAngle(shape.endAngle);
+      const steps = Math.max(8, Math.round(Math.abs(b - a) / (Math.PI / 16)));
+      const poly = [];
+      for (let i = 0; i <= steps; i++) { const t = a + (b - a) * (i / steps); poly.push([cx + Math.cos(t) * rad, cy + Math.sin(t) * rad]); }
+      return poly;
+    }
+    return null;
+  };
+
+  // Draw the part's shapes in authoring order (back → front). Each fillable shape lays an
+  // opaque paper-tint underlay of ITS OWN silhouette immediately before it strokes — so a
+  // front shape hides the outlines of the shapes behind it WITHIN the same part (a hat crown
+  // over its brim, a parrot's body over its tail feathers), not just across parts. Each shape
+  // fills with a FAINT tint of its role colour so cloth/metal/skin regions still read distinct.
+  // `lacy` parts (paper absent) skip the underlay and stay see-through detail over the head.
+  for (const raw of def.shapes) {
+    const shape = effective(raw, state);
+    if (!shape) continue;
+
+    if (occlude) {
+      const poly = polyOf(shape);
       if (poly && poly.length >= 3) {
+        ctx.globalAlpha = 1;
         ctx.fillStyle = shape.role ? mixHex(paper, colorFor(shape.role), OCCLUDE_TINT) : paper;
         ctx.beginPath();
         ctx.moveTo(poly[0][0], poly[0][1]);
@@ -193,11 +205,7 @@ export function inkDraw(ctx, r, colors, def, state, _now) {
         ctx.fill();
       }
     }
-  }
 
-  for (const raw of def.shapes) {
-    const shape = effective(raw, state);
-    if (!shape) continue;
     const color = colorFor(shape.role);
     const lw = (shape.setup && shape.setup.lineWidth) || 2.5;
     const maxW = Math.max(1.0, lw * (0.32 + r * 0.012)); // lineWidth differentiates outline vs detail

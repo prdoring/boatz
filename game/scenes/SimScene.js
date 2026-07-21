@@ -626,10 +626,13 @@ export class SimScene extends Scene {
     if (!lines || !lines.length) return;
 
     // A ship's captain gets a little portrait tucked into the left of the card.
-    let portrait = null;
+    let portrait = null, portraitFlavor = 'common';
     if (t.kind === 'ship' && this.shared.portraits) {
       const s = this._world && this._world.entities[t.id];
-      if (s && s.captain && s.captain.portrait != null) portrait = s.captain.portrait;
+      if (s && s.captain && s.captain.portrait != null) {
+        portrait = s.captain.portrait;
+        portraitFlavor = s.pirate ? 'pirate' : s.privateer ? 'navy' : 'common';
+      }
     }
 
     ctx.save();
@@ -663,7 +666,7 @@ export class SimScene extends Scene {
       ctx.save();
       roundRectPath(ctx, pxx, pyy, portSize, portSize, 8);
       ctx.fillStyle = '#e9dcbb'; ctx.fill(); ctx.clip();
-      this.shared.portraits.draw(ctx, pxx + portSize / 2, pyy + portSize * 0.46, portSize * 0.34, portrait, 0);
+      this.shared.portraits.draw(ctx, pxx + portSize / 2, pyy + portSize * 0.53, portSize * 0.40, portrait, 0, portraitFlavor);
       ctx.restore();
     }
 

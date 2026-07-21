@@ -3,163 +3,594 @@
 
   "heads": {
     "weathered": { "shapes": [
-      { "type": "path", "role": "skin", "closed": true, "smooth": true, "setup": { "lineWidth": 3 },
-        "points": [[0,-0.6],[0.33,-0.42],[0.42,-0.06],[0.34,0.32],[0.16,0.54],[0,0.58],[-0.16,0.54],[-0.34,0.32],[-0.42,-0.06],[-0.33,-0.42]] },
-      { "type": "arc", "role": "skin", "cx": -0.42, "cy": 0.0, "radius": 0.1, "startAngle": "PI*0.5", "endAngle": "PI*1.5", "setup": { "lineWidth": 2 } },
-      { "type": "arc", "role": "skin", "cx": 0.42, "cy": 0.0, "radius": 0.1, "startAngle": "-PI*0.5", "endAngle": "PI*0.5", "setup": { "lineWidth": 2 } }
+      {"type":"path","role":"skin","closed":true,"smooth":true,"setup":{"lineWidth":3},"points":[[0,-0.6],[0.33,-0.42],[0.42,-0.06],[0.34,0.32],[0.16,0.54],[0,0.58],[-0.16,0.54],[-0.34,0.32],[-0.42,-0.06],[-0.33,-0.42]]},
+      {"type":"arc","role":"skin","cx":-0.42,"cy":0,"radius":0.1,"startAngle":"PI*0.5","endAngle":"PI*1.5","setup":{"lineWidth":2}},
+      {"type":"arc","role":"skin","cx":0.42,"cy":0,"radius":0.1,"startAngle":"-PI*0.5","endAngle":"PI*0.5","setup":{"lineWidth":2}}
     ] },
     "square": { "shapes": [
-      { "type": "path", "role": "skin", "closed": true, "smooth": true, "setup": { "lineWidth": 3 },
-        "points": [[0,-0.6],[0.36,-0.44],[0.46,-0.08],[0.44,0.28],[0.32,0.5],[0,0.56],[-0.32,0.5],[-0.44,0.28],[-0.46,-0.08],[-0.36,-0.44]] },
-      { "type": "arc", "role": "skin", "cx": -0.46, "cy": 0.02, "radius": 0.1, "startAngle": "PI*0.5", "endAngle": "PI*1.5", "setup": { "lineWidth": 2 } },
-      { "type": "arc", "role": "skin", "cx": 0.46, "cy": 0.02, "radius": 0.1, "startAngle": "-PI*0.5", "endAngle": "PI*0.5", "setup": { "lineWidth": 2 } }
+      {"type":"path","role":"skin","closed":true,"smooth":true,"setup":{"lineWidth":3},"points":[[0,-0.6],[0.36,-0.44],[0.46,-0.08],[0.44,0.28],[0.32,0.5],[0,0.56],[-0.32,0.5],[-0.44,0.28],[-0.46,-0.08],[-0.36,-0.44]]},
+      {"type":"arc","role":"skin","cx":-0.46,"cy":0.02,"radius":0.1,"startAngle":"PI*0.5","endAngle":"PI*1.5","setup":{"lineWidth":2}},
+      {"type":"arc","role":"skin","cx":0.46,"cy":0.02,"radius":0.1,"startAngle":"-PI*0.5","endAngle":"PI*0.5","setup":{"lineWidth":2}}
     ] },
     "lean": { "shapes": [
-      { "type": "path", "role": "skin", "closed": true, "smooth": true, "setup": { "lineWidth": 3 },
-        "points": [[0,-0.62],[0.28,-0.44],[0.36,-0.06],[0.3,0.34],[0.14,0.56],[0,0.62],[-0.14,0.56],[-0.3,0.34],[-0.36,-0.06],[-0.28,-0.44]] },
-      { "type": "arc", "role": "skin", "cx": -0.36, "cy": -0.02, "radius": 0.09, "startAngle": "PI*0.5", "endAngle": "PI*1.5", "setup": { "lineWidth": 2 } },
-      { "type": "arc", "role": "skin", "cx": 0.36, "cy": -0.02, "radius": 0.09, "startAngle": "-PI*0.5", "endAngle": "PI*0.5", "setup": { "lineWidth": 2 } }
+      {"type":"path","role":"skin","closed":true,"smooth":true,"setup":{"lineWidth":3},"points":[[0,-0.62],[0.28,-0.44],[0.36,-0.06],[0.3,0.34],[0.14,0.56],[0,0.62],[-0.14,0.56],[-0.3,0.34],[-0.36,-0.06],[-0.28,-0.44]]},
+      {"type":"arc","role":"skin","cx":-0.36,"cy":-0.02,"radius":0.09,"startAngle":"PI*0.5","endAngle":"PI*1.5","setup":{"lineWidth":2}},
+      {"type":"arc","role":"skin","cx":0.36,"cy":-0.02,"radius":0.09,"startAngle":"-PI*0.5","endAngle":"PI*0.5","setup":{"lineWidth":2}}
+    ] },
+    "heavy": { "shapes": [
+      {"type":"path","role":"skin","closed":true,"smooth":true,"setup":{"lineWidth":3},"points":[[0,-0.58],[0.34,-0.42],[0.47,-0.06],[0.47,0.22],[0.34,0.44],[0.17,0.54],[0,0.57],[-0.17,0.54],[-0.34,0.44],[-0.47,0.22],[-0.47,-0.06],[-0.34,-0.42]]},
+      {"type":"lines","role":"skin","setup":{"lineWidth":1.4},"segments":[[[-0.22,-0.34],[0.22,-0.34]],[[-0.2,-0.26],[0.2,-0.26]]]},
+      {"type":"path","role":"skin","smooth":true,"setup":{"lineWidth":1.4},"points":[[-0.32,0.04],[-0.26,0.26],[-0.14,0.38]]},
+      {"type":"path","role":"skin","smooth":true,"setup":{"lineWidth":1.4},"points":[[0.32,0.04],[0.26,0.26],[0.14,0.38]]},
+      {"type":"arc","role":"skin","cx":-0.47,"cy":-0.02,"radius":0.1,"startAngle":"PI*0.5","endAngle":"PI*1.5","setup":{"lineWidth":2}},
+      {"type":"arc","role":"skin","cx":0.47,"cy":-0.02,"radius":0.1,"startAngle":"-PI*0.5","endAngle":"PI*0.5","setup":{"lineWidth":2}}
+    ] },
+    "gaunt": { "shapes": [
+      {"type":"path","role":"skin","closed":true,"smooth":true,"setup":{"lineWidth":3},"points":[[0,-0.62],[0.26,-0.44],[0.34,-0.12],[0.26,0.14],[0.24,0.36],[0.12,0.52],[0,0.58],[-0.12,0.52],[-0.24,0.36],[-0.26,0.14],[-0.34,-0.12],[-0.26,-0.44]]},
+      {"type":"path","role":"skin","smooth":true,"setup":{"lineWidth":1.4},"points":[[-0.3,-0.06],[-0.2,0.12],[-0.24,0.3]]},
+      {"type":"path","role":"skin","smooth":true,"setup":{"lineWidth":1.4},"points":[[0.3,-0.06],[0.2,0.12],[0.24,0.3]]},
+      {"type":"arc","role":"skin","cx":-0.34,"cy":-0.08,"radius":0.09,"startAngle":"PI*0.5","endAngle":"PI*1.5","setup":{"lineWidth":2}},
+      {"type":"arc","role":"skin","cx":0.34,"cy":-0.08,"radius":0.09,"startAngle":"-PI*0.5","endAngle":"PI*0.5","setup":{"lineWidth":2}}
+    ] },
+    "round": { "shapes": [
+      {"type":"path","role":"skin","closed":true,"smooth":true,"setup":{"lineWidth":3},"points":[[0,-0.56],[0.3,-0.46],[0.44,-0.16],[0.44,0.08],[0.36,0.34],[0.2,0.48],[0,0.52],[-0.2,0.48],[-0.36,0.34],[-0.44,0.08],[-0.44,-0.16],[-0.3,-0.46]]},
+      {"type":"arc","role":"skin","cx":-0.44,"cy":-0.04,"radius":0.1,"startAngle":"PI*0.5","endAngle":"PI*1.5","setup":{"lineWidth":2}},
+      {"type":"arc","role":"skin","cx":0.44,"cy":-0.04,"radius":0.1,"startAngle":"-PI*0.5","endAngle":"PI*0.5","setup":{"lineWidth":2}}
+    ] },
+    "angular": { "shapes": [
+      {"type":"path","role":"skin","closed":true,"smooth":true,"setup":{"lineWidth":3},"points":[[0,-0.6],[0.3,-0.46],[0.42,-0.14],[0.38,0.18],[0.26,0.42],[0,0.58],[-0.26,0.42],[-0.38,0.18],[-0.42,-0.14],[-0.3,-0.46]]},
+      {"type":"arc","role":"skin","cx":-0.42,"cy":-0.08,"radius":0.09,"startAngle":"PI*0.5","endAngle":"PI*1.5","setup":{"lineWidth":2}},
+      {"type":"arc","role":"skin","cx":0.42,"cy":-0.08,"radius":0.09,"startAngle":"-PI*0.5","endAngle":"PI*0.5","setup":{"lineWidth":2}}
+    ] },
+    "broad": { "shapes": [
+      {"type":"path","role":"skin","closed":true,"smooth":true,"setup":{"lineWidth":3},"points":[[0,-0.58],[0.38,-0.44],[0.5,-0.06],[0.46,0.26],[0.34,0.46],[0.16,0.54],[0,0.56],[-0.16,0.54],[-0.34,0.46],[-0.46,0.26],[-0.5,-0.06],[-0.38,-0.44]]},
+      {"type":"arc","role":"skin","cx":-0.5,"cy":-0.02,"radius":0.1,"startAngle":"PI*0.5","endAngle":"PI*1.5","setup":{"lineWidth":2}},
+      {"type":"arc","role":"skin","cx":0.5,"cy":-0.02,"radius":0.1,"startAngle":"-PI*0.5","endAngle":"PI*0.5","setup":{"lineWidth":2}}
     ] }
   },
 
   "faces": {
     "salt": { "lacy": true, "shapes": [
-      { "type": "lines", "role": "ink", "setup": { "lineWidth": 2.4 }, "segments": [[[-0.3,-0.16],[-0.08,-0.18]],[[0.3,-0.16],[0.08,-0.18]]] },
-      { "type": "circle", "role": "ink", "fill": true, "cx": -0.18, "cy": -0.04, "radius": 0.05 },
-      { "type": "circle", "role": "ink", "fill": true, "cx": 0.18, "cy": -0.04, "radius": 0.05 },
-      { "type": "path", "role": "ink", "smooth": true, "setup": { "lineWidth": 2 }, "points": [[-0.02,0.02],[-0.06,0.14],[0.04,0.16]] },
-      { "type": "path", "role": "ink", "smooth": true, "setup": { "lineWidth": 2.6 }, "points": [[-0.16,0.28],[0,0.29],[0.16,0.28]] }
+      {"type":"lines","role":"ink","setup":{"lineWidth":2.4},"segments":[[[-0.3,-0.16],[-0.08,-0.18]],[[0.3,-0.16],[0.08,-0.18]]]},
+      {"type":"circle","role":"ink","fill":true,"cx":-0.18,"cy":-0.04,"radius":0.05},
+      {"type":"circle","role":"ink","fill":true,"cx":0.18,"cy":-0.04,"radius":0.05},
+      {"type":"path","role":"ink","smooth":true,"setup":{"lineWidth":2},"points":[[-0.02,0.02],[-0.06,0.14],[0.04,0.16]]},
+      {"type":"path","role":"ink","smooth":true,"setup":{"lineWidth":2.6},"points":[[-0.16,0.28],[0,0.29],[0.16,0.28]]}
     ] },
     "squint": { "lacy": true, "shapes": [
-      { "type": "lines", "role": "ink", "setup": { "lineWidth": 3 }, "segments": [[[-0.3,-0.14],[-0.06,-0.2]],[[0.3,-0.14],[0.06,-0.2]]] },
-      { "type": "lines", "role": "ink", "setup": { "lineWidth": 3 }, "segments": [[[-0.27,-0.03],[-0.09,-0.03]],[[0.27,-0.03],[0.09,-0.03]]] },
-      { "type": "path", "role": "ink", "smooth": true, "setup": { "lineWidth": 2 }, "points": [[-0.02,0.02],[-0.07,0.15],[0.05,0.17]] },
-      { "type": "path", "role": "ink", "smooth": true, "setup": { "lineWidth": 2.8 }, "points": [[-0.15,0.3],[0,0.24],[0.15,0.3]] }
+      {"type":"lines","role":"ink","setup":{"lineWidth":3},"segments":[[[-0.3,-0.14],[-0.06,-0.2]],[[0.3,-0.14],[0.06,-0.2]]]},
+      {"type":"lines","role":"ink","setup":{"lineWidth":3},"segments":[[[-0.27,-0.03],[-0.09,-0.03]],[[0.27,-0.03],[0.09,-0.03]]]},
+      {"type":"path","role":"ink","smooth":true,"setup":{"lineWidth":2},"points":[[-0.02,0.02],[-0.07,0.15],[0.05,0.17]]},
+      {"type":"path","role":"ink","smooth":true,"setup":{"lineWidth":2.8},"points":[[-0.15,0.3],[0,0.24],[0.15,0.3]]}
     ] },
     "eyepatch": { "lacy": true, "shapes": [
-      { "type": "lines", "role": "ink", "setup": { "lineWidth": 2.4 }, "segments": [[[0.3,-0.16],[0.08,-0.18]]] },
-      { "type": "circle", "role": "ink", "fill": true, "cx": 0.18, "cy": -0.04, "radius": 0.05 },
-      { "type": "path", "role": "ink", "closed": true, "smooth": true, "fillSoft": true, "setup": { "lineWidth": 2.6 }, "points": [[-0.28,-0.1],[-0.08,-0.08],[-0.08,0.06],[-0.28,0.05]] },
-      { "type": "lines", "role": "ink", "setup": { "lineWidth": 2 }, "segments": [[[-0.3,-0.12],[0.32,-0.28]]] },
-      { "type": "path", "role": "ink", "smooth": true, "setup": { "lineWidth": 2 }, "points": [[0.0,0.02],[-0.05,0.14],[0.05,0.16]] },
-      { "type": "path", "role": "ink", "smooth": true, "setup": { "lineWidth": 2.6 }, "points": [[-0.15,0.29],[0,0.25],[0.15,0.29]] }
+      {"type":"lines","role":"ink","setup":{"lineWidth":2.4},"segments":[[[0.3,-0.16],[0.08,-0.18]]]},
+      {"type":"circle","role":"ink","fill":true,"cx":0.18,"cy":-0.04,"radius":0.05},
+      {"type":"path","role":"ink","closed":true,"smooth":true,"fillSoft":true,"setup":{"lineWidth":2.6},"points":[[-0.28,-0.1],[-0.08,-0.08],[-0.08,0.06],[-0.28,0.05]]},
+      {"type":"lines","role":"ink","setup":{"lineWidth":2},"segments":[[[-0.3,-0.12],[0.32,-0.28]]]},
+      {"type":"path","role":"ink","smooth":true,"setup":{"lineWidth":2},"points":[[0,0.02],[-0.05,0.14],[0.05,0.16]]},
+      {"type":"path","role":"ink","smooth":true,"setup":{"lineWidth":2.6},"points":[[-0.15,0.29],[0,0.25],[0.15,0.29]]}
     ] },
     "jolly": { "lacy": true, "shapes": [
-      { "type": "lines", "role": "ink", "setup": { "lineWidth": 2.4 }, "segments": [[[-0.3,-0.2],[-0.06,-0.16]],[[0.3,-0.2],[0.06,-0.16]]] },
-      { "type": "circle", "role": "ink", "fill": true, "cx": -0.18, "cy": -0.02, "radius": 0.055 },
-      { "type": "circle", "role": "ink", "fill": true, "cx": 0.18, "cy": -0.02, "radius": 0.055 },
-      { "type": "path", "role": "ink", "closed": true, "smooth": true, "setup": { "lineWidth": 2 }, "points": [[-0.04,0.04],[-0.08,0.16],[0.02,0.18],[0.04,0.08]] },
-      { "type": "path", "role": "ink", "smooth": true, "setup": { "lineWidth": 2.8 }, "points": [[-0.19,0.24],[0,0.36],[0.19,0.24]] }
+      {"type":"lines","role":"ink","setup":{"lineWidth":2.4},"segments":[[[-0.3,-0.2],[-0.06,-0.16]],[[0.3,-0.2],[0.06,-0.16]]]},
+      {"type":"circle","role":"ink","fill":true,"cx":-0.18,"cy":-0.02,"radius":0.055},
+      {"type":"circle","role":"ink","fill":true,"cx":0.18,"cy":-0.02,"radius":0.055},
+      {"type":"path","role":"ink","closed":true,"smooth":true,"setup":{"lineWidth":2},"points":[[-0.04,0.04],[-0.08,0.16],[0.02,0.18],[0.04,0.08]]},
+      {"type":"path","role":"ink","smooth":true,"setup":{"lineWidth":2.8},"points":[[-0.19,0.24],[0,0.36],[0.19,0.24]]}
+    ] },
+    "grim": { "lacy": true, "flavors": ["pirate","navy","official"], "shapes": [
+      {"type":"lines","role":"ink","setup":{"lineWidth":3},"segments":[[[-0.3,-0.2],[-0.06,-0.1]],[[0.3,-0.2],[0.06,-0.1]]]},
+      {"type":"circle","role":"ink","fill":true,"cx":-0.18,"cy":-0.04,"radius":0.045},
+      {"type":"circle","role":"ink","fill":true,"cx":0.18,"cy":-0.04,"radius":0.045},
+      {"type":"path","role":"ink","smooth":true,"setup":{"lineWidth":2},"points":[[-0.02,0.02],[-0.06,0.14],[0.04,0.16]]},
+      {"type":"path","role":"ink","smooth":true,"setup":{"lineWidth":2.8},"points":[[-0.16,0.3],[0,0.26],[0.16,0.3]]},
+      {"type":"lines","role":"ink","setup":{"lineWidth":1.6},"segments":[[[-0.2,-0.34],[0.2,-0.34]],[[-0.16,-0.42],[0.16,-0.42]]]}
+    ] },
+    "sly": { "lacy": true, "shapes": [
+      {"type":"lines","role":"ink","setup":{"lineWidth":2.4},"segments":[[[-0.3,-0.16],[-0.06,-0.16]]]},
+      {"type":"path","role":"ink","smooth":true,"setup":{"lineWidth":2.4},"points":[[0.06,-0.2],[0.2,-0.26],[0.32,-0.22]]},
+      {"type":"circle","role":"ink","fill":true,"cx":-0.18,"cy":-0.04,"radius":0.05},
+      {"type":"circle","role":"ink","fill":true,"cx":0.18,"cy":-0.06,"radius":0.05},
+      {"type":"path","role":"ink","smooth":true,"setup":{"lineWidth":2},"points":[[-0.02,0.02],[-0.06,0.14],[0.04,0.16]]},
+      {"type":"path","role":"ink","smooth":true,"setup":{"lineWidth":2.4},"points":[[-0.16,0.3],[0.02,0.29],[0.18,0.22]]}
+    ] },
+    "stern": { "lacy": true, "flavors": ["navy","official"], "shapes": [
+      {"type":"lines","role":"ink","setup":{"lineWidth":2.6},"segments":[[[-0.3,-0.17],[-0.06,-0.17]],[[0.3,-0.17],[0.06,-0.17]]]},
+      {"type":"circle","role":"ink","fill":true,"cx":-0.18,"cy":-0.04,"radius":0.048},
+      {"type":"circle","role":"ink","fill":true,"cx":0.18,"cy":-0.04,"radius":0.048},
+      {"type":"path","role":"ink","smooth":true,"setup":{"lineWidth":2},"points":[[0,0.02],[-0.05,0.14],[0.05,0.16]]},
+      {"type":"lines","role":"ink","setup":{"lineWidth":2.6},"segments":[[[-0.16,0.28],[0.16,0.28]]]}
+    ] },
+    "hooded": { "lacy": true, "shapes": [
+      {"type":"lines","role":"ink","setup":{"lineWidth":2.2},"segments":[[[-0.3,-0.2],[-0.06,-0.2]],[[0.3,-0.2],[0.06,-0.2]]]},
+      {"type":"arc","role":"ink","cx":-0.18,"cy":-0.02,"radius":0.09,"startAngle":"PI","endAngle":"2*PI","setup":{"lineWidth":2.2}},
+      {"type":"arc","role":"ink","cx":0.18,"cy":-0.02,"radius":0.09,"startAngle":"PI","endAngle":"2*PI","setup":{"lineWidth":2.2}},
+      {"type":"circle","role":"ink","fill":true,"cx":-0.18,"cy":0,"radius":0.03},
+      {"type":"circle","role":"ink","fill":true,"cx":0.18,"cy":0,"radius":0.03},
+      {"type":"path","role":"ink","smooth":true,"setup":{"lineWidth":2},"points":[[-0.02,0.04],[-0.06,0.14],[0.04,0.16]]},
+      {"type":"path","role":"ink","smooth":true,"setup":{"lineWidth":2.4},"points":[[-0.15,0.29],[0,0.3],[0.15,0.29]]}
+    ] },
+    "wideEyed": { "lacy": true, "shapes": [
+      {"type":"arc","role":"ink","cx":-0.18,"cy":-0.22,"radius":0.12,"startAngle":"PI*1.15","endAngle":"PI*1.85","setup":{"lineWidth":2.2}},
+      {"type":"arc","role":"ink","cx":0.18,"cy":-0.22,"radius":0.12,"startAngle":"PI*1.15","endAngle":"PI*1.85","setup":{"lineWidth":2.2}},
+      {"type":"circle","role":"ink","cx":-0.18,"cy":-0.04,"radius":0.08,"setup":{"lineWidth":2}},
+      {"type":"circle","role":"ink","cx":0.18,"cy":-0.04,"radius":0.08,"setup":{"lineWidth":2}},
+      {"type":"circle","role":"ink","fill":true,"cx":-0.18,"cy":-0.04,"radius":0.035},
+      {"type":"circle","role":"ink","fill":true,"cx":0.18,"cy":-0.04,"radius":0.035},
+      {"type":"path","role":"ink","smooth":true,"setup":{"lineWidth":2},"points":[[-0.02,0.02],[-0.05,0.14],[0.05,0.16]]},
+      {"type":"path","role":"ink","smooth":true,"setup":{"lineWidth":2.2},"points":[[-0.12,0.28],[0,0.3],[0.12,0.28]]}
+    ] },
+    "ruddy": { "lacy": true, "flavors": ["pirate","common"], "shapes": [
+      {"type":"lines","role":"ink","setup":{"lineWidth":2.6},"segments":[[[-0.28,-0.05],[-0.09,-0.05]],[[0.28,-0.05],[0.09,-0.05]]]},
+      {"type":"lines","role":"ink","setup":{"lineWidth":2},"segments":[[[-0.3,-0.16],[-0.08,-0.19]],[[0.3,-0.16],[0.08,-0.19]]]},
+      {"type":"path","role":"ink","smooth":true,"setup":{"lineWidth":2},"points":[[-0.02,0.02],[-0.06,0.12],[0.04,0.14]]},
+      {"type":"path","role":"ink","smooth":true,"setup":{"lineWidth":2.8},"points":[[-0.19,0.25],[0,0.35],[0.19,0.25]]},
+      {"type":"circle","role":"ink","fill":true,"cx":-0.26,"cy":0.08,"radius":0.017},
+      {"type":"circle","role":"ink","fill":true,"cx":-0.32,"cy":0.16,"radius":0.017},
+      {"type":"circle","role":"ink","fill":true,"cx":0.26,"cy":0.08,"radius":0.017},
+      {"type":"circle","role":"ink","fill":true,"cx":0.32,"cy":0.16,"radius":0.017},
+      {"type":"circle","role":"ink","fill":true,"cx":-0.06,"cy":0.1,"radius":0.015},
+      {"type":"circle","role":"ink","fill":true,"cx":0.06,"cy":0.1,"radius":0.015}
     ] }
   },
 
   "hairs": {
     "bald": { "shapes": [] },
     "cropped": { "shapes": [
-      { "type": "path", "role": "hair", "closed": true, "smooth": true, "setup": { "lineWidth": 2.5 },
-        "points": [[-0.42,-0.1],[-0.44,-0.4],[-0.24,-0.62],[0,-0.68],[0.24,-0.62],[0.44,-0.4],[0.42,-0.1],[0.3,-0.32],[0.12,-0.42],[-0.12,-0.42],[-0.3,-0.32]] }
+      {"type":"path","role":"hair","closed":true,"smooth":true,"setup":{"lineWidth":2.5},"points":[[-0.42,-0.1],[-0.44,-0.4],[-0.24,-0.62],[0,-0.68],[0.24,-0.62],[0.44,-0.4],[0.42,-0.1],[0.3,-0.32],[0.12,-0.42],[-0.12,-0.42],[-0.3,-0.32]]}
     ] },
     "ponytail": { "shapes": [
-      { "type": "path", "role": "hair", "closed": true, "smooth": true, "setup": { "lineWidth": 2.5 },
-        "points": [[0.34,0.28],[0.5,0.0],[0.46,-0.42],[0.2,-0.66],[0,-0.7],[-0.2,-0.66],[-0.46,-0.42],[-0.5,0.0],[-0.34,0.28],[-0.34,-0.14],[-0.2,-0.4],[0,-0.48],[0.2,-0.4],[0.34,-0.14]] },
-      { "type": "path", "role": "hair", "closed": true, "smooth": true, "setup": { "lineWidth": 2.5 },
-        "points": [[0.42,-0.28],[0.6,-0.1],[0.58,0.24],[0.46,0.2],[0.42,-0.04]] }
+      {"type":"path","role":"hair","closed":true,"smooth":true,"setup":{"lineWidth":2.5},"points":[[0.34,0.28],[0.5,0],[0.46,-0.42],[0.2,-0.66],[0,-0.7],[-0.2,-0.66],[-0.46,-0.42],[-0.5,0],[-0.34,0.28],[-0.34,-0.14],[-0.2,-0.4],[0,-0.48],[0.2,-0.4],[0.34,-0.14]]},
+      {"type":"path","role":"hair","closed":true,"smooth":true,"setup":{"lineWidth":2.5},"points":[[0.42,-0.28],[0.6,-0.1],[0.58,0.24],[0.46,0.2],[0.42,-0.04]]}
     ] },
     "longWavy": { "shapes": [
-      { "type": "path", "role": "hair", "closed": true, "smooth": true, "setup": { "lineWidth": 2.5 },
-        "points": [[-0.48,0.5],[-0.56,0.0],[-0.5,-0.44],[-0.22,-0.68],[0,-0.72],[0.22,-0.68],[0.5,-0.44],[0.56,0.0],[0.48,0.5],[0.4,0.2],[0.4,-0.2],[0.24,-0.42],[0,-0.5],[-0.24,-0.42],[-0.4,-0.2],[-0.4,0.2]] }
+      {"type":"path","role":"hair","closed":true,"smooth":true,"setup":{"lineWidth":2.5},"points":[[-0.48,0.5],[-0.56,0],[-0.5,-0.44],[-0.22,-0.68],[0,-0.72],[0.22,-0.68],[0.5,-0.44],[0.56,0],[0.48,0.5],[0.4,0.2],[0.4,-0.2],[0.24,-0.42],[0,-0.5],[-0.24,-0.42],[-0.4,-0.2],[-0.4,0.2]]}
     ] },
     "receding": { "shapes": [
-      { "type": "path", "role": "hair", "closed": true, "smooth": true, "setup": { "lineWidth": 2.5 },
-        "points": [[-0.44,0.18],[-0.5,-0.28],[-0.36,-0.5],[-0.4,-0.2],[-0.34,0.02],[-0.4,0.14]] },
-      { "type": "path", "role": "hair", "closed": true, "smooth": true, "setup": { "lineWidth": 2.5 },
-        "points": [[0.44,0.18],[0.5,-0.28],[0.36,-0.5],[0.4,-0.2],[0.34,0.02],[0.4,0.14]] }
+      {"type":"path","role":"hair","closed":true,"smooth":true,"setup":{"lineWidth":2.5},"points":[[-0.44,0.18],[-0.5,-0.28],[-0.36,-0.5],[-0.4,-0.2],[-0.34,0.02],[-0.4,0.14]]},
+      {"type":"path","role":"hair","closed":true,"smooth":true,"setup":{"lineWidth":2.5},"points":[[0.44,0.18],[0.5,-0.28],[0.36,-0.5],[0.4,-0.2],[0.34,0.02],[0.4,0.14]]}
+    ] },
+    "longStraight": { "shapes": [
+      {"type":"path","role":"hair","closed":true,"smooth":true,"setup":{"lineWidth":2.5},"points":[[-0.46,0.5],[-0.5,-0.1],[-0.46,-0.46],[-0.2,-0.68],[0,-0.72],[0.2,-0.68],[0.46,-0.46],[0.5,-0.1],[0.46,0.5],[0.38,0.2],[0.38,-0.22],[0.22,-0.44],[0,-0.5],[-0.22,-0.44],[-0.38,-0.22],[-0.38,0.2]]}
+    ] },
+    "topKnot": { "shapes": [
+      {"type":"path","role":"hair","closed":true,"smooth":true,"setup":{"lineWidth":2.5},"points":[[-0.4,-0.12],[-0.42,-0.42],[-0.22,-0.62],[0,-0.68],[0.22,-0.62],[0.42,-0.42],[0.4,-0.12],[0.28,-0.34],[0.1,-0.44],[-0.1,-0.44],[-0.28,-0.34]]},
+      {"type":"path","role":"hair","closed":true,"smooth":true,"setup":{"lineWidth":2.5},"points":[[0,-0.8],[0.14,-0.74],[0.15,-0.64],[0,-0.58],[-0.15,-0.64],[-0.14,-0.74]]},
+      {"type":"lines","role":"hair","setup":{"lineWidth":2},"segments":[[[-0.16,-0.64],[0.16,-0.64]]]}
+    ] },
+    "dreadlocks": { "flavors": ["pirate","common"], "shapes": [
+      {"type":"path","role":"hair","closed":true,"smooth":true,"setup":{"lineWidth":2.5},"points":[[-0.44,-0.14],[-0.46,-0.44],[-0.24,-0.64],[0,-0.7],[0.24,-0.64],[0.46,-0.44],[0.44,-0.14],[0.3,-0.34],[0.12,-0.44],[-0.12,-0.44],[-0.3,-0.34]]},
+      {"type":"path","role":"hair","closed":true,"smooth":true,"setup":{"lineWidth":2.2},"points":[[-0.5,-0.08],[-0.4,-0.1],[-0.36,0.42],[-0.5,0.44]]},
+      {"type":"path","role":"hair","closed":true,"smooth":true,"setup":{"lineWidth":2.2},"points":[[-0.34,0],[-0.24,-0.02],[-0.22,0.34],[-0.34,0.36]]},
+      {"type":"path","role":"hair","closed":true,"smooth":true,"setup":{"lineWidth":2.2},"points":[[0.5,-0.08],[0.4,-0.1],[0.36,0.42],[0.5,0.44]]},
+      {"type":"path","role":"hair","closed":true,"smooth":true,"setup":{"lineWidth":2.2},"points":[[0.34,0],[0.24,-0.02],[0.22,0.34],[0.34,0.36]]}
+    ] },
+    "wildMane": { "flavors": ["pirate","common"], "shapes": [
+      {"type":"path","role":"hair","closed":true,"smooth":true,"setup":{"lineWidth":2.5},"points":[[-0.5,0.42],[-0.56,0.06],[-0.52,-0.3],[-0.56,-0.5],[-0.42,-0.54],[-0.46,-0.68],[-0.22,-0.66],[0,-0.72],[0.22,-0.66],[0.46,-0.68],[0.42,-0.54],[0.56,-0.5],[0.52,-0.3],[0.56,0.06],[0.5,0.42],[0.38,0.16],[0.4,-0.24],[0.24,-0.46],[0,-0.52],[-0.24,-0.46],[-0.4,-0.24],[-0.38,0.16]]}
+    ] },
+    "sidePart": { "flavors": ["navy","official"], "shapes": [
+      {"type":"path","role":"hair","closed":true,"smooth":true,"setup":{"lineWidth":2.5},"points":[[-0.46,-0.06],[-0.5,-0.4],[-0.26,-0.64],[0.04,-0.7],[0.34,-0.62],[0.46,-0.36],[0.44,-0.12],[0.32,-0.3],[0.12,-0.4],[-0.06,-0.42],[-0.24,-0.4],[-0.4,-0.24]]},
+      {"type":"path","role":"hair","smooth":true,"setup":{"lineWidth":1.6},"points":[[-0.4,-0.3],[-0.1,-0.5],[0.22,-0.56]]},
+      {"type":"path","role":"hair","smooth":true,"setup":{"lineWidth":1.6},"points":[[-0.36,-0.16],[-0.06,-0.36],[0.26,-0.44]]}
+    ] },
+    "curly": { "shapes": [
+      {"type":"path","role":"hair","closed":true,"smooth":true,"setup":{"lineWidth":2.5},"points":[[-0.44,-0.08],[-0.5,-0.24],[-0.44,-0.4],[-0.52,-0.5],[-0.34,-0.58],[-0.4,-0.7],[-0.18,-0.66],[0,-0.74],[0.18,-0.66],[0.4,-0.7],[0.34,-0.58],[0.52,-0.5],[0.44,-0.4],[0.5,-0.24],[0.44,-0.08],[0.3,-0.3],[0.12,-0.42],[-0.12,-0.42],[-0.3,-0.3]]},
+      {"type":"circle","role":"hair","cx":-0.22,"cy":-0.5,"radius":0.08,"setup":{"lineWidth":1.6}},
+      {"type":"circle","role":"hair","cx":0.22,"cy":-0.5,"radius":0.08,"setup":{"lineWidth":1.6}},
+      {"type":"circle","role":"hair","cx":0,"cy":-0.6,"radius":0.08,"setup":{"lineWidth":1.6}}
     ] }
   },
 
   "facialHair": {
     "cleanShaven": { "shapes": [] },
     "mustache": { "shapes": [
-      { "type": "path", "role": "hair", "closed": true, "smooth": true, "setup": { "lineWidth": 2.5 },
-        "points": [[-0.24,0.2],[-0.1,0.16],[0,0.2],[0.1,0.16],[0.24,0.2],[0.16,0.28],[0,0.24],[-0.16,0.28]] }
+      {"type":"path","role":"hair","closed":true,"smooth":true,"setup":{"lineWidth":2.5},"points":[[-0.24,0.2],[-0.1,0.16],[0,0.2],[0.1,0.16],[0.24,0.2],[0.16,0.28],[0,0.24],[-0.16,0.28]]}
     ] },
     "goatee": { "shapes": [
-      { "type": "path", "role": "hair", "closed": true, "smooth": true, "setup": { "lineWidth": 2.4 },
-        "points": [[-0.2,0.2],[0,0.16],[0.2,0.2],[0.14,0.26],[0,0.22],[-0.14,0.26]] },
-      { "type": "path", "role": "hair", "closed": true, "smooth": true, "setup": { "lineWidth": 2.4 },
-        "points": [[-0.14,0.34],[0,0.32],[0.14,0.34],[0.1,0.52],[0,0.58],[-0.1,0.52]] }
+      {"type":"path","role":"hair","closed":true,"smooth":true,"setup":{"lineWidth":2.4},"points":[[-0.2,0.2],[0,0.16],[0.2,0.2],[0.14,0.26],[0,0.22],[-0.14,0.26]]},
+      {"type":"path","role":"hair","closed":true,"smooth":true,"setup":{"lineWidth":2.4},"points":[[-0.14,0.34],[0,0.32],[0.14,0.34],[0.1,0.52],[0,0.58],[-0.1,0.52]]}
     ] },
     "fullBeard": { "shapes": [
-      { "type": "path", "role": "hair", "closed": true, "smooth": true, "setup": { "lineWidth": 2.5 },
-        "points": [[-0.4,-0.02],[-0.42,0.2],[-0.34,0.42],[-0.16,0.58],[0,0.62],[0.16,0.58],[0.34,0.42],[0.42,0.2],[0.4,-0.02],[0.24,0.12],[0.1,0.18],[-0.1,0.18],[-0.24,0.12]] }
+      {"type":"path","role":"hair","closed":true,"smooth":true,"setup":{"lineWidth":2.5},"points":[[-0.4,-0.02],[-0.42,0.2],[-0.34,0.42],[-0.16,0.58],[0,0.62],[0.16,0.58],[0.34,0.42],[0.42,0.2],[0.4,-0.02],[0.24,0.12],[0.1,0.18],[-0.1,0.18],[-0.24,0.12]]}
     ] },
     "longBeard": { "shapes": [
-      { "type": "path", "role": "hair", "closed": true, "smooth": true, "setup": { "lineWidth": 2.5 },
-        "points": [[-0.42,-0.04],[-0.44,0.24],[-0.36,0.5],[-0.2,0.72],[-0.08,0.9],[0,0.98],[0.08,0.9],[0.2,0.72],[0.36,0.5],[0.44,0.24],[0.42,-0.04],[0.24,0.12],[0.1,0.18],[-0.1,0.18],[-0.24,0.12]] },
-      { "type": "path", "role": "hair", "smooth": true, "setup": { "lineWidth": 2 }, "points": [[-0.14,0.34],[0,0.4],[0.14,0.34]] }
+      {"type":"path","role":"hair","closed":true,"smooth":true,"setup":{"lineWidth":2.5},"points":[[-0.42,-0.04],[-0.44,0.24],[-0.36,0.5],[-0.2,0.72],[-0.08,0.9],[0,0.98],[0.08,0.9],[0.2,0.72],[0.36,0.5],[0.44,0.24],[0.42,-0.04],[0.24,0.12],[0.1,0.18],[-0.1,0.18],[-0.24,0.12]]},
+      {"type":"path","role":"hair","smooth":true,"setup":{"lineWidth":2},"points":[[-0.14,0.34],[0,0.4],[0.14,0.34]]}
+    ] },
+    "stubble": { "flavors": ["pirate","common"], "shapes": [
+      {"type":"lines","role":"hair","setup":{"lineWidth":1.2},"segments":[[[-0.3,0.22],[-0.28,0.26]],[[-0.18,0.23],[-0.16,0.27]],[[-0.06,0.24],[-0.04,0.28]],[[0.06,0.24],[0.08,0.28]],[[0.18,0.23],[0.2,0.27]],[[0.3,0.22],[0.32,0.26]],[[-0.34,0.32],[-0.32,0.36]],[[-0.22,0.33],[-0.2,0.37]],[[-0.1,0.34],[-0.08,0.38]],[[0.02,0.34],[0.04,0.38]],[[0.14,0.34],[0.16,0.38]],[[0.26,0.33],[0.28,0.37]],[[-0.28,0.42],[-0.26,0.46]],[[-0.15,0.43],[-0.13,0.47]],[[-0.02,0.44],[0,0.48]],[[0.11,0.43],[0.13,0.47]],[[0.24,0.42],[0.26,0.46]],[[-0.18,0.5],[-0.16,0.54]],[[-0.04,0.51],[-0.02,0.55]],[[0.08,0.5],[0.1,0.54]],[[0.18,0.49],[0.2,0.53]],[[-0.24,0.28],[-0.22,0.32]],[[0.22,0.28],[0.24,0.32]],[[0,0.29],[0.02,0.33]]]}
+    ] },
+    "handlebar": { "shapes": [
+      {"type":"path","role":"hair","closed":true,"smooth":true,"setup":{"lineWidth":2.5},"points":[[-0.3,0.1],[-0.24,0.12],[-0.12,0.17],[0,0.2],[0.12,0.17],[0.24,0.12],[0.3,0.1],[0.32,0.06],[0.26,0.08],[0.14,0.18],[0,0.24],[-0.14,0.18],[-0.26,0.08],[-0.32,0.06]]}
+    ] },
+    "vandyke": { "flavors": ["navy","official"], "shapes": [
+      {"type":"path","role":"hair","closed":true,"smooth":true,"setup":{"lineWidth":2.4},"points":[[-0.22,0.18],[-0.1,0.16],[0,0.2],[0.1,0.16],[0.22,0.18],[0.15,0.26],[0,0.23],[-0.15,0.26]]},
+      {"type":"path","role":"hair","closed":true,"smooth":true,"setup":{"lineWidth":2.4},"points":[[-0.12,0.36],[0,0.34],[0.12,0.36],[0.06,0.52],[0,0.6],[-0.06,0.52]]}
+    ] },
+    "braidedBeard": { "flavors": ["pirate"], "shapes": [
+      {"type":"path","role":"hair","closed":true,"smooth":true,"setup":{"lineWidth":2.5},"points":[[-0.4,-0.02],[-0.42,0.2],[-0.34,0.42],[-0.16,0.58],[0,0.62],[0.16,0.58],[0.34,0.42],[0.42,0.2],[0.4,-0.02],[0.24,0.12],[0.1,0.18],[-0.1,0.18],[-0.24,0.12]]},
+      {"type":"path","role":"hair","smooth":true,"setup":{"lineWidth":2},"points":[[-0.14,0.34],[0,0.4],[0.14,0.34]]},
+      {"type":"circle","role":"metal","fill":true,"cx":-0.02,"cy":0.5,"radius":0.03},
+      {"type":"circle","role":"metal","fill":true,"cx":0.02,"cy":0.58,"radius":0.03}
+    ] },
+    "forkedBeard": { "flavors": ["pirate"], "shapes": [
+      {"type":"path","role":"hair","closed":true,"smooth":true,"setup":{"lineWidth":2.5},"points":[[-0.42,-0.04],[-0.44,0.24],[-0.38,0.5],[-0.24,0.72],[-0.14,0.85],[-0.06,0.72],[0,0.68],[0.06,0.72],[0.14,0.85],[0.24,0.72],[0.38,0.5],[0.44,0.24],[0.42,-0.04],[0.24,0.12],[0.1,0.18],[-0.1,0.18],[-0.24,0.12]]}
+    ] },
+    "muttonChops": { "flavors": ["navy","official"], "shapes": [
+      {"type":"path","role":"hair","closed":true,"smooth":true,"setup":{"lineWidth":2.5},"points":[[-0.4,-0.06],[-0.42,0.2],[-0.34,0.4],[-0.2,0.44],[-0.18,0.3],[-0.26,0.14],[-0.3,-0.02]]},
+      {"type":"path","role":"hair","closed":true,"smooth":true,"setup":{"lineWidth":2.5},"points":[[0.4,-0.06],[0.42,0.2],[0.34,0.4],[0.2,0.44],[0.18,0.3],[0.26,0.14],[0.3,-0.02]]},
+      {"type":"path","role":"hair","closed":true,"smooth":true,"setup":{"lineWidth":2.4},"points":[[-0.24,0.18],[-0.1,0.15],[0,0.19],[0.1,0.15],[0.24,0.18],[0.16,0.26],[0,0.22],[-0.16,0.26]]}
+    ] },
+    "soulPatch": { "shapes": [
+      {"type":"path","role":"hair","closed":true,"smooth":true,"setup":{"lineWidth":2.5},"points":[[-0.24,0.2],[-0.1,0.16],[0,0.2],[0.1,0.16],[0.24,0.2],[0.16,0.28],[0,0.24],[-0.16,0.28]]},
+      {"type":"path","role":"hair","closed":true,"smooth":true,"setup":{"lineWidth":2.2},"points":[[-0.05,0.35],[0.05,0.35],[0.05,0.44],[-0.05,0.44]]}
     ] }
   },
 
   "headgear": {
-    "bare": { "shapes": [] },
-    "bandana": { "shapes": [
-      { "type": "path", "role": "accent", "closed": true, "smooth": true, "setup": { "lineWidth": 2.5 },
-        "points": [[-0.46,-0.28],[-0.3,-0.5],[0,-0.56],[0.3,-0.5],[0.46,-0.28],[0.42,-0.16],[0.2,-0.28],[0,-0.32],[-0.2,-0.28],[-0.42,-0.16]] },
-      { "type": "path", "role": "accent", "closed": true, "smooth": true, "setup": { "lineWidth": 2.2 },
-        "points": [[-0.46,-0.24],[-0.62,-0.14],[-0.66,0.04],[-0.52,-0.02],[-0.44,-0.14]] },
-      { "type": "lines", "role": "ink", "setup": { "lineWidth": 1.6 }, "segments": [[[-0.34,-0.24],[-0.26,-0.4]],[[-0.04,-0.28],[-0.02,-0.44]],[[0.26,-0.26],[0.32,-0.4]]] }
+    "bare": { "flavors": ["common"], "shapes": [] },
+    "bandana": { "flavors": ["pirate","common"], "shapes": [
+      {"type":"path","role":"accent","closed":true,"smooth":true,"setup":{"lineWidth":2.6},"points":[[-0.5,-0.2],[-0.52,-0.46],[-0.32,-0.64],[0,-0.7],[0.32,-0.64],[0.52,-0.46],[0.5,-0.2],[0.32,-0.3],[0,-0.34],[-0.32,-0.3]]},
+      {"type":"circle","role":"accent","fill":true,"cx":-0.52,"cy":-0.18,"radius":0.06},
+      {"type":"path","role":"accent","closed":true,"smooth":true,"setup":{"lineWidth":2},"points":[[-0.52,-0.2],[-0.68,-0.14],[-0.74,0.04],[-0.6,-0.02],[-0.5,-0.12]]},
+      {"type":"path","role":"accent","closed":true,"smooth":true,"setup":{"lineWidth":2},"points":[[-0.52,-0.14],[-0.66,-0.04],[-0.68,0.14],[-0.56,0.04],[-0.5,-0.06]]},
+      {"type":"lines","role":"ink","setup":{"lineWidth":1.3},"segments":[[[-0.28,-0.26],[-0.22,-0.56]],[[0.02,-0.3],[0.02,-0.62]],[[0.3,-0.28],[0.34,-0.54]]]}
     ] },
-    "tricorn": { "shapes": [
-      { "type": "path", "role": "hat", "closed": true, "smooth": true, "setup": { "lineWidth": 3 },
-        "points": [[-0.36,-0.46],[-0.2,-0.62],[0,-0.66],[0.2,-0.62],[0.36,-0.46],[0.2,-0.5],[0,-0.54],[-0.2,-0.5]] },
-      { "type": "path", "role": "hat", "closed": true, "smooth": true, "setup": { "lineWidth": 3 },
-        "points": [[-0.64,-0.3],[-0.5,-0.48],[-0.26,-0.4],[0,-0.52],[0.26,-0.4],[0.5,-0.48],[0.64,-0.3],[0.36,-0.28],[0,-0.32],[-0.36,-0.28]] },
-      { "type": "path", "role": "trim", "smooth": true, "setup": { "lineWidth": 1.6 },
-        "points": [[-0.58,-0.32],[-0.28,-0.42],[0,-0.48],[0.28,-0.42],[0.58,-0.32]] }
+    "bandanaKnot": { "flavors": ["pirate","common"], "shapes": [
+      {"type":"path","role":"accent","closed":true,"smooth":true,"setup":{"lineWidth":2.6},"points":[[-0.5,-0.2],[-0.52,-0.46],[-0.32,-0.64],[0,-0.7],[0.32,-0.64],[0.52,-0.46],[0.5,-0.2],[0.32,-0.3],[0,-0.34],[-0.32,-0.3]]},
+      {"type":"circle","role":"accent","fill":true,"cx":0.52,"cy":-0.2,"radius":0.07},
+      {"type":"path","role":"accent","closed":true,"smooth":true,"setup":{"lineWidth":2},"points":[[0.52,-0.22],[0.7,-0.16],[0.76,0.02],[0.62,-0.04],[0.52,-0.14]]},
+      {"type":"path","role":"accent","closed":true,"smooth":true,"setup":{"lineWidth":2},"points":[[0.52,-0.16],[0.68,-0.06],[0.68,0.12],[0.56,0.04],[0.5,-0.06]]},
+      {"type":"lines","role":"ink","setup":{"lineWidth":1.3},"segments":[[[-0.3,-0.28],[-0.24,-0.56]],[[0.02,-0.3],[0.02,-0.62]]]}
     ] },
-    "peakedCap": { "shapes": [
-      { "type": "path", "role": "hat", "closed": true, "smooth": true, "setup": { "lineWidth": 3 },
-        "points": [[-0.44,-0.34],[-0.46,-0.54],[-0.28,-0.66],[0,-0.7],[0.28,-0.66],[0.46,-0.54],[0.44,-0.34],[0.22,-0.42],[0,-0.44],[-0.22,-0.42]] },
-      { "type": "path", "role": "hat", "closed": true, "smooth": true, "setup": { "lineWidth": 2.6 },
-        "points": [[-0.5,-0.28],[-0.2,-0.34],[0.2,-0.34],[0.5,-0.28],[0.34,-0.2],[0,-0.24],[-0.34,-0.2]] },
-      { "type": "lines", "role": "trim", "setup": { "lineWidth": 2.4 }, "segments": [[[-0.42,-0.36],[0.42,-0.36]]] },
-      { "type": "circle", "role": "metal", "fill": true, "cx": 0, "cy": -0.46, "radius": 0.05 }
+    "headscarf": { "flavors": ["pirate","common"], "shapes": [
+      {"type":"path","role":"accent","closed":true,"smooth":true,"setup":{"lineWidth":2.6},"points":[[-0.48,-0.2],[-0.5,-0.44],[-0.28,-0.66],[0,-0.72],[0.28,-0.66],[0.5,-0.44],[0.48,-0.2],[0.28,-0.3],[0,-0.34],[-0.28,-0.3]]},
+      {"type":"path","role":"accent","closed":true,"smooth":true,"setup":{"lineWidth":2.2},"points":[[-0.48,-0.18],[-0.66,-0.12],[-0.72,0.1],[-0.56,0.02],[-0.46,-0.08]]},
+      {"type":"lines","role":"ink","setup":{"lineWidth":1.3},"segments":[[[-0.28,-0.2],[-0.22,-0.5]],[[0.02,-0.24],[0.04,-0.56]],[[0.3,-0.2],[0.36,-0.48]]]}
     ] },
-    "knitCap": { "shapes": [
-      { "type": "path", "role": "accent", "closed": true, "smooth": true, "setup": { "lineWidth": 2.6 },
-        "points": [[-0.44,-0.14],[-0.46,-0.44],[-0.26,-0.64],[0,-0.7],[0.26,-0.64],[0.46,-0.44],[0.44,-0.14],[0.22,-0.26],[0,-0.3],[-0.22,-0.26]] },
-      { "type": "lines", "role": "ink", "setup": { "lineWidth": 1.4 }, "segments": [[[-0.4,-0.2],[-0.34,-0.5]],[[-0.13,-0.26],[-0.1,-0.62]],[[0.13,-0.26],[0.1,-0.62]],[[0.4,-0.2],[0.34,-0.5]]] }
+    "tricorn": { "flavors": ["navy","official"], "shapes": [
+      {"type":"path","role":"hat","closed":true,"smooth":true,"setup":{"lineWidth":2.8},"points":[[-0.42,-0.3],[-0.44,-0.56],[-0.24,-0.72],[0,-0.76],[0.24,-0.72],[0.44,-0.56],[0.42,-0.3],[0.24,-0.4],[0,-0.44],[-0.24,-0.4]]},
+      {"type":"path","role":"hat","closed":true,"smooth":true,"setup":{"lineWidth":3},"points":[[-0.64,-0.28],[-0.5,-0.42],[-0.26,-0.4],[0,-0.52],[0.26,-0.4],[0.5,-0.42],[0.64,-0.28],[0.36,-0.28],[0,-0.32],[-0.36,-0.28]]},
+      {"type":"path","role":"trim","smooth":true,"setup":{"lineWidth":1.6},"points":[[-0.58,-0.32],[-0.28,-0.42],[0,-0.48],[0.28,-0.42],[0.58,-0.32]]}
+    ] },
+    "tricornRiveted": { "flavors": ["pirate"], "shapes": [
+      {"type":"path","role":"accent","closed":true,"smooth":true,"setup":{"lineWidth":2},"points":[[-0.46,-0.24],[-0.32,-0.36],[0,-0.4],[0.32,-0.36],[0.46,-0.24],[0.42,-0.14],[0,-0.18],[-0.42,-0.14]]},
+      {"type":"path","role":"hat","closed":true,"smooth":true,"setup":{"lineWidth":2.8},"points":[[-0.42,-0.34],[-0.44,-0.58],[-0.24,-0.72],[0,-0.76],[0.24,-0.72],[0.44,-0.58],[0.42,-0.34],[0.24,-0.42],[0,-0.46],[-0.24,-0.42]]},
+      {"type":"path","role":"hat","closed":true,"smooth":true,"setup":{"lineWidth":3},"points":[[-0.66,-0.34],[-0.5,-0.52],[-0.26,-0.44],[0,-0.56],[0.26,-0.44],[0.5,-0.52],[0.66,-0.34],[0.36,-0.32],[0,-0.36],[-0.36,-0.32]]},
+      {"type":"circle","role":"metal","fill":true,"cx":-0.5,"cy":-0.4,"radius":0.028},
+      {"type":"circle","role":"metal","fill":true,"cx":-0.28,"cy":-0.46,"radius":0.028},
+      {"type":"circle","role":"metal","fill":true,"cx":0,"cy":-0.48,"radius":0.028},
+      {"type":"circle","role":"metal","fill":true,"cx":0.28,"cy":-0.46,"radius":0.028},
+      {"type":"circle","role":"metal","fill":true,"cx":0.5,"cy":-0.4,"radius":0.028}
+    ] },
+    "tricornPlumed": { "flavors": ["pirate","navy"], "shapes": [
+      {"type":"path","role":"plume","closed":true,"smooth":true,"fillSoft":true,"setup":{"lineWidth":2},"points":[[-0.48,-0.46],[-0.6,-0.7],[-0.66,-0.98],[-0.56,-1.02],[-0.47,-0.84],[-0.42,-0.6],[-0.4,-0.48]]},
+      {"type":"path","role":"hat","closed":true,"smooth":true,"setup":{"lineWidth":2.8},"points":[[-0.42,-0.3],[-0.44,-0.56],[-0.24,-0.72],[0,-0.76],[0.24,-0.72],[0.44,-0.56],[0.42,-0.3],[0.24,-0.4],[0,-0.44],[-0.24,-0.4]]},
+      {"type":"path","role":"hat","closed":true,"smooth":true,"setup":{"lineWidth":3},"points":[[-0.64,-0.28],[-0.5,-0.42],[-0.26,-0.4],[0,-0.52],[0.26,-0.4],[0.5,-0.42],[0.64,-0.28],[0.36,-0.28],[0,-0.32],[-0.36,-0.28]]},
+      {"type":"path","role":"trim","smooth":true,"setup":{"lineWidth":1.6},"points":[[-0.58,-0.32],[-0.28,-0.42],[0,-0.48],[0.28,-0.42],[0.58,-0.32]]}
+    ] },
+    "cavalier": { "flavors": ["pirate","common"], "shapes": [
+      {"type":"path","role":"plume","closed":true,"smooth":true,"fillSoft":true,"setup":{"lineWidth":2},"points":[[0.24,-0.54],[0.5,-0.64],[0.72,-0.6],[0.66,-0.82],[0.4,-0.98],[0.08,-1],[-0.18,-0.88],[-0.32,-0.7],[-0.26,-0.58],[-0.08,-0.6]]},
+      {"type":"path","role":"hat","closed":true,"smooth":true,"setup":{"lineWidth":3},"points":[[-0.72,-0.32],[-0.4,-0.42],[0,-0.46],[0.4,-0.42],[0.72,-0.32],[0.5,-0.24],[0,-0.28],[-0.5,-0.24]]},
+      {"type":"path","role":"hat","closed":true,"smooth":true,"setup":{"lineWidth":3},"points":[[-0.44,-0.36],[-0.4,-0.6],[-0.22,-0.72],[0,-0.76],[0.22,-0.72],[0.4,-0.6],[0.44,-0.36],[0.26,-0.42],[0,-0.46],[-0.26,-0.42]]},
+      {"type":"path","role":"trim","smooth":true,"setup":{"lineWidth":1.6},"points":[[-0.62,-0.34],[-0.3,-0.42],[0,-0.44],[0.3,-0.42],[0.62,-0.34]]},
+      {"type":"path","role":"metal","closed":true,"setup":{"lineWidth":1.4},"points":[[-0.07,-0.4],[0.07,-0.4],[0.07,-0.28],[-0.07,-0.28]]}
+    ] },
+    "bicorne": { "flavors": ["navy","official"], "shapes": [
+      {"type":"path","role":"hat","closed":true,"smooth":true,"setup":{"lineWidth":2.6},"points":[[-0.38,-0.32],[-0.4,-0.56],[-0.22,-0.72],[0,-0.76],[0.22,-0.72],[0.4,-0.56],[0.38,-0.32],[0.22,-0.42],[0,-0.46],[-0.22,-0.42]]},
+      {"type":"path","role":"hat","closed":true,"smooth":true,"setup":{"lineWidth":3},"points":[[-0.6,-0.28],[-0.44,-0.4],[-0.18,-0.56],[0,-0.64],[0.18,-0.56],[0.44,-0.4],[0.6,-0.28],[0.34,-0.26],[0,-0.3],[-0.34,-0.26]]},
+      {"type":"path","role":"trim","smooth":true,"setup":{"lineWidth":1.6},"points":[[-0.5,-0.32],[-0.2,-0.5],[0,-0.58],[0.2,-0.5],[0.5,-0.32]]}
+    ] },
+    "bicornePlumed": { "flavors": ["navy","official"], "shapes": [
+      {"type":"path","role":"plume","closed":true,"smooth":true,"fillSoft":true,"setup":{"lineWidth":2},"points":[[-0.5,-0.5],[-0.6,-0.74],[-0.62,-0.98],[-0.52,-1],[-0.44,-0.82],[-0.4,-0.58],[-0.4,-0.46]]},
+      {"type":"path","role":"hat","closed":true,"smooth":true,"setup":{"lineWidth":2.6},"points":[[-0.38,-0.32],[-0.4,-0.56],[-0.22,-0.72],[0,-0.76],[0.22,-0.72],[0.4,-0.56],[0.38,-0.32],[0.22,-0.42],[0,-0.46],[-0.22,-0.42]]},
+      {"type":"path","role":"hat","closed":true,"smooth":true,"setup":{"lineWidth":3},"points":[[-0.6,-0.28],[-0.44,-0.4],[-0.18,-0.56],[0,-0.64],[0.18,-0.56],[0.44,-0.4],[0.6,-0.28],[0.34,-0.26],[0,-0.3],[-0.34,-0.26]]},
+      {"type":"circle","role":"metal","fill":true,"cx":-0.42,"cy":-0.46,"radius":0.05}
+    ] },
+    "peakedCap": { "flavors": ["navy","common"], "shapes": [
+      {"type":"path","role":"hat","closed":true,"smooth":true,"setup":{"lineWidth":3},"points":[[-0.44,-0.34],[-0.46,-0.54],[-0.28,-0.66],[0,-0.7],[0.28,-0.66],[0.46,-0.54],[0.44,-0.34],[0.22,-0.42],[0,-0.44],[-0.22,-0.42]]},
+      {"type":"path","role":"hat","closed":true,"smooth":true,"setup":{"lineWidth":2.6},"points":[[-0.5,-0.28],[-0.2,-0.34],[0.2,-0.34],[0.5,-0.28],[0.34,-0.2],[0,-0.24],[-0.34,-0.2]]},
+      {"type":"lines","role":"trim","setup":{"lineWidth":2.4},"segments":[[[-0.42,-0.36],[0.42,-0.36]]]},
+      {"type":"circle","role":"metal","fill":true,"cx":0,"cy":-0.46,"radius":0.05}
+    ] },
+    "peakedBadge": { "flavors": ["navy","official"], "shapes": [
+      {"type":"path","role":"hat","closed":true,"smooth":true,"setup":{"lineWidth":3},"points":[[-0.44,-0.34],[-0.46,-0.54],[-0.28,-0.66],[0,-0.7],[0.28,-0.66],[0.46,-0.54],[0.44,-0.34],[0.22,-0.42],[0,-0.44],[-0.22,-0.42]]},
+      {"type":"path","role":"hat","closed":true,"smooth":true,"setup":{"lineWidth":2.6},"points":[[-0.5,-0.28],[-0.2,-0.34],[0.2,-0.34],[0.5,-0.28],[0.34,-0.2],[0,-0.24],[-0.34,-0.2]]},
+      {"type":"lines","role":"trim","setup":{"lineWidth":2.4},"segments":[[[-0.42,-0.36],[0.42,-0.36]]]},
+      {"type":"circle","role":"metal","fill":true,"cx":0,"cy":-0.48,"radius":0.08},
+      {"type":"circle","role":"ink","cx":0,"cy":-0.48,"radius":0.05,"setup":{"lineWidth":1.2}}
+    ] },
+    "knitCap": { "flavors": ["common"], "shapes": [
+      {"type":"path","role":"accent","closed":true,"smooth":true,"setup":{"lineWidth":2.6},"points":[[-0.44,-0.14],[-0.46,-0.44],[-0.26,-0.64],[0,-0.7],[0.26,-0.64],[0.46,-0.44],[0.44,-0.14],[0.22,-0.26],[0,-0.3],[-0.22,-0.26]]},
+      {"type":"lines","role":"ink","setup":{"lineWidth":1.4},"segments":[[[-0.4,-0.2],[-0.34,-0.5]],[[-0.13,-0.26],[-0.1,-0.62]],[[0.13,-0.26],[0.1,-0.62]],[[0.4,-0.2],[0.34,-0.5]]]}
+    ] },
+    "monteroCap": { "flavors": ["common","pirate"], "shapes": [
+      {"type":"path","role":"hat","closed":true,"smooth":true,"setup":{"lineWidth":2.8},"points":[[-0.44,-0.16],[-0.48,-0.48],[-0.26,-0.64],[0,-0.68],[0.26,-0.64],[0.48,-0.48],[0.44,-0.16],[0.22,-0.24],[0,-0.28],[-0.22,-0.24]]},
+      {"type":"path","role":"hat","closed":true,"smooth":true,"setup":{"lineWidth":2.4},"points":[[-0.44,-0.16],[-0.5,-0.04],[-0.3,-0.1],[0,-0.05],[0.3,-0.1],[0.5,-0.04],[0.44,-0.16]]}
     ] }
   },
 
   "shoulders": {
-    "navalCoat": { "shapes": [
-      { "type": "path", "role": "coat", "closed": true, "smooth": true, "setup": { "lineWidth": 3 },
-        "points": [[-0.95,0.62],[-0.9,0.1],[-0.6,-0.28],[-0.24,-0.42],[0,-0.36],[0.24,-0.42],[0.6,-0.28],[0.9,0.1],[0.95,0.62]] },
-      { "type": "path", "role": "trim", "closed": true, "smooth": true, "setup": { "lineWidth": 2.4 },
-        "points": [[-0.24,-0.42],[0,-0.34],[-0.2,0.6],[-0.42,0.6],[-0.4,-0.1]] },
-      { "type": "path", "role": "trim", "closed": true, "smooth": true, "setup": { "lineWidth": 2.4 },
-        "points": [[0.24,-0.42],[0,-0.34],[0.2,0.6],[0.42,0.6],[0.4,-0.1]] },
-      { "type": "path", "role": "paper", "closed": true, "smooth": true, "fillSoft": true, "setup": { "lineWidth": 1.5 },
-        "points": [[-0.14,-0.34],[0.14,-0.34],[0.1,0.6],[-0.1,0.6]] },
-      { "type": "circle", "role": "metal", "fill": true, "cx": -0.3, "cy": 0.08, "radius": 0.045 },
-      { "type": "circle", "role": "metal", "fill": true, "cx": -0.3, "cy": 0.3, "radius": 0.045 },
-      { "type": "circle", "role": "metal", "fill": true, "cx": 0.3, "cy": 0.08, "radius": 0.045 },
-      { "type": "circle", "role": "metal", "fill": true, "cx": 0.3, "cy": 0.3, "radius": 0.045 }
+    "navalCoat": { "flavors": ["navy","official"], "shapes": [
+      {"type":"path","role":"coat","closed":true,"smooth":true,"setup":{"lineWidth":3},"points":[[-0.95,0.62],[-0.9,0.1],[-0.6,-0.28],[-0.24,-0.42],[0,-0.36],[0.24,-0.42],[0.6,-0.28],[0.9,0.1],[0.95,0.62]]},
+      {"type":"path","role":"trim","closed":true,"smooth":true,"setup":{"lineWidth":2.4},"points":[[-0.24,-0.42],[0,-0.34],[-0.2,0.6],[-0.42,0.6],[-0.4,-0.1]]},
+      {"type":"path","role":"trim","closed":true,"smooth":true,"setup":{"lineWidth":2.4},"points":[[0.24,-0.42],[0,-0.34],[0.2,0.6],[0.42,0.6],[0.4,-0.1]]},
+      {"type":"path","role":"paper","closed":true,"smooth":true,"fillSoft":true,"setup":{"lineWidth":1.5},"points":[[-0.14,-0.34],[0.14,-0.34],[0.1,0.6],[-0.1,0.6]]},
+      {"type":"circle","role":"metal","fill":true,"cx":-0.3,"cy":0.08,"radius":0.045},
+      {"type":"circle","role":"metal","fill":true,"cx":-0.3,"cy":0.3,"radius":0.045},
+      {"type":"circle","role":"metal","fill":true,"cx":0.3,"cy":0.08,"radius":0.045},
+      {"type":"circle","role":"metal","fill":true,"cx":0.3,"cy":0.3,"radius":0.045}
     ] },
-    "stripedShirt": { "shapes": [
-      { "type": "path", "role": "coat", "closed": true, "smooth": true, "setup": { "lineWidth": 3 },
-        "points": [[-0.9,0.62],[-0.86,0.12],[-0.54,-0.24],[-0.22,-0.4],[0,-0.34],[0.22,-0.4],[0.54,-0.24],[0.86,0.12],[0.9,0.62]] },
-      { "type": "lines", "role": "accent", "setup": { "lineWidth": 3 }, "segments": [[[-0.82,0.08],[0.82,0.08]],[[-0.86,0.28],[0.86,0.28]],[[-0.88,0.48],[0.88,0.48]]] }
+    "stripedShirt": { "flavors": ["pirate","common"], "shapes": [
+      {"type":"path","role":"coat","closed":true,"smooth":true,"setup":{"lineWidth":3},"points":[[-0.9,0.62],[-0.86,0.12],[-0.54,-0.24],[-0.22,-0.4],[0,-0.34],[0.22,-0.4],[0.54,-0.24],[0.86,0.12],[0.9,0.62]]},
+      {"type":"lines","role":"accent","setup":{"lineWidth":3},"segments":[[[-0.82,0.08],[0.82,0.08]],[[-0.86,0.28],[0.86,0.28]],[[-0.88,0.48],[0.88,0.48]]]}
     ] },
-    "vest": { "shapes": [
-      { "type": "path", "role": "coat", "closed": true, "smooth": true, "setup": { "lineWidth": 3 },
-        "points": [[-0.92,0.62],[-0.88,0.1],[-0.56,-0.26],[-0.22,-0.4],[0,-0.34],[0.22,-0.4],[0.56,-0.26],[0.88,0.1],[0.92,0.62]] },
-      { "type": "path", "role": "paper", "closed": true, "smooth": true, "fillSoft": true, "setup": { "lineWidth": 1.5 },
-        "points": [[-0.22,-0.4],[0,-0.34],[0.22,-0.4],[0.12,0.6],[-0.12,0.6]] },
-      { "type": "path", "role": "ink", "smooth": true, "setup": { "lineWidth": 1.6 }, "points": [[0,-0.32],[0,0.58]] },
-      { "type": "circle", "role": "trim", "fill": true, "cx": 0, "cy": 0.1, "radius": 0.04 },
-      { "type": "circle", "role": "trim", "fill": true, "cx": 0, "cy": 0.34, "radius": 0.04 }
+    "vest": { "flavors": ["common","pirate"], "shapes": [
+      {"type":"path","role":"coat","closed":true,"smooth":true,"setup":{"lineWidth":3},"points":[[-0.92,0.62],[-0.88,0.1],[-0.56,-0.26],[-0.22,-0.4],[0,-0.34],[0.22,-0.4],[0.56,-0.26],[0.88,0.1],[0.92,0.62]]},
+      {"type":"path","role":"paper","closed":true,"smooth":true,"fillSoft":true,"setup":{"lineWidth":1.5},"points":[[-0.22,-0.4],[0,-0.34],[0.22,-0.4],[0.12,0.6],[-0.12,0.6]]},
+      {"type":"path","role":"ink","smooth":true,"setup":{"lineWidth":1.6},"points":[[0,-0.32],[0,0.58]]},
+      {"type":"circle","role":"trim","fill":true,"cx":0,"cy":0.1,"radius":0.04},
+      {"type":"circle","role":"trim","fill":true,"cx":0,"cy":0.34,"radius":0.04}
+    ] },
+    "pirateCoat": { "flavors": ["pirate"], "shapes": [
+      {"type":"path","role":"coat","closed":true,"smooth":true,"setup":{"lineWidth":3},"points":[[-0.95,0.62],[-0.9,0.1],[-0.58,-0.28],[-0.28,-0.4],[0,-0.3],[0.28,-0.4],[0.58,-0.28],[0.9,0.1],[0.95,0.62]]},
+      {"type":"path","role":"paper","closed":true,"smooth":true,"fillSoft":true,"setup":{"lineWidth":1.5},"points":[[-0.28,-0.4],[0,-0.3],[0.28,-0.4],[0.16,0.62],[-0.16,0.62]]},
+      {"type":"path","role":"coat","closed":true,"smooth":true,"setup":{"lineWidth":2.4},"points":[[-0.28,-0.4],[0,-0.3],[-0.14,0.62],[-0.4,0.62],[-0.46,-0.1]]},
+      {"type":"path","role":"coat","closed":true,"smooth":true,"setup":{"lineWidth":2.4},"points":[[0.28,-0.4],[0,-0.3],[0.14,0.62],[0.4,0.62],[0.46,-0.1]]},
+      {"type":"lines","role":"ink","setup":{"lineWidth":1.4},"segments":[[[-0.08,-0.2],[0.08,-0.12]],[[0.08,-0.12],[-0.08,-0.04]],[[-0.08,-0.04],[0.08,0.04]],[[0.08,0.04],[-0.08,0.12]]]}
+    ] },
+    "officerCoat": { "flavors": ["navy","official"], "shapes": [
+      {"type":"path","role":"coat","closed":true,"smooth":true,"setup":{"lineWidth":3},"points":[[-0.95,0.62],[-0.9,0.1],[-0.6,-0.28],[-0.24,-0.42],[0,-0.36],[0.24,-0.42],[0.6,-0.28],[0.9,0.1],[0.95,0.62]]},
+      {"type":"path","role":"trim","closed":true,"smooth":true,"setup":{"lineWidth":2.2},"points":[[-0.24,-0.42],[0,-0.34],[-0.2,0.6],[-0.4,0.6],[-0.38,-0.1]]},
+      {"type":"path","role":"trim","closed":true,"smooth":true,"setup":{"lineWidth":2.2},"points":[[0.24,-0.42],[0,-0.34],[0.2,0.6],[0.4,0.6],[0.38,-0.1]]},
+      {"type":"path","role":"paper","closed":true,"smooth":true,"fillSoft":true,"setup":{"lineWidth":1.5},"points":[[-0.14,-0.34],[0.14,-0.34],[0.1,0.6],[-0.1,0.6]]},
+      {"type":"circle","role":"metal","fill":true,"cx":-0.72,"cy":-0.12,"radius":0.12},
+      {"type":"circle","role":"metal","fill":true,"cx":0.72,"cy":-0.12,"radius":0.12},
+      {"type":"lines","role":"metal","setup":{"lineWidth":1.4},"segments":[[[-0.82,0],[-0.84,0.16]],[[-0.72,0.02],[-0.72,0.18]],[[-0.62,0],[-0.6,0.16]]]},
+      {"type":"lines","role":"metal","setup":{"lineWidth":1.4},"segments":[[[0.82,0],[0.84,0.16]],[[0.72,0.02],[0.72,0.18]],[[0.62,0],[0.6,0.16]]]},
+      {"type":"circle","role":"metal","fill":true,"cx":-0.24,"cy":0.16,"radius":0.045},
+      {"type":"circle","role":"metal","fill":true,"cx":-0.24,"cy":0.4,"radius":0.045},
+      {"type":"circle","role":"metal","fill":true,"cx":0.24,"cy":0.16,"radius":0.045},
+      {"type":"circle","role":"metal","fill":true,"cx":0.24,"cy":0.4,"radius":0.045}
+    ] },
+    "ladenCoat": { "flavors": ["pirate"], "shapes": [
+      {"type":"path","role":"coat","closed":true,"smooth":true,"setup":{"lineWidth":3},"points":[[-0.95,0.62],[-0.9,0.1],[-0.58,-0.28],[-0.26,-0.42],[0,-0.34],[0.26,-0.42],[0.58,-0.28],[0.9,0.1],[0.95,0.62]]},
+      {"type":"path","role":"paper","closed":true,"smooth":true,"fillSoft":true,"setup":{"lineWidth":1.5},"points":[[-0.14,-0.34],[0.14,-0.34],[0.1,0.6],[-0.1,0.6]]},
+      {"type":"path","role":"hat","closed":true,"smooth":true,"setup":{"lineWidth":2.5},"points":[[-0.643,-0.271],[0.407,0.649],[0.493,0.551],[-0.557,-0.369]]},
+      {"type":"circle","role":"metal","fill":true,"cx":-0.5,"cy":-0.16,"radius":0.05},
+      {"type":"circle","role":"metal","fill":true,"cx":-0.34,"cy":0.06,"radius":0.05},
+      {"type":"circle","role":"metal","fill":true,"cx":-0.18,"cy":0.28,"radius":0.05},
+      {"type":"path","role":"metal","closed":true,"setup":{"lineWidth":1.4},"points":[[0.34,0.48],[0.5,0.5],[0.48,0.64],[0.32,0.62]]}
+    ] },
+    "sash": { "flavors": ["pirate","common"], "shapes": [
+      {"type":"path","role":"paper","closed":true,"smooth":true,"setup":{"lineWidth":3},"points":[[-0.9,0.62],[-0.86,0.12],[-0.54,-0.24],[-0.22,-0.4],[0,-0.34],[0.22,-0.4],[0.54,-0.24],[0.86,0.12],[0.9,0.62]]},
+      {"type":"path","role":"accent","closed":true,"smooth":true,"setup":{"lineWidth":2.5},"points":[[-0.599,-0.25],[0.351,0.67],[0.449,0.57],[-0.501,-0.35]]},
+      {"type":"path","role":"ink","smooth":true,"setup":{"lineWidth":1.4},"points":[[0,-0.3],[0,0.6]]}
+    ] },
+    "ruffledShirt": { "flavors": ["official","navy"], "shapes": [
+      {"type":"path","role":"coat","closed":true,"smooth":true,"setup":{"lineWidth":3},"points":[[-0.92,0.62],[-0.88,0.1],[-0.56,-0.26],[-0.22,-0.4],[0,-0.34],[0.22,-0.4],[0.56,-0.26],[0.88,0.1],[0.92,0.62]]},
+      {"type":"path","role":"paper","closed":true,"smooth":true,"fillSoft":true,"setup":{"lineWidth":2},"points":[[-0.16,-0.34],[0.16,-0.34],[0.2,-0.1],[0.14,0.1],[0.2,0.3],[0,0.44],[-0.2,0.3],[-0.14,0.1],[-0.2,-0.1]]},
+      {"type":"lines","role":"ink","setup":{"lineWidth":1.2},"segments":[[[-0.12,-0.16],[0.12,-0.16]],[[-0.14,0.04],[0.14,0.04]],[[-0.12,0.24],[0.12,0.24]]]}
+    ] },
+    "furCollar": { "flavors": ["pirate","common"], "shapes": [
+      {"type":"path","role":"coat","closed":true,"smooth":true,"setup":{"lineWidth":3},"points":[[-0.95,0.62],[-0.9,0.1],[-0.58,-0.24],[-0.26,-0.38],[0,-0.3],[0.26,-0.38],[0.58,-0.24],[0.9,0.1],[0.95,0.62]]},
+      {"type":"path","role":"hair","closed":true,"smooth":true,"setup":{"lineWidth":2.6},"points":[[-0.6,-0.18],[-0.5,-0.34],[-0.36,-0.22],[-0.24,-0.4],[-0.1,-0.26],[0,-0.36],[0.1,-0.26],[0.24,-0.4],[0.36,-0.22],[0.5,-0.34],[0.6,-0.18],[0.42,0.18],[0,0.3],[-0.42,0.18]]}
+    ] },
+    "tatteredCoat": { "flavors": ["pirate","common"], "shapes": [
+      {"type":"path","role":"coat","closed":true,"smooth":true,"setup":{"lineWidth":2.8},"points":[[-0.92,0.62],[-0.86,0.1],[-0.56,-0.26],[-0.24,-0.4],[0,-0.32],[0.24,-0.4],[0.56,-0.26],[0.86,0.1],[0.92,0.62],[0.7,0.5],[0.5,0.62],[0.3,0.48],[0.1,0.62],[-0.1,0.5],[-0.3,0.62],[-0.5,0.48],[-0.7,0.62]]},
+      {"type":"path","role":"paper","closed":true,"smooth":true,"fillSoft":true,"setup":{"lineWidth":1.5},"points":[[-0.2,-0.36],[0.2,-0.36],[0.12,0.4],[-0.12,0.4]]},
+      {"type":"path","role":"ink","smooth":true,"setup":{"lineWidth":1.2},"points":[[0,-0.34],[0,0.4]]}
+    ] }
+  },
+
+  "shoulderPets": {
+    "none": { "shapes": [] },
+    "plainB": { "shapes": [] },
+    "plainC": { "shapes": [] },
+    "plainD": { "shapes": [] },
+    "plainE": { "shapes": [] },
+    "parrot": { "flavors": ["pirate"], "shapes": [
+      {"type":"path","role":"plume","closed":true,"smooth":true,"fillSoft":true,"setup":{"lineWidth":1.6},"points":[[-0.66,0.12],[-0.72,0.36],[-0.68,0.58],[-0.6,0.36],[-0.58,0.14]]},
+      {"type":"path","role":"plume","closed":true,"smooth":true,"fillSoft":true,"setup":{"lineWidth":1.6},"points":[[-0.54,0.14],[-0.54,0.4],[-0.48,0.58],[-0.46,0.36],[-0.48,0.14]]},
+      {"type":"path","role":"accent","closed":true,"smooth":true,"fillSoft":true,"setup":{"lineWidth":2.2},"points":[[-0.7,-0.14],[-0.6,-0.22],[-0.48,-0.14],[-0.46,0.08],[-0.52,0.24],[-0.64,0.22],[-0.72,0.04]]},
+      {"type":"path","role":"plume","closed":true,"smooth":true,"fillSoft":true,"setup":{"lineWidth":1.8},"points":[[-0.5,-0.08],[-0.42,0.06],[-0.46,0.22],[-0.56,0.12],[-0.56,-0.02]]},
+      {"type":"path","role":"accent","closed":true,"smooth":true,"fillSoft":true,"setup":{"lineWidth":2},"points":[[-0.74,-0.36],[-0.62,-0.42],[-0.5,-0.34],[-0.52,-0.18],[-0.64,-0.14],[-0.74,-0.22]]},
+      {"type":"path","role":"ink","closed":true,"smooth":true,"setup":{"lineWidth":1.5},"points":[[-0.52,-0.34],[-0.4,-0.32],[-0.42,-0.24],[-0.46,-0.26],[-0.5,-0.28]]},
+      {"type":"circle","role":"ink","fill":true,"cx":-0.62,"cy":-0.32,"radius":0.025},
+      {"type":"lines","role":"ink","setup":{"lineWidth":1.2},"segments":[[[-0.62,0.2],[-0.62,0.32]],[[-0.55,0.2],[-0.55,0.32]]]}
+    ] },
+    "monkey": { "flavors": ["pirate"], "shapes": [
+      {"type":"path","role":"hair","closed":true,"smooth":true,"fillSoft":true,"setup":{"lineWidth":1.8},"points":[[-0.5,0.14],[-0.34,0.16],[-0.26,0.0],[-0.32,-0.18],[-0.36,-0.04],[-0.42,0.06],[-0.5,0.06]]},
+      {"type":"path","role":"hair","closed":true,"smooth":true,"fillSoft":true,"setup":{"lineWidth":2},"points":[[-0.74,-0.02],[-0.64,-0.12],[-0.52,-0.04],[-0.5,0.18],[-0.58,0.3],[-0.72,0.26],[-0.78,0.1]]},
+      {"type":"circle","role":"hair","cx":-0.78,"cy":-0.28,"radius":0.08,"setup":{"lineWidth":1.6}},
+      {"type":"circle","role":"hair","cx":-0.5,"cy":-0.28,"radius":0.08,"setup":{"lineWidth":1.6}},
+      {"type":"circle","role":"hair","cx":-0.64,"cy":-0.26,"radius":0.15,"setup":{"lineWidth":2}},
+      {"type":"path","role":"skin","closed":true,"smooth":true,"fillSoft":true,"setup":{"lineWidth":1.4},"points":[[-0.72,-0.28],[-0.64,-0.34],[-0.56,-0.28],[-0.56,-0.16],[-0.64,-0.1],[-0.72,-0.16]]},
+      {"type":"circle","role":"ink","fill":true,"cx":-0.68,"cy":-0.28,"radius":0.022},
+      {"type":"circle","role":"ink","fill":true,"cx":-0.6,"cy":-0.28,"radius":0.022},
+      {"type":"path","role":"ink","smooth":true,"setup":{"lineWidth":1.2},"points":[[-0.68,-0.16],[-0.64,-0.13],[-0.6,-0.16]]}
+    ] },
+    "raven": { "flavors": ["pirate","common"], "shapes": [
+      {"type":"path","role":"ink","closed":true,"smooth":true,"fillSoft":true,"setup":{"lineWidth":1.6},"points":[[-0.58,0.06],[-0.44,0.26],[-0.32,0.46],[-0.4,0.24],[-0.48,0.08]]},
+      {"type":"path","role":"ink","closed":true,"smooth":true,"fillSoft":true,"setup":{"lineWidth":2},"points":[[-0.74,-0.06],[-0.66,-0.2],[-0.5,-0.16],[-0.4,0.02],[-0.48,0.2],[-0.64,0.22],[-0.74,0.1]]},
+      {"type":"path","role":"ink","smooth":true,"setup":{"lineWidth":1.3},"points":[[-0.62,-0.12],[-0.5,-0.04],[-0.44,0.08]]},
+      {"type":"path","role":"ink","smooth":true,"setup":{"lineWidth":1.3},"points":[[-0.64,-0.04],[-0.54,0.06],[-0.48,0.16]]},
+      {"type":"circle","role":"ink","cx":-0.7,"cy":-0.24,"radius":0.11,"setup":{"lineWidth":2}},
+      {"type":"path","role":"metal","closed":true,"setup":{"lineWidth":1.4},"points":[[-0.6,-0.26],[-0.42,-0.22],[-0.6,-0.18]]},
+      {"type":"circle","role":"metal","fill":true,"cx":-0.72,"cy":-0.26,"radius":0.022}
+    ] }
+  },
+
+  "neckBases": {
+    "base": { "shapes": [
+      {"type":"path","role":"skin","closed":true,"smooth":true,"setup":{"lineWidth":2.6},"points":[[-0.16,0.42],[0.16,0.42],[0.22,0.98],[-0.22,0.98]]},
+      {"type":"path","role":"ink","smooth":true,"setup":{"lineWidth":1.1},"points":[[-0.12,0.58],[-0.1,0.82]]},
+      {"type":"path","role":"ink","smooth":true,"setup":{"lineWidth":1.1},"points":[[0.12,0.58],[0.1,0.82]]}
+    ] }
+  },
+
+  "faceMarks": {
+    "none": { "lacy": true, "flavors": ["navy","official","common"], "shapes": [] },
+    "scarBrow": { "lacy": true, "flavors": ["pirate","navy","common"], "shapes": [
+      {"type":"lines","role":"ink","setup":{"lineWidth":2.2},"segments":[[[0.05,-0.3],[0.3,0.05]]]},
+      {"type":"lines","role":"ink","setup":{"lineWidth":1.8},"segments":[[[0.13,-0.1],[0.21,-0.16]]]}
+    ] },
+    "scarCheek": { "lacy": true, "flavors": ["pirate","common"], "shapes": [
+      {"type":"lines","role":"ink","setup":{"lineWidth":2.2},"segments":[[[-0.28,0.05],[-0.24,0.25]]]},
+      {"type":"lines","role":"ink","setup":{"lineWidth":1.6},"segments":[[[-0.31,0.1],[-0.23,0.12]],[[-0.29,0.18],[-0.21,0.2]]]}
+    ] },
+    "scarLip": { "lacy": true, "flavors": ["pirate","common"], "shapes": [
+      {"type":"lines","role":"ink","setup":{"lineWidth":2},"segments":[[[0.16,0.24],[0.22,0.38]]]},
+      {"type":"lines","role":"ink","setup":{"lineWidth":1.5},"segments":[[[0.14,0.3],[0.22,0.29]]]}
+    ] },
+    "cheekTattoo": { "lacy": true, "flavors": ["pirate"], "shapes": [
+      {"type":"path","role":"accent","smooth":true,"setup":{"lineWidth":1.8},"points":[[-0.3,0.05],[-0.24,0.1],[-0.3,0.17]]},
+      {"type":"path","role":"accent","smooth":true,"setup":{"lineWidth":1.6},"points":[[-0.2,0.08],[-0.15,0.13],[-0.2,0.19]]},
+      {"type":"circle","role":"accent","fill":true,"cx":-0.22,"cy":0.23,"radius":0.022}
+    ] },
+    "foreheadMark": { "lacy": true, "flavors": ["pirate"], "shapes": [
+      {"type":"path","role":"ink","closed":true,"smooth":true,"setup":{"lineWidth":1.8},"points":[[0,-0.37],[0.05,-0.3],[0,-0.23],[-0.05,-0.3]]},
+      {"type":"lines","role":"ink","setup":{"lineWidth":1.6},"segments":[[[0,-0.23],[0,-0.19]]]}
+    ] },
+    "warPaintStripes": { "lacy": true, "flavors": ["pirate","common"], "shapes": [
+      {"type":"lines","role":"accent","setup":{"lineWidth":6},"segments":[[[-0.12,-0.15],[-0.12,0.15]]]},
+      {"type":"lines","role":"accent","setup":{"lineWidth":6},"segments":[[[0,-0.17],[0,0.15]]]},
+      {"type":"lines","role":"accent","setup":{"lineWidth":6},"segments":[[[0.12,-0.15],[0.12,0.15]]]}
+    ] },
+    "warPaintDots": { "lacy": true, "flavors": ["pirate"], "shapes": [
+      {"type":"circle","role":"accent","fill":true,"cx":-0.24,"cy":0.12,"radius":0.028},
+      {"type":"circle","role":"accent","fill":true,"cx":-0.12,"cy":0.1,"radius":0.028},
+      {"type":"circle","role":"accent","fill":true,"cx":0,"cy":0.14,"radius":0.028},
+      {"type":"circle","role":"accent","fill":true,"cx":0.12,"cy":0.1,"radius":0.028},
+      {"type":"circle","role":"accent","fill":true,"cx":0.24,"cy":0.12,"radius":0.028}
+    ] },
+    "kohl": { "lacy": true, "flavors": ["pirate","official"], "shapes": [
+      {"type":"arc","role":"ink","cx":-0.18,"cy":-0.03,"radius":0.11,"startAngle":"PI*0.15","endAngle":"PI*0.85","setup":{"lineWidth":3.4}},
+      {"type":"arc","role":"ink","cx":0.18,"cy":-0.03,"radius":0.11,"startAngle":"PI*0.15","endAngle":"PI*0.85","setup":{"lineWidth":3.4}},
+      {"type":"lines","role":"ink","setup":{"lineWidth":3},"segments":[[[-0.28,-0.09],[-0.08,-0.11]],[[0.28,-0.09],[0.08,-0.11]]]}
+    ] },
+    "brand": { "lacy": true, "flavors": ["pirate"], "shapes": [
+      {"type":"circle","role":"ink","cx":0.24,"cy":0.15,"radius":0.06,"setup":{"lineWidth":2}},
+      {"type":"lines","role":"ink","setup":{"lineWidth":1.6},"segments":[[[0.24,0.11],[0.24,0.19]]]}
+    ] }
+  },
+
+  "mouths": {
+    "none": { "lacy": true, "flavors": ["navy","official","common"], "shapes": [] },
+    "clayPipe": { "lacy": true, "flavors": ["pirate","common"], "shapes": [
+      {"type":"path","role":"ink","smooth":true,"setup":{"lineWidth":2.4},"points":[[0.1,0.3],[0.3,0.4],[0.5,0.5]]},
+      {"type":"path","role":"ink","closed":true,"smooth":true,"setup":{"lineWidth":2.2},"points":[[0.5,0.5],[0.58,0.45],[0.62,0.53],[0.53,0.58]]},
+      {"type":"path","role":"ink","smooth":true,"setup":{"lineWidth":1.3},"points":[[0.61,0.43],[0.66,0.37],[0.61,0.31]]}
+    ] },
+    "goldTooth": { "lacy": true, "flavors": ["pirate","common"], "shapes": [
+      {"type":"circle","role":"metal","fill":true,"cx":0.03,"cy":0.3,"radius":0.028}
+    ] },
+    "cigar": { "lacy": true, "flavors": ["pirate","common"], "shapes": [
+      {"type":"lines","role":"ink","setup":{"lineWidth":6},"segments":[[[0.14,0.29],[0.42,0.3]]]},
+      {"type":"circle","role":"accent","fill":true,"cx":0.44,"cy":0.3,"radius":0.03}
+    ] },
+    "toothpick": { "lacy": true, "flavors": ["pirate","common"], "shapes": [
+      {"type":"lines","role":"ink","setup":{"lineWidth":1.4},"segments":[[[0.16,0.29],[0.34,0.26]]]}
+    ] },
+    "grinGold": { "lacy": true, "flavors": ["pirate","common"], "shapes": [
+      {"type":"path","role":"ink","smooth":true,"setup":{"lineWidth":2.8},"points":[[-0.18,0.27],[0,0.35],[0.18,0.27]]},
+      {"type":"lines","role":"ink","setup":{"lineWidth":1.5},"segments":[[[-0.1,0.31],[0.1,0.31]]]},
+      {"type":"circle","role":"metal","fill":true,"cx":-0.05,"cy":0.31,"radius":0.02},
+      {"type":"circle","role":"metal","fill":true,"cx":0.05,"cy":0.31,"radius":0.02}
+    ] }
+  },
+
+  "earrings": {
+    "none": { "flavors": ["navy","official","common"], "shapes": [] },
+    "goldHoop": { "flavors": ["pirate","common"], "shapes": [
+      {"type":"arc","role":"metal","cx":-0.42,"cy":0.19,"radius":0.095,"startAngle":"-PI*0.4","endAngle":"PI*1.4","setup":{"lineWidth":2}}
+    ] },
+    "goldHoopPair": { "flavors": ["pirate"], "shapes": [
+      {"type":"arc","role":"metal","cx":-0.42,"cy":0.19,"radius":0.09,"startAngle":"-PI*0.4","endAngle":"PI*1.4","setup":{"lineWidth":2}},
+      {"type":"arc","role":"metal","cx":0.42,"cy":0.19,"radius":0.09,"startAngle":"-PI*0.4","endAngle":"PI*1.4","setup":{"lineWidth":2}}
+    ] },
+    "goldStud": { "flavors": ["navy","official","common"], "shapes": [
+      {"type":"circle","role":"metal","fill":true,"cx":-0.4,"cy":0.07,"radius":0.045}
+    ] },
+    "dangle": { "flavors": ["pirate"], "shapes": [
+      {"type":"arc","role":"metal","cx":-0.42,"cy":0.15,"radius":0.075,"startAngle":"-PI*0.4","endAngle":"PI*1.4","setup":{"lineWidth":1.8}},
+      {"type":"lines","role":"metal","setup":{"lineWidth":1.4},"segments":[[[-0.42,0.225],[-0.42,0.28]]]},
+      {"type":"circle","role":"accent","fill":true,"cx":-0.42,"cy":0.325,"radius":0.05}
+    ] },
+    "ringCluster": { "flavors": ["pirate"], "shapes": [
+      {"type":"arc","role":"metal","cx":-0.42,"cy":0.14,"radius":0.058,"startAngle":"-PI*0.4","endAngle":"PI*1.4","setup":{"lineWidth":1.6}},
+      {"type":"arc","role":"metal","cx":-0.42,"cy":0.28,"radius":0.058,"startAngle":"-PI*0.4","endAngle":"PI*1.4","setup":{"lineWidth":1.6}}
+    ] },
+    "boneHoop": { "flavors": ["pirate"], "shapes": [
+      {"type":"arc","role":"ink","cx":-0.42,"cy":0.18,"radius":0.09,"startAngle":"-PI*0.4","endAngle":"PI*1.4","setup":{"lineWidth":2}},
+      {"type":"circle","role":"ink","fill":true,"cx":-0.42,"cy":0.31,"radius":0.03}
+    ] }
+  },
+
+  "necks": {
+    "none": { "flavors": ["navy","official","common"], "shapes": [] },
+    "goldChain": { "flavors": ["pirate","navy","common"], "shapes": [
+      {"type":"path","role":"metal","smooth":true,"setup":{"lineWidth":2},"points":[[-0.45,-0.25],[-0.24,0],[0,0.13],[0.24,0],[0.45,-0.25]]}
+    ] },
+    "doubleChain": { "flavors": ["pirate"], "shapes": [
+      {"type":"path","role":"metal","smooth":true,"setup":{"lineWidth":2},"points":[[-0.47,-0.26],[-0.24,0.02],[0,0.16],[0.24,0.02],[0.47,-0.26]]},
+      {"type":"path","role":"metal","smooth":true,"setup":{"lineWidth":1.8},"points":[[-0.38,-0.22],[-0.19,0],[0,0.09],[0.19,0],[0.38,-0.22]]}
+    ] },
+    "coinString": { "flavors": ["pirate"], "shapes": [
+      {"type":"path","role":"metal","smooth":true,"setup":{"lineWidth":2},"points":[[-0.45,-0.25],[-0.24,0],[0,0.13],[0.24,0],[0.45,-0.25]]},
+      {"type":"circle","role":"metal","fill":true,"cx":-0.26,"cy":0.05,"radius":0.05},
+      {"type":"circle","role":"metal","fill":true,"cx":-0.09,"cy":0.17,"radius":0.055},
+      {"type":"circle","role":"metal","fill":true,"cx":0.09,"cy":0.17,"radius":0.055},
+      {"type":"circle","role":"metal","fill":true,"cx":0.26,"cy":0.05,"radius":0.05}
+    ] },
+    "skullPendant": { "flavors": ["pirate"], "shapes": [
+      {"type":"path","role":"metal","smooth":true,"setup":{"lineWidth":2},"points":[[-0.42,-0.24],[-0.22,0],[0,0.12],[0.22,0],[0.42,-0.24]]},
+      {"type":"lines","role":"metal","setup":{"lineWidth":1.4},"segments":[[[0,0.12],[0,0.3]]]},
+      {"type":"circle","role":"metal","fill":true,"cx":0,"cy":0.42,"radius":0.12},
+      {"type":"circle","role":"ink","fill":true,"cx":-0.05,"cy":0.4,"radius":0.025},
+      {"type":"circle","role":"ink","fill":true,"cx":0.05,"cy":0.4,"radius":0.025},
+      {"type":"lines","role":"ink","setup":{"lineWidth":1.6},"segments":[[[-0.06,0.52],[-0.06,0.57]],[[0,0.53],[0,0.585]],[[0.06,0.52],[0.06,0.57]]]}
+    ] },
+    "beadNecklace": { "flavors": ["pirate","common"], "shapes": [
+      {"type":"path","role":"ink","smooth":true,"setup":{"lineWidth":1.2},"points":[[-0.44,-0.22],[-0.22,0.02],[0,0.13],[0.22,0.02],[0.44,-0.22]]},
+      {"type":"circle","role":"accent","fill":true,"cx":-0.44,"cy":-0.22,"radius":0.038},
+      {"type":"circle","role":"accent","fill":true,"cx":-0.32,"cy":-0.08,"radius":0.04},
+      {"type":"circle","role":"accent","fill":true,"cx":-0.18,"cy":0.03,"radius":0.042},
+      {"type":"circle","role":"accent","fill":true,"cx":0,"cy":0.11,"radius":0.05},
+      {"type":"circle","role":"accent","fill":true,"cx":0.18,"cy":0.03,"radius":0.042},
+      {"type":"circle","role":"accent","fill":true,"cx":0.32,"cy":-0.08,"radius":0.04},
+      {"type":"circle","role":"accent","fill":true,"cx":0.44,"cy":-0.22,"radius":0.038}
+    ] },
+    "boneNecklace": { "flavors": ["pirate","common"], "shapes": [
+      {"type":"path","role":"ink","smooth":true,"setup":{"lineWidth":1.6},"points":[[-0.44,-0.22],[-0.22,0.02],[0,0.14],[0.22,0.02],[0.44,-0.22]]},
+      {"type":"path","role":"ink","closed":true,"smooth":true,"setup":{"lineWidth":1.4},"points":[[-0.3,-0.03],[-0.26,-0.03],[-0.28,0.08]]},
+      {"type":"path","role":"ink","closed":true,"smooth":true,"setup":{"lineWidth":1.4},"points":[[-0.16,0.08],[-0.12,0.08],[-0.14,0.2]]},
+      {"type":"path","role":"ink","closed":true,"smooth":true,"setup":{"lineWidth":1.4},"points":[[-0.03,0.16],[0.03,0.16],[0,0.32]]},
+      {"type":"path","role":"ink","closed":true,"smooth":true,"setup":{"lineWidth":1.4},"points":[[0.12,0.08],[0.16,0.08],[0.14,0.2]]},
+      {"type":"path","role":"ink","closed":true,"smooth":true,"setup":{"lineWidth":1.4},"points":[[0.26,-0.03],[0.3,-0.03],[0.28,0.08]]}
+    ] },
+    "gorget": { "flavors": ["navy","official"], "shapes": [
+      {"type":"path","role":"metal","closed":true,"smooth":true,"setup":{"lineWidth":2.5},"points":[[-0.4,-0.14],[-0.22,-0.22],[0,-0.25],[0.22,-0.22],[0.4,-0.14],[0.26,-0.05],[0,-0.01],[-0.26,-0.05]]},
+      {"type":"arc","role":"ink","cx":0,"cy":-0.2,"radius":0.17,"startAngle":"PI*0.18","endAngle":"PI*0.82","setup":{"lineWidth":1.4}},
+      {"type":"circle","role":"metal","fill":true,"cx":0,"cy":-0.09,"radius":0.03},
+      {"type":"circle","role":"metal","fill":true,"cx":-0.28,"cy":-0.12,"radius":0.025},
+      {"type":"circle","role":"metal","fill":true,"cx":0.28,"cy":-0.12,"radius":0.025}
+    ] },
+    "medallion": { "flavors": ["navy","official"], "shapes": [
+      {"type":"path","role":"metal","smooth":true,"setup":{"lineWidth":2},"points":[[-0.42,-0.24],[-0.22,0],[0,0.12],[0.22,0],[0.42,-0.24]]},
+      {"type":"lines","role":"metal","setup":{"lineWidth":1.4},"segments":[[[0,0.12],[0,0.27]]]},
+      {"type":"circle","role":"metal","cx":0,"cy":0.44,"radius":0.17,"setup":{"lineWidth":2.5}},
+      {"type":"circle","role":"metal","cx":0,"cy":0.44,"radius":0.1,"setup":{"lineWidth":1.8}},
+      {"type":"circle","role":"metal","fill":true,"cx":0,"cy":0.44,"radius":0.035},
+      {"type":"circle","role":"metal","fill":true,"cx":0,"cy":0.28,"radius":0.022},
+      {"type":"circle","role":"metal","fill":true,"cx":0,"cy":0.6,"radius":0.022},
+      {"type":"circle","role":"metal","fill":true,"cx":-0.16,"cy":0.44,"radius":0.022},
+      {"type":"circle","role":"metal","fill":true,"cx":0.16,"cy":0.44,"radius":0.022}
+    ] },
+    "cravat": { "flavors": ["official","navy"], "shapes": [
+      {"type":"path","role":"trim","closed":true,"smooth":true,"setup":{"lineWidth":2.4},"points":[[-0.26,-0.26],[0,-0.2],[0.26,-0.26],[0.19,-0.04],[0.09,0.05],[0.15,0.32],[0,0.48],[-0.15,0.32],[-0.09,0.05],[-0.19,-0.04]]},
+      {"type":"path","role":"paper","closed":true,"smooth":true,"fillSoft":true,"setup":{"lineWidth":1.6},"points":[[-0.08,-0.02],[0.08,-0.02],[0.06,0.12],[-0.06,0.12]]},
+      {"type":"lines","role":"ink","setup":{"lineWidth":1.2},"segments":[[[-0.08,0.04],[0.08,0.04]],[[-0.07,0.15],[-0.09,0.3]],[[0.07,0.15],[0.09,0.3]]]}
     ] }
   }
 }

@@ -30,12 +30,11 @@ export class NewsPanel extends Panel {
     this.focus = focus;             // (e) -> void  (snap the camera + select)
     this.getControlsLeft = getControlsLeft || null; // () -> left screen-x of the bottom-center controls
     this._expanded = false;
-    this._pinned = false;
     this._filter = 'all';
     this._scroll = new ScrollBox();
     this._rows = [];                // clickable event-row rects {e, x, y, w, h} (rebuilt each draw)
     this._chips = [];               // filter-chip rects
-    this._btns = {};                // {expand?, collapse, pin} rects
+    this._btns = {};                // {expand?, collapse} rects
     this._cursor = null;            // last pointer, for hover highlight
   }
 
@@ -51,7 +50,9 @@ export class NewsPanel extends Panel {
       const w = Math.min(view.width - 24, Math.max(PANEL_W, Math.round(view.width / 2 - 190)));
       this.setRect(12, top, w, bottom - top);
     } else {
-      const h = CRAWL_ROWS * CRAWL_LH + 26;
+      // The HISTORY tab sits ABOVE the pane (drawn in _drawCrawl), so the plate only needs a
+      // little breathing room above the first feed row — no in-pane reserve for the header.
+      const h = CRAWL_ROWS * CRAWL_LH + 15;
       // Fixed width: fill the bottom-left up to the centered control cluster (matches _drawCrawl).
       const LEFT = 8, GAP = 12;
       const cl = this.getControlsLeft ? this.getControlsLeft() : (view.width / 2 - 240);
@@ -64,7 +65,7 @@ export class NewsPanel extends Panel {
 
   /** For the scene's cursor style: is the pointer over something clickable here? */
   hitPointer(px, py) {
-    if (this._hit(this._btns.expand, px, py) || this._hit(this._btns.collapse, px, py) || this._hit(this._btns.pin, px, py)) return true;
+    if (this._hit(this._btns.expand, px, py) || this._hit(this._btns.collapse, px, py)) return true;
     for (const ch of this._chips) if (this._hit(ch, px, py)) return true;
     for (const r of this._rows) if (this._hit(r, px, py)) return true;
     return false;
@@ -75,12 +76,12 @@ export class NewsPanel extends Panel {
   onDown(px, py) {
     if (this._expanded) {
       if (this._hit(this._btns.collapse, px, py)) { this._expanded = false; return true; }
-      if (this._hit(this._btns.pin, px, py)) { this._pinned = !this._pinned; return true; }
       for (const ch of this._chips) {
         if (this._hit(ch, px, py)) { this._filter = ch.key; this._scroll.reset('news:' + this._filter); return true; }
       }
       for (const r of this._rows) {
-        if (this._hit(r, px, py)) { this.focus(r.e); if (!this._pinned) this._expanded = false; return true; }
+        // Browsing stays open on a row click (focus the camera, keep the panel up); collapse via the tab or `h`.
+        if (this._hit(r, px, py)) { this.focus(r.e); return true; }
       }
       return this.contains(px, py); // swallow other clicks inside the panel
     }
@@ -119,30 +120,8 @@ export class NewsPanel extends Panel {
     // A subtle chart-frame plate so the crawl reads over the painted sea (it used to float).
     plate(ctx, this.x, this.y, boxW, this.h, { radius: 10, fill: 'rgba(240, 232, 206, 0.86)', corners: true });
 
-    // Header tab: chevron + "History" + an (h) key badge — a proper handle, styled like the buttons.
-    const hx = this.x + 8, hy = this.y + 6, hh = 19;
-    ctx.font = tfont('section', 700);
-    if ('letterSpacing' in ctx) ctx.letterSpacing = '0.6px';
-    const lblW = ctx.measureText('HISTORY').width;
-    if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
-    const hw = 22 + lblW + 26;
-    const hg = ctx.createLinearGradient(0, hy, 0, hy + hh);
-    hg.addColorStop(0, PALETTE.panelPaperHi); hg.addColorStop(1, PALETTE.panelPaperLo);
-    roundRect(ctx, hx, hy, hw, hh, 6); ctx.fillStyle = hg; ctx.fill();
-    ctx.lineWidth = 1; ctx.strokeStyle = PALETTE.panelEdge; ctx.stroke();
-    drawIcon(ctx, 'chevronUp', hx + 13, hy + hh / 2, 10, PALETTE.panelAccent);
-    ctx.fillStyle = PALETTE.panelText; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.font = tfont('section', 700);
-    if ('letterSpacing' in ctx) ctx.letterSpacing = '0.6px';
-    ctx.fillText('HISTORY', hx + 22, hy + hh / 2 + 0.5);
-    if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
-    // key badge
-    ctx.font = tfont('numSmall');
-    const kx = hx + hw - 20;
-    roundRect(ctx, kx, hy + 4, 14, hh - 8, 3); ctx.fillStyle = PALETTE.panelInk; ctx.fill();
-    ctx.fillStyle = PALETTE.panelDim; ctx.textAlign = 'center';
-    ctx.fillText('h', kx + 7, hy + hh / 2 + 0.5);
-    this._btns.expand = { x: hx, y: hy, w: hw, h: hh };
+    // The HISTORY handle rides above the pane (see _drawTab); chevronUp = "expand upward".
+    this._btns.expand = this._drawTab(ctx, 'chevronUp');
 
     ctx.font = tfont('small');
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
@@ -175,15 +154,17 @@ export class NewsPanel extends Panel {
     // Panel chrome — the shared double-ruled chart-frame plate.
     plate(ctx, this.x, this.y, this.w, this.h, { radius: 10 });
 
-    const x = this.x + 12, right = this.x + this.w - 10;
-    // Title + collapse/pin buttons.
+    // Collapse handle: the SAME HISTORY tab as the collapsed crawl — same size and top-left spot —
+    // but chevronDown = "collapse". Keeps the toggle in one consistent place across both states.
+    this._btns.collapse = this._drawTab(ctx, 'chevronDown');
+
+    const x = this.x + 12;
+    // Title (the collapse handle is the tab above the pane; no in-pane corner buttons).
     ctx.save();
     drawIcon(ctx, 'map', x + 7, this.y + 18, 14, PALETTE.panelText);
     ctx.font = tfont('heading'); ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
     ctx.fillStyle = PALETTE.panelText;
     ctx.fillText('World History', x + 18, this.y + 18);
-    this._btns.collapse = this._iconBtn(ctx, right - 22, this.y + 8, 'chevronDown', false);
-    this._btns.pin = this._iconBtn(ctx, right - 48, this.y + 8, 'pin', this._pinned);
     ctx.restore();
 
     // Filter chips (shared theme.chip).
@@ -240,15 +221,38 @@ export class NewsPanel extends Panel {
     if (sb.atBottom() && tl.more && !tl.done && !tl.loading) tl.more(); // page older history in
   }
 
-  _iconBtn(ctx, x, y, icon, active) {
+  /** The HISTORY handle — a folder tab riding just above the pane's top-left edge (hy sits one px
+   *  into the plate so it reads as attached). Shared by both states so the toggle keeps one size and
+   *  place: collapsed passes 'chevronUp' (expand), expanded passes 'chevronDown' (collapse).
+   *  Returns the tab's hit rect. */
+  _drawTab(ctx, chevron) {
+    const hx = this.x + 8, hh = 19, hy = this.y - hh + 1;
     ctx.save();
-    roundRect(ctx, x, y, 20, 20, 5);
-    ctx.fillStyle = active ? 'rgba(156,109,36,0.20)' : PALETTE.panelInset; ctx.fill();
-    ctx.lineWidth = 1; ctx.strokeStyle = active ? PALETTE.panelAccent : PALETTE.panelEdge; ctx.stroke();
-    drawIcon(ctx, icon, x + 10, y + 10, 12, active ? PALETTE.panelAccent : PALETTE.panelDim);
+    ctx.font = tfont('section', 700);
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '0.6px';
+    const lblW = ctx.measureText('HISTORY').width;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+    const hw = 22 + lblW + 26;
+    const hg = ctx.createLinearGradient(0, hy, 0, hy + hh);
+    hg.addColorStop(0, PALETTE.panelPaperHi); hg.addColorStop(1, PALETTE.panelPaperLo);
+    roundRect(ctx, hx, hy, hw, hh, 6); ctx.fillStyle = hg; ctx.fill();
+    ctx.lineWidth = 1; ctx.strokeStyle = PALETTE.panelEdge; ctx.stroke();
+    drawIcon(ctx, chevron, hx + 13, hy + hh / 2, 10, PALETTE.panelAccent);
+    ctx.fillStyle = PALETTE.panelText; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.font = tfont('section', 700);
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '0.6px';
+    ctx.fillText('HISTORY', hx + 22, hy + hh / 2 + 0.5);
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+    // key badge
+    ctx.font = tfont('numSmall');
+    const kx = hx + hw - 20;
+    roundRect(ctx, kx, hy + 4, 14, hh - 8, 3); ctx.fillStyle = PALETTE.panelInk; ctx.fill();
+    ctx.fillStyle = PALETTE.panelDim; ctx.textAlign = 'center';
+    ctx.fillText('h', kx + 7, hy + hh / 2 + 0.5);
     ctx.restore();
-    return { x, y, w: 20, h: 20 };
+    return { x: hx, y: hy, w: hw, h: hh };
   }
+
 }
 
 function clip(ctx, text, maxW) {

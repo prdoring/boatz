@@ -176,8 +176,9 @@ function bakeBurn(w, h, r, dpr, intensity) {
   const pts = roundRectPerimeter(w, h, rr, 4);
   const field = burnField(pts, (0x51ED ^ Math.imul(w | 0, 73856093) ^ Math.imul(h | 0, 19349663)) >>> 0);
   const RMAX = Math.min(24, 9 + Math.min(w, h) * 0.03);
+  const hots = field.map(f => smoothstep(0.62, 1, f) * intensity);   // scorch depth per point — drives BOTH the char AND the bites
   for (let i = 0; i < pts.length; i++) {
-    const pt = pts[i], hot = smoothstep(0.62, 1, field[i]) * intensity;
+    const pt = pts[i], hot = hots[i];
     if (hot <= 0.02) continue;
     const rad = 5 + RMAX * hot;
     // dark char sitting on the rim (biased slightly outward so the blackest line is the paper's edge)
@@ -191,7 +192,46 @@ function bakeBurn(w, h, r, dpr, intensity) {
     if (hot > 0.55) { const kr = rad * 0.5; c.globalAlpha = (hot - 0.55) * 0.9; c.drawImage(charB, pt.x - kr, pt.y - kr, kr * 2, kr * 2); }
   }
   c.globalAlpha = 1;
-  return { canvas: cv, w, h };
+
+  // Pick a few burn-THROUGH bites at the hottest edge peaks (corners win via their boost), spaced out
+  // + capped, only on panels big enough to carry them. Each is a ragged CLOSED outline (a smoothly
+  // wobbling ring — non-self-intersecting so it clips as one clean shape) centred ON the edge so it
+  // opens to the sea. We scorch a burnt lip around it HERE; the see-through itself is cut at draw time
+  // by clipToBurntPaper() — the paper is simply never painted there, so the real sea/map drawn earlier
+  // this frame shows and pans naturally. Nothing is faked and nothing is erased.
+  const holes = [];
+  if (intensity > 0.35 && Math.min(w, h) >= 90) {
+    const hrng = mulberry32((0x9E37 ^ Math.imul(w | 0, 40503) ^ Math.imul(h | 0, 12289)) >>> 0);
+    const N = pts.length, minGap = RMAX * 2.6, maxHoles = Math.max(2, Math.min(9, Math.round((w + h) / 240)));
+    const rCap = Math.min(w, h) * 0.2;
+    let lastIdx = -1e9;
+    for (let i = 0; i < N && holes.length < maxHoles; i++) {
+      const hv = hots[i];
+      // Burn THROUGH at every LOCAL PEAK of the scorch depth (same `hots` that paints the char), so the
+      // deepest char — corner OR straight edge — always gets a bite; spacing keeps a hot run to one bite.
+      if (hv < 0.5 || hv < hots[(i - 1 + N) % N] || hv < hots[(i + 1) % N] || (i - lastIdx) * 4 < minGap) continue;
+      lastIdx = i;
+      const pt = pts[i];
+      const r = Math.max(5, Math.min(rCap, RMAX * (0.32 + 0.6 * hv) * (0.8 + hrng() * 0.4)));
+      const NP = 18, ph = hrng() * TAU, ph2 = hrng() * TAU, poly = [];
+      for (let k = 0; k < NP; k++) {
+        const a = (k / NP) * TAU, rr = r * (0.82 + 0.16 * Math.sin(a * 3 + ph) + 0.1 * Math.sin(a * 5 + ph2));
+        poly.push([Math.cos(a) * rr, Math.sin(a) * rr]);
+      }
+      // broad scorch centred on the bite → the paper right around it (and any inset frame line that
+      // crosses there) goes fully dark, so no crisp hairline hugs the hole; its core is clipped away.
+      // Reach ≥ the frame-gap margin (see clipToBurntPaper) so even a small bite's scorch fills the gap.
+      const br = Math.max(r * 1.4, r + 11);
+      c.globalAlpha = 0.5; c.drawImage(charB, pt.x - br, pt.y - br, br * 2, br * 2);
+      // burnt lip: char + ember rings hugging the bite (their inner halves are clipped off at draw)
+      const nring = Math.max(10, Math.round(r * 1.1));
+      for (let k = 0; k < nring; k++) { const a = (k / nring) * TAU; c.globalAlpha = 0.5; c.drawImage(charB, pt.x + Math.cos(a) * r - r * 0.62, pt.y + Math.sin(a) * r - r * 0.62, r * 1.24, r * 1.24); }
+      for (let k = 0; k < nring; k++) { const a = (k / nring) * TAU; c.globalAlpha = 0.3; c.drawImage(emberB, pt.x + Math.cos(a) * r * 0.86 - r * 0.4, pt.y + Math.sin(a) * r * 0.86 - r * 0.4, r * 0.8, r * 0.8); }
+      holes.push({ cx: pt.x, cy: pt.y, poly });
+    }
+    c.globalAlpha = 1;
+  }
+  return { canvas: cv, w, h, holes };
 }
 
 const _burnCache = new Map();
@@ -244,11 +284,9 @@ export function agePaper(ctx, x, y, w, h, r = 10, opts = {}) {
   ctx.fillRect(x, y, w, h);
   ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = 'source-over';
-  if (opts.burn) {
-    // Uneven charred/singed rim (corner-heavy). Baked once per size, so this is one drawImage.
-    const tile = getBurnTile(w, h, r, opts.burnIntensity ?? 1);
-    if (tile) ctx.drawImage(tile.canvas, x, y, w, h);
-  } else if (edge > 0) {
+  // Non-burn panels get a soft inner-shadow rim here; BURNT panels get their scorch from burnScorch()
+  // AFTER the frame strokes, so the burn sits on top of and consumes those crisp lines (see below).
+  if (!opts.burn && edge > 0) {
     // Handled, darkened edges — an inner shadow: stroke a path JUST OUTSIDE the clip so only its soft
     // blur bleeds inward (one op, hugs the rounded corners, no per-edge gradients).
     ctx.shadowColor = `rgba(56,38,16,${edge})`;
@@ -259,4 +297,55 @@ export function agePaper(ctx, x, y, w, h, r = 10, opts = {}) {
     ctx.stroke();
   }
   ctx.restore();
+}
+
+/** Draw the cached burnt-edge scorch (the uneven char rim + the charred lip around each bite). Call
+ *  this LAST — after the panel's body, grain AND its border/frame strokes — so the burn sits ON TOP
+ *  of those crisp lines and consumes them at the hot spots. Drawn earlier, an outer rule or gilt
+ *  frame shows straight through a burn as a thin "bounding line" (worst on straight-edge bites, where
+ *  the inset gilt hairline runs right past the hole). Clipped to the panel → in plate()/Panel.draw it
+ *  lands on paper-minus-bites, never in a hole. Cheap: one cached drawImage. */
+export function burnScorch(ctx, x, y, w, h, r = 10, opts = {}) {
+  if (!opts.burn) return;
+  const tile = getBurnTile(w, h, r, opts.burnIntensity ?? 1);
+  if (!tile) return;
+  ctx.save();
+  roundRect(ctx, x, y, w, h, r);
+  ctx.clip();
+  ctx.drawImage(tile.canvas, x, y, w, h);
+  ctx.restore();
+}
+
+/** Cut the burn-THROUGH bites out of a scorched panel by CLIPPING them away, so the paper is never
+ *  painted there and the real sea/map drawn earlier this frame shows through — moving naturally when
+ *  you pan, exactly like a hole in a real chart. No fake water, no erase.
+ *
+ *  Call this RIGHT AFTER the caller's own `ctx.save()` and BEFORE the body fill: everything the panel
+ *  then draws (body, grain, scorch, border) is confined to paper-minus-bites, leaving the bites open.
+ *  The panel content the caller draws AFTER its `restore()` is unclipped, so keep content off the
+ *  extreme edge/corners if you don't want it to cover a bite (holes only sit there anyway).
+ *
+ *  Two clips make an edge bite behave: clip A = the panel (so the outside half of an edge bite can't
+ *  paint parchment onto the open sea); clip B = panel-minus-bites via even-odd. Their intersection is
+ *  exactly the paper with clean bites and no stray lune. Returns true if any bite was applied.
+ *  `opts.burn` required; `opts.burnIntensity` matches the agePaper call. Cheap: two clips + a tiny path. */
+export function clipToBurntPaper(ctx, x, y, w, h, r = 10, opts = {}) {
+  if (!opts.burn) return false;
+  const tile = getBurnTile(w, h, r, opts.burnIntensity ?? 1);
+  if (!tile || !tile.holes || !tile.holes.length) return false;
+  const sx = w / tile.w, sy = h / tile.h, mgn = opts.margin ?? 0;   // margin>0 → a FIXED wider gap (frame strokes)
+  // Push each outline point OUT by a fixed pixel margin (radius + mgn) so the gap around a bite is the
+  // same absolute width whether the bite is tiny or huge — a scale factor left small bites barely gapped.
+  const pt = (hole, dx, dy) => { const d = Math.hypot(dx, dy) || 1, f = (d + mgn) / d; return [x + (hole.cx + dx * f) * sx, y + (hole.cy + dy * f) * sy]; };
+  roundRect(ctx, x, y, w, h, r);
+  ctx.clip();                                   // clip A: the panel
+  roundRect(ctx, x, y, w, h, r);                // clip B path: panel …
+  for (const hole of tile.holes) {              // … minus each ragged bite
+    const p = hole.poly, [mx, my] = pt(hole, p[0][0], p[0][1]);
+    ctx.moveTo(mx, my);
+    for (let k = 1; k < p.length; k++) { const [lx, ly] = pt(hole, p[k][0], p[k][1]); ctx.lineTo(lx, ly); }
+    ctx.closePath();
+  }
+  ctx.clip('evenodd');
+  return true;
 }

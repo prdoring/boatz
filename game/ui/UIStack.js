@@ -10,7 +10,7 @@
 
 import { PALETTE } from '../config.js';
 import { drawIcon } from './icons.js';
-import { agePaper } from './parchment.js';
+import { agePaper, clipToBurntPaper, burnScorch } from './parchment.js';
 
 export function roundRect(ctx, x, y, w, h, r) {
   const rr = Math.min(r, w / 2, h / 2);
@@ -93,16 +93,26 @@ export class Panel extends Widget {
   draw(ctx) {
     if (!this.visible) return;
     ctx.save();
+    // Clip the burn-through bites out first → the real sea shows through them (see clipToBurntPaper);
+    // everything below is confined to paper-minus-bites.
+    clipToBurntPaper(ctx, this.x, this.y, this.w, this.h, 10, { burn: true, burnIntensity: 0.8 });
     roundRect(ctx, this.x, this.y, this.w, this.h, 10);
     ctx.fillStyle = PALETTE.panelBg;
     ctx.fill();
-    // Worn-paper grain + a burnt pirate-map rim on the big reading surfaces (logbook / stats /
-    // controls). Both are baked once and painted as cached tiles, so this stays a couple of cheap
-    // composites per frame regardless of panel count.
+    // Worn-paper grain on the big reading surfaces (logbook / stats / controls); baked once and
+    // painted as a cached pattern, so this stays a couple of cheap composites per frame.
     agePaper(ctx, this.x, this.y, this.w, this.h, 10, { tex: 0.5, burn: true, burnIntensity: 0.8 });
+    // Border inside a WIDER hole clip so the edge line gaps around each bite instead of hugging it.
+    ctx.save();
+    clipToBurntPaper(ctx, this.x, this.y, this.w, this.h, 10, { burn: true, burnIntensity: 0.8, margin: 9 });
+    roundRect(ctx, this.x, this.y, this.w, this.h, 10);
     ctx.lineWidth = 1;
     ctx.strokeStyle = PALETTE.panelEdge;
     ctx.stroke();
+    ctx.restore();
+    // Scorch LAST, so the burn sits on top of the border and consumes it at the bites (no line
+    // hugging a hole). Baked + cached; one drawImage.
+    burnScorch(ctx, this.x, this.y, this.w, this.h, 10, { burn: true, burnIntensity: 0.8 });
     ctx.restore();
     this.drawContent(ctx);
   }

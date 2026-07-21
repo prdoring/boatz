@@ -566,7 +566,8 @@ export class InfoPanel extends Panel {
       roundRect(ctx, px, top, size, size, 10);
       ctx.fillStyle = '#e9dcbb'; ctx.fill();
       ctx.clip();
-      ctxt.portraits.draw(ctx, px + size / 2, top + size * 0.46, size * 0.34, cn.portrait, 0);
+      const capFlavor = s.pirate ? 'pirate' : s.privateer ? 'navy' : 'common';
+      ctxt.portraits.draw(ctx, px + size / 2, top + size * 0.53, size * 0.40, cn.portrait, 0, capFlavor);
       ctx.restore();
       roundRect(ctx, px, top, size, size, 10);
       ctx.strokeStyle = PALETTE.panelEdge; ctx.lineWidth = 1; ctx.stroke();
@@ -603,7 +604,8 @@ export class InfoPanel extends Panel {
       roundRect(ctx, px, top, size, size, 10);
       ctx.fillStyle = '#e9dcbb'; ctx.fill();
       ctx.clip();
-      ctxt.portraits.draw(ctx, px + size / 2, top + size * 0.46, size * 0.34, m.portrait, 0);
+      const magFlavor = isl.haven ? 'pirate' : 'official';
+      ctxt.portraits.draw(ctx, px + size / 2, top + size * 0.53, size * 0.40, m.portrait, 0, magFlavor);
       ctx.restore();
       roundRect(ctx, px, top, size, size, 10);
       ctx.strokeStyle = PALETTE.panelEdge; ctx.lineWidth = 1; ctx.stroke();

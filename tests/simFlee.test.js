@@ -134,3 +134,30 @@ test('HUNTED: a bold, matched raider TURNS on the pirate-hunter; an outmatched o
   assert.ok(fled, 'the outmatched raider marked itself fleeing');
   assert.ok(dAfter < dBefore - 50, 'and ran toward its haven (mend + shelter), not toward the hunter');
 });
+
+test('flee HYSTERESIS: once running, a raider keeps fleeing until the hunter is WELL clear (no per-tick flip-flop)', () => {
+  const w = makeWorld();
+  for (const i of w.islands) i.haven = false; // no den → threat block runs, flee straight away from the hunter
+  const pirate = w.ships[0], priv = w.ships[1];
+  turnPirate(w, pirate);
+  pirate.captain.traits = { boldness: 0.3, wanderlust: 0.3, greed: 0.3 };
+  pirate.captain.xp = { sea: 277, gun: 277, cmd: 277 }; // skill ~0.5 → reach ~1
+  pirate.hull = 1; pirate.rig = 1; pirate._huntCd = 0; pirate._prey = null;
+  pirate.cargo = { Gold: 0, People: 0, Food: 999, Weapons: 2 };  // weak → flees, never stands
+  priv.privateer = true; priv.pirate = false; priv.homeId = w.islands[1].id;
+  priv.cargo = { Gold: 0, People: 0, Food: 200, Weapons: 40 };   // a strong hunter
+  const base = w.rules.PIRATE_FLEE_PRIVATEER_RANGE, wide = base * w.rules.FLEE_DISENGAGE;
+  priv.x = 5000 + (base + wide) / 2; priv.y = 5000;             // BETWEEN the base trigger and the widened disengage
+  w.ships = w.ships.filter((s) => s === pirate || s === priv);
+  w.rules = { ...w.rules, SINK_PER_1000: 0 };
+
+  // NOT yet fleeing → a hunter beyond the base radius does not trigger a flee.
+  pirate.x = 5000; pirate.y = 5000; pirate._fleeing = false;
+  piracy(w, w.rules.SIM_STEP);
+  assert.notEqual(pirate._act && pirate._act.k, 'flee', 'a hunter beyond the BASE radius does not (yet) start a flee');
+
+  // ALREADY fleeing → the SAME hunter at the SAME distance keeps it running (widened disengage = hysteresis).
+  pirate.x = 5000; pirate.y = 5000; pirate._fleeing = true;
+  piracy(w, w.rules.SIM_STEP);
+  assert.equal(pirate._act && pirate._act.k, 'flee', 'already running, it keeps fleeing rather than flip-flopping back');
+});

@@ -14,7 +14,7 @@ import { transfer, cargoUnits, GOLD, PEOPLE } from './resources.js';
 import { logEvent, logEventThrottled, maybeSink } from './events.js';
 import { makePirateCaptain, hardenToPirate, skill01, awardCombatXp, rankOf, regimeData } from './captains.js';
 import { windMult } from './wind.js';
-import { rigMult, damageHull, damageRig } from './repair.js';
+import { rigMult, damageHull, damageRig, maybeHeaveToRepair } from './repair.js';
 import { markDanger, postBounty, payBounty } from './bounty.js';
 import { computeFleetByHome } from './fleet.js';
 import { nearestIsland as gridNearestIsland, buildShipGrid, eachShipInRange, nearestShip } from './grid.js';
@@ -37,6 +37,14 @@ export function foeData(world, foe) {
 export function setAct(s, k, id) {
   if (!s._act) s._act = { k, id: id || null };
   else { s._act.k = k; s._act.id = id || null; }
+}
+
+/** Is this ship SAFE IN PORT — docked, trading, or sheltering at a wharf? Mirrors the display's "docked"
+ *  set (snapshot.js displayState: idle / trading / _sheltered), so a ship the player sees berthed can never
+ *  be a combat target. Used by every hunter's prey-selection (a raider's merchants, a privateer's pirates)
+ *  so nothing fires on a hull that has already reached the safety of a harbour. */
+export function inPortSafe(ship) {
+  return ship.state === 'idle' || ship.state === 'trading' || !!ship._sheltered;
 }
 
 /** Local straight-line move (piracy can't import ship.js — that would cycle). Returns arrival. Faces the
@@ -229,27 +237,38 @@ export function piracy(world, h) {
     // fleeing them.) This is what makes a hunted pirate decide — turn and fight, or flee — instead of
     // blindly pressing its own chase while a privateer shoots it to pieces.
     if (!nearDen) {
-      const hunter = nearestShip(privGrid, ship.x, ship.y, null, t.PIRATE_FLEE_PRIVATEER_RANGE * reach);
+      // HYSTERESIS on the flee boundary (mirrors the merchant fleeTarget / FLEE_DISENGAGE): once a raider is
+      // running, it keeps running until the hunter is WELL clear (the trigger radius widens by FLEE_DISENGAGE
+      // while `_fleeing`). Without it, a fleeing pirate that slips one unit past the radius stops fleeing,
+      // turns back toward its blockade/prey (or, if crippled, halts to careen), re-enters the radius, and
+      // flees again — the per-substep "running pirate flip-flop".
+      const fleeRange = t.PIRATE_FLEE_PRIVATEER_RANGE * reach * (ship._fleeing ? (t.FLEE_DISENGAGE || 1.6) : 1);
+      const hunter = nearestShip(privGrid, ship.x, ship.y, null, fleeRange);
       if (hunter) {
         const fightOdds = (t.PIRATE_FIGHTBACK_ODDS || 0.9) + (0.5 - boldness) * (t.PIRATE_FIGHTBACK_BOLD || 0)
           - (skill - 0.5) * (t.PIRATE_DEFEND_SKILL_EDGE || 0); // bold accept parity/worse; timid want a clear edge
         const stand = !crippled && combatStrength(world, ship) >= combatStrength(world, hunter) * fightOdds;
         ship._blockadeId = null;
         if (stand) { // turn and give battle — close to gun-range, then trade broadsides (attrition, no plunder)
-          ship._prey = null;
+          ship._fleeing = false; ship._prey = null;
           setAct(ship, 'fight', hunter.id);
           if (dist(ship, hunter) <= t.PIRATE_COMBAT_RANGE) {
             if (world.simTime >= (ship._fightCd || 0)) { if (skirmish(world, ship, hunter, false)) sunk = true; }
             else { const st = standoffPoint(hunter, ship, t.COMBAT_STANDOFF || 80); if (sail(world, ship, st.x, st.y, speed, h) === 'sunk') sunk = true; }
           } else if (sail(world, ship, hunter.x, hunter.y, speed, h) === 'sunk') sunk = true;
         } else { // outmatched, timid, or too mauled to fight — run for a haven to mend (or just open water)
-          ship._prey = null;
+          ship._fleeing = true; ship._prey = null;
           setAct(ship, 'flee', hunter.id);
-          const to = den || awayPoint(hunter.x, hunter.y, ship.x, ship.y, t.PIRATE_HUNT_RANGE);
+          // Head for the den only if it lies AWAY from the hunter (in the same half-plane as "directly away");
+          // otherwise running toward it means running INTO the chaser — the pirate aims at the hunter, the
+          // separation system shoves it back, and it lurches. When the den is behind the hunter, just run clear.
+          let to = awayPoint(hunter.x, hunter.y, ship.x, ship.y, t.PIRATE_HUNT_RANGE);
+          if (den && (den.x - ship.x) * (ship.x - hunter.x) + (den.y - ship.y) * (ship.y - hunter.y) > 0) to = den;
           if (sail(world, ship, to.x, to.y, speed, h) === 'sunk') sunk = true;
         }
         continue;
       }
+      ship._fleeing = false; // no hunter within the (widened) range → clear the flee latch, resume normal work
     }
 
     // DEFEND THE HAVEN — a raider lying off its stronghold turns on a privateer come to assault it (home and
@@ -282,10 +301,27 @@ export function piracy(world, h) {
       }
     }
 
+    // HUNGER is the master drive — hoisted ABOVE heave-to so a starving crew hunts/raids before it lies-to.
+    const hungry = (ship.cargo.Food || 0) < t.CREW_FOOD_PER_DAY;
+    // TIMBER PREDATOR — a crippled raider with NO repair timber aboard turns hunter FOR the timber: it can't
+    // heave-to without it, so it prefers prey/ports carrying Wood/Fiber to get back in the fight.
+    const needsTimber = crippled && (ship.cargo.Wood || 0) < (t.HEAVE_KIT_MIN || 3) && (ship.cargo.Fiber || 0) < (t.HEAVE_KIT_MIN || 3);
+
+    // HEAVE TO & MEND — a crippled raider with repair timber aboard, NOT starving and NOT off its own den
+    // (a besieged den is HAVEN DEFENCE above; a reachable den is the full-refit fallback just below), lies-to
+    // DEAD IN THE WATER and jury-rigs from its stores. This is what lets a raider survive far from the sparse
+    // havens. It's catchable — a hunter closing is handled by the fight-or-flight rung above, which pulls it
+    // off the repair. Placed BEFORE the run-to-den rung (den is ~always non-null, so after it is dead code).
+    if (crippled && !hungry && !nearDen && maybeHeaveToRepair(world, ship, h)) {
+      ship._blockadeId = null;
+      if (ship._sunk) sunk = true;
+      continue;
+    }
+
     // SELF-PRESERVATION — a raider mauled past what its captain will bear breaks off the hunt and limps to
     // its nearest haven to mend, EVEN WITH a fat prize in sight (a wreck takes no prizes — this is what
-    // stops a shot-to-pieces pirate blindly pressing a chase). With no haven to run to it fights on to
-    // survive; the gentler 'battered' valve below still catches a lesser hurt when the seas are quiet.
+    // stops a shot-to-pieces pirate blindly pressing a chase). With no haven (and no timber to heave-to on)
+    // it fights on to survive; the gentler 'battered' valve below still catches a lesser hurt when quiet.
     if (crippled && den) {
       ship._blockadeId = null; ship._prey = null;
       setAct(ship, 'resupply', den.id);
@@ -298,13 +334,12 @@ export function piracy(world, h) {
     // prey range to the snap to stay on station rather than chase distant traffic. A HUNGRY pirate does
     // NEITHER: it never rests, ranges to its full reach even off a blockaded port, and scorns no prize,
     // however lean (dropping the greedy captain's minimum). That's what sends a starving raider after ships.
-    const hungry = (ship.cargo.Food || 0) < t.CREW_FOOD_PER_DAY;
     const resting = !hungry && world.simTime < (ship._huntCd || 0);
     const holding = !wander && ship._blockadeId && world.simTime < (ship._blockadeUntil || 0);
     const preyRange = (holding && !hungry ? t.PIRATE_BLOCKADE_SNAP : t.PIRATE_HUNT_RANGE) * reach;
     let prey = null;
     if (!resting && ship._prey) { const p = world._shipsById.get(ship._prey); if (p && !p.pirate && !p._sunk && dist(ship, p) <= preyRange && !(dist(ship, p) > t.PIRATE_COMBAT_RANGE && shelteredAtPort(world, p))) prey = p; }
-    if (!resting && !prey) { prey = nearestPrey(world, ship, preyRange, hungry ? 0 : minPrize); ship._prey = prey ? prey.id : null; }
+    if (!resting && !prey) { prey = nearestPrey(world, ship, preyRange, (hungry || needsTimber) ? 0 : minPrize, needsTimber); ship._prey = prey ? prey.id : null; }
 
     if (prey) {
       setAct(ship, 'hunt', prey.id);
@@ -342,7 +377,7 @@ export function piracy(world, h) {
     const isle = gridNearestIsland(world, ship.x, ship.y);
     // A BOLD raider raids a port when merely peckish; a cautious one only when truly starving (raiding
     // is dangerous, so the timid would sooner hunt or slink to a haven).
-    const willRaid = hungry && (bold || (ship.cargo.Food || 0) <= 0);
+    const willRaid = (hungry && (bold || (ship.cargo.Food || 0) <= 0)) || (needsTimber && bold);
     // Can it actually strike NOW, or is it (or the port) on a post-raid cooldown? A port just hit — or one
     // already stripped of food — must NOT become a trap the raider steers onto and parks dead-centre inside
     // while it waits out the cooldown (that was the "pirate stuck in the middle of an island" bug). When it
@@ -367,7 +402,7 @@ export function piracy(world, h) {
     // to eat). Everyone else BLOCKADES — orbiting the approaches (never the wharf, which would pin the fleet
     // and gridlock trade), chasing what ventures close, and stoking the fear of these waters. A rover with
     // no trade in sight falls through to blockade too.
-    const seaPrey = (wander || hungry) ? nearestSeaMerchant(world, ship) : null;
+    const seaPrey = (wander || hungry || needsTimber) ? nearestSeaMerchant(world, ship) : null;
     if (seaPrey) {
       ship._blockadeId = null;
       setAct(ship, 'hunt', seaPrey.id);
@@ -420,15 +455,18 @@ function shelteredAtPort(world, s) {
 /** Nearest merchant (non-pirate, at sea) within `range` — the fatter the prize the better. Visits
  *  only the ships the merchant grid holds within range (grid excludes pirates); keeps the exact
  *  in-port skip and prize scoring. `minPrize` lets a greedy captain scorn a near-empty hull. */
-function nearestPrey(world, ship, range, minPrize = 0) {
+function nearestPrey(world, ship, range, minPrize = 0, timberWant = false) {
   const t = world.rules;
   let best = null, bestScore = -Infinity;
   eachShipInRange(world._merchGrid, ship.x, ship.y, range, (s) => {
-    if (s._sunk || s.state === 'idle' || s.state === 'trading') return; // ships in port are safe
+    if (s._sunk || inPortSafe(s)) return; // docked / trading / sheltered — safe in harbour, never a target
     const prize = (s.cargo[GOLD] || 0) + cargoUnits(s) * 10; // rough worth of the haul
     if (prize < minPrize) return; // not worth a greedy captain's powder
-    if (dist(ship, s) > t.PIRATE_COMBAT_RANGE && shelteredAtPort(world, s)) return; // reached a port's guns — can't be chased onto the wharf
-    const score = prize - dist(ship, s) * 2; // near + rich preferred
+    if (dist(ship, s) > t.PIRATE_COMBAT_RANGE && shelteredAtPort(world, s)) return; // a ship UNDER WAY that reached a port's guns — can't be chased onto the wharf
+    // A timber-starved raider values a hull carrying Wood/Fiber above a fatter but drier prize (it needs the
+    // spars & canvas to jury-rig back into the fight, not just coin).
+    const timberBonus = timberWant ? ((s.cargo.Wood || 0) + (s.cargo.Fiber || 0)) * (t.PIRATE_TIMBER_PRIZE_BONUS || 0) : 0;
+    const score = prize + timberBonus - dist(ship, s) * 2; // near + rich (+ timber, when needed) preferred
     if (score > bestScore) { bestScore = score; best = s; }
   });
   return best;
@@ -440,7 +478,7 @@ function nearestPrey(world, ship, range, minPrize = 0) {
  *  the merchant grid (excludes pirates); same lowest-index tie-break as the old first-min scan. */
 function nearestSeaMerchant(world, ship) {
   return nearestShip(world._merchGrid, ship.x, ship.y,
-    (s) => !s.privateer && !s._sunk && (s.state === 'outbound' || s.state === 'inbound') && !shelteredAtPort(world, s));
+    (s) => !s.privateer && !s._sunk && !inPortSafe(s) && (s.state === 'outbound' || s.state === 'inbound') && !shelteredAtPort(world, s));
 }
 
 /** Nearest pirate HAVEN — a stronghold a raider can run to for food and to fence loot (havens.js).
@@ -647,14 +685,16 @@ function skirmish(world, pirate, priv, atHaven = true) {
   return false;
 }
 
-/** Strip a beaten merchant: all its coin, then its cargo (food first — pirates must eat) into the
- *  pirate's hold, up to what will fit. Returns rough {goods, gold} for the chronicle. */
+/** Strip a beaten merchant: all its coin, then its cargo into the pirate's hold, up to what will fit.
+ *  Priority FOOD (the crew must eat) → WOOD/FIBER (repair timber to jury-rig back into the fight) → the
+ *  rest — so a raider always carries off what keeps it at sea. Returns rough {goods, gold} for the chronicle. */
 function plunder(world, pirate, victim) {
   const gpu = world.rules.GOLD_PER_CARGO_UNIT;
   const gold = Math.round(victim.cargo[GOLD] || 0);
   transfer(victim.cargo, GOLD, pirate.cargo, GOLD, victim.cargo[GOLD] || 0);
   let goods = 0;
-  const keys = Object.keys(victim.cargo).sort((a, b) => (a === 'Food' ? -1 : b === 'Food' ? 1 : 0));
+  const rank = (g) => (g === 'Food' ? 0 : g === 'Wood' ? 1 : g === 'Fiber' ? 2 : 3); // eat, then mend, then loot
+  const keys = Object.keys(victim.cargo).sort((a, b) => rank(a) - rank(b));
   for (const g of keys) {
     if (g === GOLD || g === PEOPLE) continue;
     const space = Math.max(0, pirate.capacity - cargoUnits(pirate, gpu));
@@ -679,6 +719,15 @@ function raidIsland(world, pirate, island) {
   }
   const food = Math.min(t.PIRATE_RAID_FOOD, island.stock.Food || 0);
   transfer(island.stock, 'Food', pirate.cargo, 'Food', food);
+  // A raider also carries off repair TIMBER (spars & canvas) — the very materials that let it jury-rig back
+  // into the fight — up to what fits in the hold. A port near a den thus loses the stores it needs to refit.
+  const gpu = t.GOLD_PER_CARGO_UNIT;
+  const timberCap = t.PIRATE_RAID_TIMBER || 0;
+  const wood = Math.min(timberCap, island.stock.Wood || 0, Math.max(0, pirate.capacity - cargoUnits(pirate, gpu)));
+  if (wood > 0.5) transfer(island.stock, 'Wood', pirate.cargo, 'Wood', wood);
+  const fiber = Math.min(timberCap, island.stock.Fiber || 0, Math.max(0, pirate.capacity - cargoUnits(pirate, gpu)));
+  if (fiber > 0.5) transfer(island.stock, 'Fiber', pirate.cargo, 'Fiber', fiber);
+  const timber = Math.round(wood + fiber);
   const gold = Math.floor((island.gold || 0) * t.PIRATE_RAID_GOLD_FRAC);
   transfer(island, 'gold', pirate.cargo, GOLD, gold);
   if (island.loyalty != null) island.loyalty = Math.max(0, island.loyalty - t.PIRATE_RAID_LOYALTY_HIT);
@@ -686,5 +735,5 @@ function raidIsland(world, pirate, island) {
   pirate.morale = Math.min(1, (pirate.morale || 0.6) + 0.15);
   markDanger(world, island.x, island.y, 'raid');       // a sacked port's waters are the most feared
   postBounty(world, pirate, island.id, 'raid');        // and it puts a price on the raider's head
-  logEvent(world, 'raid', `${pirate.name} raided ${island.name} — Capt. ${pirate.captain.name} carried off ${Math.round(food)} food and ${gold}g.`, { islandId: island.id, shipId: pirate.id });
+  logEvent(world, 'raid', `${pirate.name} raided ${island.name} — Capt. ${pirate.captain.name} carried off ${Math.round(food)} food${timber > 0 ? `, ${timber} timber` : ''} and ${gold}g.`, { islandId: island.id, shipId: pirate.id });
 }

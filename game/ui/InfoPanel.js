@@ -40,6 +40,8 @@ const ACT = {
   raid:      (n) => n ? `Raiding ${n}` : 'Raiding a port',
   resupply:  (n) => n ? `Making for ${n} to resupply` : 'Running low — resupplying',
   defend:    (n) => n ? `Defending ${n}` : 'Defending the haven',
+  fight:     (n) => n ? `Fighting ${n}` : 'Fighting off a hunter',
+  careen:    ()  => 'Hove to — making repairs',
   assault:   (n) => n ? `Assaulting ${n}` : 'Assaulting a haven',
   patrol:    (n) => n ? `Patrolling off ${n}` : 'On patrol',
   standdown: (n) => n ? `Standing down at ${n}` : 'Standing down',
@@ -492,7 +494,8 @@ export class InfoPanel extends Panel {
     if (s.morale != null) this._crew(ctx, s, c);
 
     // Condition — hull integrity + rigging (shown when there's wear worth showing).
-    if ((s.hull != null && s.hull < 0.985) || (s.rig != null && s.rig < 0.985)) this._condition(ctx, s, c);
+    if ((s.hull != null && s.hull < 0.985) || (s.rig != null && s.rig < 0.985)
+        || (s.hullSound != null && s.hullSound < 0.95) || (s.rigSound != null && s.rigSound < 0.95)) this._condition(ctx, s, c);
 
     // Route with the current leg highlighted.
     if (Array.isArray(s.route) && s.route.length) {
@@ -518,13 +521,17 @@ export class InfoPanel extends Panel {
 
   /** Hull integrity + rigging condition (repair.js) — the ship's physical state, high=green→red=low. */
   _condition(ctx, s, c) {
-    const bar = (label, v) => {
+    const bar = (label, v, cap) => {
       const col = v > 0.6 ? '#2f7d45' : v > 0.3 ? '#b0842a' : '#b23a2e';
-      this._gauge(ctx, label, `${Math.round(v * 100)}%`, v, col, c);
+      this._gauge(ctx, label, `${Math.round(v * 100)}%`, v, col, c, cap);
     };
     this._section(ctx, 'CONDITION', c);
-    bar('Hull', s.hull != null ? s.hull : 1);
-    bar('Rig', s.rig != null ? s.rig : 1);
+    const hullSound = s.hullSound != null ? s.hullSound : 1;
+    const rigSound = s.rigSound != null ? s.rigSound : 1;
+    bar('Hull', s.hull != null ? s.hull : 1, hullSound);
+    bar('Rig', s.rig != null ? s.rig : 1, rigSound);
+    // Structural soundness eroded → name the consequence: a jury-rig can't fix it, only a real dry-dock.
+    if (Math.min(hullSound, rigSound) < 0.95) this._kv(ctx, 'Seaworthiness', 'needs a dry-dock', c, '#a8722e');
   }
 
   /** The ship's specific current action, drawn as a prominent banner (coloured by faction). Falls back to
@@ -805,7 +812,7 @@ export class InfoPanel extends Panel {
     c.y += 8;
   }
 
-  _gauge(ctx, label, valText, frac, color, c) {
+  _gauge(ctx, label, valText, frac, color, c, cap) {
     c.y += 16;
     ctx.save();
     ctx.font = font('body');
@@ -816,6 +823,12 @@ export class InfoPanel extends Panel {
     c.y += 6;
     const bw = c.cw, bh = 6;
     roundRect(ctx, c.cx, c.y, bw, bh, 3); ctx.fillStyle = PALETTE.panelTrack; ctx.fill();
+    // A structural CEILING (soundness) below full: shade cap→1 as "lost capacity" only a dry-dock rebuilds
+    // (drawn under the health fill), so the bar reads current | recoverable-headroom | lost, left→right.
+    if (cap != null && cap < 0.995) {
+      const cx = c.cx + bw * Math.max(0, Math.min(1, cap));
+      roundRect(ctx, cx, c.y, Math.max(1, c.cx + bw - cx), bh, 3); ctx.fillStyle = PALETTE.panelLostCap || '#6b3a2e'; ctx.fill();
+    }
     roundRect(ctx, c.cx, c.y, Math.max(2, bw * Math.max(0, Math.min(1, frac))), bh, 3); ctx.fillStyle = color; ctx.fill();
     ctx.restore();
     c.y += 8;

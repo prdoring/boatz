@@ -182,7 +182,7 @@ function fixAgreement(t) {
 // Event kinds that concern the subject ALONE → a bare "her/his/its/she" unambiguously refers to us.
 // Split by subject kind: a SHIP event (maiden/wreck…) is ALSO tagged with its home island, so it
 // surfaces in the ISLAND's log too — there the ship's "her" must NOT be folded to the island.
-const SHIP_SELF = new Set(['maiden', 'voyages', 'bearings', 'wreck', 'stormloss', 'adrift', 'starve', 'launch', 'shun', 'reroute']);
+const SHIP_SELF = new Set(['maiden', 'voyages', 'bearings', 'wreck', 'stormloss', 'adrift', 'starve', 'launch', 'shun', 'reroute', 'careen']);
 const ISLAND_SELF = new Set(['boom', 'goldenage', 'popmilestone', 'longpeace', 'neworder', 'ambition', 'overreach',
   'haven', 'redeemed', 'contract', 'contractdone', 'famine', 'recover', 'blight', 'plague',
   // Magistrate POLICY beats — a port's own decisions, so its her/its folds to our/we in its log.

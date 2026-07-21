@@ -23,7 +23,7 @@ const BASE = {
     island: { template: 'A {type} port{magistrate}{primary}.', magistrate: ' under {magName}', primary: ', trading in {primary}' },
   },
   kinds: { plunder: { recur: { class: 'prize', phrases: [', my {ord} such prize'] } } },
-  collapse: { refitshort: 'toil', voyages: 'last' },
+  collapse: { refitshort: 'toil', voyages: 'last', careen: 'toil' },
   repeated: [' — again and again'],
 };
 // Two distinct hands. Handover text is tagged with the style letter + cause so we can assert WHO wrote WHAT.
@@ -85,6 +85,26 @@ test('deeds under each keeper read in the first person ("We…")', () => {
   assert.match(text, /We took a prize/, 'the ship name is folded to first person at a sentence head');
   assert.match(text, /we took another/, 'and to lowercase "we" after a soft join');
   assert.doesNotMatch(text, /the Salt Wraith took/, 'the third-person name is gone from the deeds');
+});
+
+test('a careen beat reads first-person, and "her hull" folds to "our hull" (careen is a SHIP_SELF event)', () => {
+  const entries = [ev(1, 1, 'careen', 'the Salt Wraith hove to and jury-rigged her hull and rigging.')];
+  const text = render(narrate(entries, { kind: 'ship', id: 's1', data: SHIP }, REG, CTX));
+  assert.match(text, /We hove to/, 'the ship name folds to the keeper\'s first person at a sentence head');
+  assert.match(text, /our hull/, 'and self-referential "her hull" → "our hull"');
+  assert.doesNotMatch(text, /the Salt Wraith hove/, 'the third-person name is gone');
+});
+
+test('a run of consecutive careen beats COLLAPSES to one (a battered raider\'s log doesn\'t restate it)', () => {
+  const entries = [
+    ev(1, 1, 'careen', 'the Salt Wraith hove to and jury-rigged her hull and rigging.'),
+    ev(2, 1, 'careen', 'the Salt Wraith hove to and jury-rigged her hull and rigging.'),
+    ev(3, 2, 'careen', 'the Salt Wraith hove to and jury-rigged her hull and rigging.'),
+    ev(4, 2, 'careen', 'the Salt Wraith hove to and jury-rigged her hull and rigging.'),
+  ];
+  const text = render(narrate(entries, { kind: 'ship', id: 's1', data: SHIP }, REG, CTX));
+  const hits = (text.match(/hove to/g) || []).length;
+  assert.equal(hits, 1, 'four careens fold to a single beat (collapse: toil)');
 });
 
 test('recurrence callbacks survive into first person ("my second such prize")', () => {

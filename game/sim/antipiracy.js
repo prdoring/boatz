@@ -17,8 +17,8 @@ import { logEvent, maybeSink } from './events.js';
 import { makeCaptain, skill01, awardCombatXp, rankOf, regimeData } from './captains.js';
 import { windMult } from './wind.js';
 import { rigMult } from './repair.js';
-import { combatStrength, exchangeFire, setAct, standoffPoint, foeData, assessFlee } from './piracy.js';
-import { repairAtPort } from './repair.js';
+import { combatStrength, exchangeFire, setAct, standoffPoint, foeData, assessFlee, inPortSafe } from './piracy.js';
+import { refitGradual, maybeHeaveToRepair } from './repair.js';
 import { foodDaysAboard } from './crew.js';
 import { payBounty } from './bounty.js';
 import { assaultHaven } from './havens.js';
@@ -38,6 +38,15 @@ function moveToward(ship, tx, ty, speed, h) {
   if (d <= Math.max(step, 1e-6)) { ship.x = tx; ship.y = ty; return true; }
   ship.x += (dx / d) * step; ship.y += (dy / d) * step;
   return false;
+}
+
+/** Move toward a friendly PORT, applying the same rig-condition & wind speed penalties every other mover
+ *  uses — so a battered hunter LIMPS home to resupply/refit (a shot rig can't sail full speed), it doesn't
+ *  glide back at cruising speed. Returns true on arrival (like moveToward), so the caller can act on it. */
+function sailToPort(world, ship, tx, ty, speed, h) {
+  const heading = Math.atan2(ty - ship.y, tx - ship.x);
+  const eff = speed * rigMult(ship, world.rules) * windMult(world, heading, skill01(ship.captain, world.rules, 'sea'));
+  return moveToward(ship, tx, ty, eff, h);
 }
 
 export function privateerCount(world) { let n = 0; for (const s of world.ships) if (s.privateer) n++; return n; }
@@ -118,10 +127,12 @@ export function antipiracy(world, h) {
     // than its raw hunt range: it actively watches its charge, not just reacting at gun-range).
     let haven = null, hd = Infinity;
     for (const hv of havenList) { const d = dist(priv, hv); if (d < hd) { hd = d; haven = hv; } }
-    let prey = priv._prey ? pirates.find((p) => p.id === priv._prey && !p._sunk) : null;
+    let prey = priv._prey ? pirates.find((p) => p.id === priv._prey && !p._sunk && !inPortSafe(p)) : null;
     if (!prey || dist(priv, prey) > t.PRIVATEER_HUNT_RANGE * reach) {
-      prey = nearestShip(pirateGrid, priv.x, priv.y, null, t.PRIVATEER_HUNT_RANGE * reach)
-          || (guard && nearestShip(pirateGrid, guard.x, guard.y, null, t.PRIVATEER_WATCH_RANGE * reach));
+      // A raider berthed/idle in a haven's roads is safe like any docked ship — a besieger bombards the
+      // DEN (assaultHaven below), it doesn't pick off hulls at the wharf. Only a raider under way is prey.
+      prey = nearestShip(pirateGrid, priv.x, priv.y, (p) => !inPortSafe(p), t.PRIVATEER_HUNT_RANGE * reach)
+          || (guard && nearestShip(pirateGrid, guard.x, guard.y, (p) => !inPortSafe(p), t.PRIVATEER_WATCH_RANGE * reach));
       priv._prey = prey ? prey.id : null;
     }
     // Captain character: a cautious privateer won't charge a raider it can't beat — it holds its patrol
@@ -144,7 +155,7 @@ export function antipiracy(world, h) {
     if (world.simTime >= (priv.privateerUntil || 0) || (pirates.length === 0 && havenList.length === 0) || surplus) {
       activePriv--; // one fewer effective hunter this tick — keep the budget/surplus test consistent
       setAct(priv, 'standdown', home ? home.id : null);
-      if (home && moveToward(priv, home.x, home.y, speed, h)) standDown(world, priv, home);
+      if (home && sailToPort(world, priv, home.x, home.y, speed, h)) standDown(world, priv, home);
       else if (!home) standDown(world, priv, null);
       continue;
     }
@@ -159,8 +170,12 @@ export function antipiracy(world, h) {
     const battered = (priv.hull != null ? priv.hull : 1) < t.REPAIR_GUARD_HULL;
     if ((foodDaysAboard(world, priv) < t.PRIVATEER_RESUPPLY_DAYS || battered) && !(prey && preyDist <= t.PIRATE_COMBAT_RANGE)) {
       const larder = guard || home;
+      // Badly battered with the guard port too far to limp to safely, and repair timber aboard? HEAVE TO and
+      // jury-rig where it lies (as a pirate does). The valve's own guard already keeps a foe off gun-range.
+      const larderFar = !larder || dist(priv, larder) > t.PRIVATEER_HUNT_RANGE;
+      if (battered && larderFar && maybeHeaveToRepair(world, priv, h)) { if (priv._sunk) sunk = true; continue; }
       setAct(priv, 'resupply', larder ? larder.id : null);
-      if (larder && moveToward(priv, larder.x, larder.y, speed, h)) victualPrivateer(world, larder, priv);
+      if (larder && sailToPort(world, priv, larder.x, larder.y, speed, h)) victualPrivateer(world, larder, priv, dDay);
       continue;
     }
 
@@ -189,9 +204,14 @@ export function antipiracy(world, h) {
       setAct(priv, 'hunt', defender.id);
       if (sailHunter(world, priv, defender.x, defender.y, speed, h)) sunk = true;
     } else if (besieging) {
-      // No defender close enough to matter — batter the walls (once/day; holds station otherwise).
+      // No defender close enough to matter — CLOSE to within the den's own gun-range and batter the walls.
+      // The suppress ring (800u) is wider than the shore guns' reach (700u), so a besieger that just held
+      // station there sat OUTSIDE the fight — no shots crossed. It now bears in to bombarding range, where the
+      // den's batteries answer (shore.js) and the exchange is a real, visible slugging match.
       setAct(priv, 'assault', haven.id);
-      if (assaultHaven(world, priv, haven) && priv._sunk) sunk = true;
+      const bombardRange = (t.PORT_CANNON_RANGE || 700) * (t.HAVEN_BOMBARD_FRAC || 0.8);
+      if (hd > bombardRange) { if (sailHunter(world, priv, haven.x, haven.y, speed, h)) sunk = true; } // bear in
+      else if (assaultHaven(world, priv, haven) && priv._sunk) sunk = true;                             // in range → batter
     } else if (prey && (!haven || preyDist <= hd)) {
       // Chase a pirate — one near the guarded port, or nearer than a distant haven.
       setAct(priv, 'hunt', prey.id);
@@ -241,15 +261,16 @@ function commissionPrivateer(world, isl, ship) {
 /** Victual a privateer from a friendly port's stores — FREE (the state feeds its own navy, the way a
  *  haven feeds its raiders). The hunger valve calls this when a starving hunter breaks off station; it
  *  tops up toward a full cruise's food and the fresh stores lift morale a touch. */
-function victualPrivateer(world, port, priv) {
+function victualPrivateer(world, port, priv, dDay) {
   const t = world.rules;
   const want = t.CREW_FOOD_PER_DAY * (t.PRIVATEER_COMMISSION_DAYS + 3) - (priv.cargo.Food || 0);
   const space = Math.max(0, priv.capacity - cargoUnits(priv, t.GOLD_PER_CARGO_UNIT));
   const load = Math.min(Math.max(0, want), port.stock.Food || 0, space);
   if (load >= 1) transfer(port.stock, 'Food', priv.cargo, 'Food', load);
   priv.morale = Math.min(1, (priv.morale || 0.7) + 0.05);
-  // Refit the hull/rig from the guard port's timber & canvas (free — its own navy).
-  if ((priv.hull != null && priv.hull < 1) || (priv.rig != null && priv.rig < 1)) repairAtPort(world, port, priv);
+  // Refit the hull/rig from the guard port's timber & canvas (free — its own navy). GRADUAL, like a haven's:
+  // a parked privateer mends a small step each tick, so it heals smoothly (no chunky jump), never mid-fight.
+  if (world.simTime >= (priv._fightCd || 0)) refitGradual(world, port, priv, dDay);
 }
 
 /** Pay off the crew and return the ship to honest trade (its guns go back to the armoury). */
@@ -289,6 +310,7 @@ function tryRecoverPrize(world, priv, pirate, paidBounty) {
   pirate.morale = 0.6; pirate.unrest = 0; pirate.uprising = null; pirate.hunger = 0;
   pirate.bounty = 0;
   pirate.hull = Math.max(pirate.hull || 0, 0.35); pirate.rig = Math.max(pirate.rig || 0, 0.35); // salvaged, needs a refit
+  pirate.hullSound = Math.max(pirate.hullSound != null ? pirate.hullSound : 0, 0.5); pirate.rigSound = Math.max(pirate.rigSound != null ? pirate.rigSound : 0, 0.5); // a battered prize — a real dry-dock will make her whole
   pirate.voyage = null; pirate.leg = null; pirate.legIdx = 0;
   pirate._prey = null; pirate._blockadeId = null; pirate.adrift = null; pirate._huntCd = 0;
   pirate.state = 'idle';

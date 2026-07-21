@@ -12,7 +12,7 @@ import { streamFloat } from './rng.js';
 import { logEvent } from './events.js';
 import { transfer, GOLD, PEOPLE, clamp } from './resources.js';
 import { createShip } from './ship.js';
-import { repairAtPort, damageHull, damageRig } from './repair.js';
+import { refitGradual, damageHull, damageRig } from './repair.js';
 import { turnPirate, pirateCount, canTurnPirate, pirateBudget } from './piracy.js';
 import { shipName } from './naming.js';
 import { installMagistrate, magRank } from './magistrate.js';
@@ -223,14 +223,20 @@ function harbourPirates(world, havenList, dDay) {
     transfer(p.cargo, GOLD, haven, 'gold', p.cargo[GOLD] || 0);
     for (const g in p.cargo) {
       if (g === GOLD || g === PEOPLE || g === 'Food') continue;
-      if ((p.cargo[g] || 0) > 0.5) transfer(p.cargo, g, haven.stock, g, p.cargo[g]);
+      // Keep a small Wood/Fiber KIT back — a raider fences the SURPLUS but holds the timber it needs to
+      // jury-rig at sea, so it doesn't hand its whole repair kit to the den the moment it comes in to fence.
+      const keep = (g === 'Wood' || g === 'Fiber') ? (t.HEAVE_KIT_MIN || 3) : 0;
+      const spare = (p.cargo[g] || 0) - keep;
+      if (spare > 0.5) transfer(p.cargo, g, haven.stock, g, spare);
     }
     // RESUPPLY — victual the crew from the haven's larder (free to its own; a base feeds its raiders).
     const want = t.CREW_FOOD_PER_DAY * t.PROVISION_DAYS - (p.cargo.Food || 0);
     if (want > 0.5 && (haven.stock.Food || 0) > 1) transfer(haven.stock, 'Food', p.cargo, 'Food', Math.min(want, t.HAVEN_RESUPPLY_FOOD * dDay + 1));
-    // REFIT — the den's shipwrights mend a battered raider from the haven's Wood/Fiber (free to its own),
-    // so a mauled pirate that limped home for repair actually gets patched up before sailing out again.
-    if ((p.hull != null && p.hull < 1) || (p.rig != null && p.rig < 1)) repairAtPort(world, haven, p);
+    // REFIT — the den's shipwrights mend a battered raider from the haven's Wood/Fiber (free to its own).
+    // GRADUAL (a small step each substep, paced by dDay), so a hull mends SMOOTHLY over a day or two rather
+    // than jerking up in per-dock chunks (the "randomly fully heals while moving near a haven" bug) — and
+    // never while a fight is live (_fightCd), so it can't heal mid-broadside defending its den.
+    if (world.simTime >= (p._fightCd || 0)) refitGradual(world, haven, p, dDay);
   }
 }
 

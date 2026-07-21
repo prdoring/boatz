@@ -6,21 +6,44 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld } from './helpers/simWorld.js';
 import { ship } from '/game/sim/ship.js';
-import { renderAid, spareAboard } from '/game/sim/repair.js';
+import { renderAid, spareAboard, juryRig } from '/game/sim/repair.js';
 
 const cap = (over = {}) => ({ name: 'C', xp: { sea: 0, gun: 0, cmd: 0 }, traits: { boldness: 0.6, wanderlust: 0.5, greed: 0.3 }, ...over });
 const boat = (over = {}) => ({ id: 's', homeId: 'h', x: 0, y: 0, type: 'brig', capacity: 400, hull: 1, rig: 1, morale: 0.6, cargo: { Gold: 0, People: 0 }, captain: cap(), ...over });
 const merchant = (w) => w.ships.find((s) => !s.pirate && !s.privateer);
 
-test('renderAid: a helper patches a dismasted ally’s rig from its SPARE canvas', () => {
+test('renderAid: a helper hands its SPARE canvas to a dismasted ally, who then mends HERSELF with it', () => {
   const w = makeWorld(); w.simTime = 0;
   const helper = boat({ cargo: { Gold: 0, People: 0, Fiber: 30, Wood: 30, Food: 100 } });
   const victim = boat({ id: 'v', homeId: 'other', rig: 0.08, hull: 0.6, cargo: { Gold: 0, People: 0, Food: 0 } });
-  const rig0 = victim.rig, fib0 = helper.cargo.Fiber;
+  const fib0 = helper.cargo.Fiber;
   const ok = renderAid(w, helper, victim);
   assert.ok(ok, 'aid was rendered');
-  assert.ok(victim.rig > rig0, 'the dismasted rig was patched enough to make sail');
-  assert.ok(helper.cargo.Fiber < fib0, 'from the helper’s spare canvas');
+  assert.ok((victim.cargo.Fiber || 0) > 0, 'the victim RECEIVED spare canvas into her hold (she is not patched on the spot)');
+  assert.ok(helper.cargo.Fiber < fib0, 'from the helper’s spare');
+  // She mends herself from the supplies over the following days — jury-rig, not a teleport to full.
+  const rig0 = victim.rig;
+  for (let i = 0; i < 200; i++) juryRig(w, victim, w.rules.SIM_DAY_SECONDS);
+  assert.ok(victim.rig > rig0, 'and jury-rigs the dismasted rig back up from the canvas given');
+});
+
+test('a stranded, hurt merchant HEAVES TO and jury-rigs — the SAME mechanic a raider uses (a boat is a boat)', () => {
+  const w = makeWorld(); w.simTime = 0;
+  const m = merchant(w);
+  for (const i of w.islands) i.haven = true;            // no LAWFUL port in reach → she can't just limp to a yard
+  w.ships = w.ships.filter((s) => s === m);             // isolate — no raiders to divert it
+  w.rules = { ...w.rules, SINK_PER_1000: 0 };
+  m.hull = 0.35; m.rig = 0.3; m._sheltered = false; m.adrift = null; m._fleeing = false; m._heaveUntil = 0;
+  m.cargo = { Gold: 0, People: 0, Wood: 50, Fiber: 50 }; // carries repair timber (a stowed kit, or spars from a rescue)
+  m.x = 5000; m.y = 5000; m.targetX = 20000; m.targetY = 5000; m.leg = null; m.legIdx = 0;
+  m.state = 'outbound';
+  m.voyage = { reason: 'trade', stops: [{ islandId: w.islands[0].id, sell: {}, buy: {}, people: 0 }], index: 0 };
+  const hull0 = m.hull, x0 = m.x;
+  for (let i = 0; i < 60; i++) ship(w, w.rules.SIM_STEP);
+  assert.equal(m._act && m._act.k, 'careen', 'she hove to and is making repairs — the same careen state as a raider');
+  assert.ok(Math.abs(m.x - x0) < 1, 'dead in the water while she works, not sailing on');
+  assert.ok(m.hull > hull0 + 0.005, `jury-rigging the hull up (${hull0} → ${m.hull.toFixed(3)})`);
+  assert.ok((m.cargo.Wood || 0) < 50, 'from her own timber');
 });
 
 test('a prolonged rescue of the SAME ship is logged once, not on every pass', () => {
@@ -71,11 +94,11 @@ test('a passing ship AIDS a carried ally in distress — off CARRIED knowledge, 
   helper.cargo = { Gold: 0, People: 0, Fiber: 40, Wood: 40, Food: 200 };
   helper.captain.traits = { boldness: 0.7, wanderlust: 0.5, greed: 0.2 }; // generous, not cautious
   victim.x = 3050; victim.y = 3000; victim.rig = 0.08; victim.hull = 0.7; victim._sunk = false; victim.adrift = null;
+  victim.cargo = { Gold: 0, People: 0, Food: 0 };            // starts with no repair timber → any it has after = from aid
   victim.voyage = { reason: 'trade', stops: [{ islandId: w.islands[2].id, sell: {}, buy: {}, people: 0 }], index: 0 };
   victim.state = 'outbound';
-  const rig0 = victim.rig;
   for (let i = 0; i < 10; i++) ship(w, w.rules.SIM_STEP);
-  assert.ok(victim.rig > rig0, 'the ally hove to and patched the dismasted rig');
+  assert.ok((victim.cargo.Fiber || 0) > 0 || (victim.cargo.Wood || 0) > 0, 'the ally handed over spare canvas/timber for her to mend herself with');
   assert.ok(helper._aidDeeds && helper._aidDeeds.length, 'and recorded the deed to report home');
 });
 

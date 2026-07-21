@@ -17,7 +17,7 @@ import { shipName } from './naming.js';
 import { computeFleetByHome, fleetAt } from './fleet.js';
 import { setAct, combatStrength } from './piracy.js';
 import { steerAroundIslands, islandLandRadius } from './navigation.js';
-import { rigMult, repairAtPort, juryRig, stowRepairKit, inDistress, renderAid, spareAboard } from './repair.js';
+import { rigMult, repairAtPort, juryRig, maybeHeaveToRepair, stowRepairKit, inDistress, renderAid, spareAboard } from './repair.js';
 import { bumpRep } from './reputation.js';
 import { streamFloat } from './rng.js';
 import { buildShipGrid, anyShipInRange, countShipsInRange, eachShipInRange, nearestIsland as gridNearestIsland, nearestShip } from './grid.js';
@@ -65,6 +65,8 @@ export function createShip(idNum, home, tuning, type = tuning.SHIP_DEFAULT_TYPE 
     _upCd: 0,        // simTime before which a new uprising can't start
     hull: 1,         // structural integrity 0..1 (repair.js) — combat HP + founder risk
     rig: 1,          // rigging/sails condition 0..1 — multiplies effective speed
+    hullSound: 1,    // structural SOUNDNESS ceiling 0..1 — hull can be jury-rigged only up to this; erodes with damage, rebuilt only at a dry-dock
+    rigSound: 1,     // rigging soundness ceiling 0..1 — same, for the rig
   };
 }
 
@@ -421,6 +423,16 @@ function updateShip(world, ship, h) {
   const v = ship.voyage;
   if (ship.uprising) return; // crew in revolt — dead in the water until crew.js resolves it
   if (ship.adrift) { driftLost(world, ship, h); return; } // blown off course — wanders until bearings return
+  // SELF-REPAIR — the SAME heave-to a raider uses (a boat's a boat): badly hurt, repair timber aboard (a
+  // stowed kit or spars from a rescue), and no lawful port within reach to limp to? HEAVE TO and jury-rig,
+  // dead in the water, showing the careen badge. A merchant normally just docks to mend, so this only fires
+  // when it's genuinely stranded and hurt — but it's the one shared mechanism, not a merchant-only path.
+  if ((ship.state === 'outbound' || ship.state === 'inbound') && !ship._sheltered
+      && ((ship.hull != null ? ship.hull : 1) < 0.5 || (ship.rig != null ? ship.rig : 1) < 0.4)) {
+    const port = gridNearestIsland(world, ship.x, ship.y);
+    const nearBase = port && !port.haven && Math.hypot(port.x - ship.x, port.y - ship.y) <= t.HAVEN_DEFEND_RANGE;
+    if (!nearBase && maybeHeaveToRepair(world, ship, h)) return; // hove to this tick — don't sail
+  }
   switch (ship.state) {
     case 'idle':
       if (v && v.stops.length) {

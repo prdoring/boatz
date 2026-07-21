@@ -14,12 +14,23 @@
 import { GOLD, transfer, cargoUnits } from './resources.js';
 import { bidAsk } from './pricing.js';
 import { skill01, awardSeamanshipXp, awardCommandXp } from './captains.js';
-import { logEvent, logEventThrottled } from './events.js';
+import { logEvent, logEventThrottled, maybeSink } from './events.js';
 
-/** Give a fresh hull full condition (called from createShip). */
+/** Give a fresh hull full condition (called from createShip). hullSound/rigSound are the STRUCTURAL
+ *  ceilings the working hull/rig can be nursed back up to at sea; they erode with damage and only a real
+ *  dry-dock rebuilds them (see damageHull/juryRig/repairAtPort). */
 export function initCondition(ship) {
   ship.hull = 1;
   ship.rig = 1;
+  ship.hullSound = 1;
+  ship.rigSound = 1;
+}
+
+/** The structural-soundness CEILING of a track ('hull'/'rig'), defaulting to 1 for old saves / raw test
+ *  ships that never carried the field — the load-bearing NaN guard for every soundness read. */
+function soundOf(ship, track) {
+  const v = ship[track + 'Sound'];
+  return v != null ? v : 1;
 }
 
 /** Speed multiplier from rigging condition — a dismasted hull still crawls (RIG_SPEED_FLOOR), never
@@ -43,17 +54,33 @@ function armorOf(ship, rules) {
   return (spec && spec.armor) || 1;
 }
 
-/** Apply hull damage (armour-divided), clamped to [0,1]. Returns the new hull. */
+/** Erode a track's structural SOUNDNESS by a fraction of the hull/rig actually lost — permanent harm only
+ *  a dry-dock undoes — floored so a jury-rigged hull stays seaworthy. `applied` is the armour-divided delta. */
+function wearSoundness(ship, track, applied, rules) {
+  const wear = (track === 'hull'
+    ? (rules.SOUNDNESS_WEAR_HULL != null ? rules.SOUNDNESS_WEAR_HULL : 0.3)
+    : (rules.SOUNDNESS_WEAR_RIG != null ? rules.SOUNDNESS_WEAR_RIG : 0.2));
+  const floor = rules.SOUNDNESS_FLOOR != null ? rules.SOUNDNESS_FLOOR : 0.45;
+  ship[track + 'Sound'] = Math.max(floor, soundOf(ship, track) - wear * Math.max(0, applied));
+}
+
+/** Apply hull damage (armour-divided), clamped to [0,1]; a fraction erodes structural soundness. Returns hull. */
 export function damageHull(ship, amt, rules) {
   if (ship.hull == null) ship.hull = 1;
-  ship.hull = Math.max(0, ship.hull - Math.max(0, amt) / armorOf(ship, rules));
+  const before = ship.hull;
+  ship.hull = Math.max(0, before - Math.max(0, amt) / armorOf(ship, rules));
+  wearSoundness(ship, 'hull', before - ship.hull, rules);
+  if (ship.hull > ship.hullSound) ship.hull = ship.hullSound; // invariant hull <= hullSound (belt-and-braces)
   return ship.hull;
 }
 
-/** Apply rigging damage (armour-divided), clamped to [0,1]. Returns the new rig. */
+/** Apply rigging damage (armour-divided), clamped to [0,1]; a fraction erodes structural soundness. Returns rig. */
 export function damageRig(ship, amt, rules) {
   if (ship.rig == null) ship.rig = 1;
-  ship.rig = Math.max(0, ship.rig - Math.max(0, amt) / armorOf(ship, rules));
+  const before = ship.rig;
+  ship.rig = Math.max(0, before - Math.max(0, amt) / armorOf(ship, rules));
+  wearSoundness(ship, 'rig', before - ship.rig, rules);
+  if (ship.rig > ship.rigSound) ship.rig = ship.rigSound;
   return ship.rig;
 }
 
@@ -73,7 +100,8 @@ export function inDistress(ship, rules) {
 function mendTrack(world, island, ship, track, good, perFull, capFrac, atHome) {
   const r = world.rules;
   const cond = ship[track] != null ? ship[track] : 1;
-  const missing = 1 - cond;
+  const ceil = soundOf(ship, track);                    // can't mend the working track above its structural soundness
+  const missing = ceil - cond;                          // (a foreign yard patches to soundness; only a dry-dock raised it)
   if (missing < 0.02) return 0;
   const want = Math.min(missing, capFrac);              // condition we'd restore this dock
   const needMat = want * (perFull || 10);               // timber/canvas that would take
@@ -93,7 +121,7 @@ function mendTrack(world, island, ship, track, good, perFull, capFrac, atHome) {
   island.stock[good] = Math.max(0, (island.stock[good] || 0) - mat);            // material consumed (goods aren't conserved)
   if (!atHome && ask > 0) transfer(ship.cargo, GOLD, island, 'gold', Math.min(ship.cargo[GOLD] || 0, mat * ask));
   const gained = mat / (perFull || 10);
-  ship[track] = Math.min(1, cond + gained);
+  ship[track] = Math.min(ceil, cond + gained);
   return gained;
 }
 
@@ -104,11 +132,21 @@ export function repairAtPort(world, island, ship) {
   if (!island || !island.stock) return;
   if (ship.hull == null) ship.hull = 1;
   if (ship.rig == null) ship.rig = 1;
+  if (ship.hullSound == null) ship.hullSound = 1;
+  if (ship.rigSound == null) ship.rigSound = 1;
   // A ship's own faction mends her free: a home port her merchants, a HAVEN its rogues (the den's
   // shipwrights). A foreign yard sells timber & canvas at ask like any other good.
   const atHome = island.id === ship.homeId || (island.haven && ship.pirate);
   const skill = skill01(ship.captain, r, 'sea');
   const cap = (r.REPAIR_PER_DOCK || 0.6) * (1 + (r.REPAIR_SKILL_BONUS || 0) * skill);
+  // A REAL DRY-DOCK (home port / own haven) rebuilds structural SOUNDNESS toward whole — re-planking a
+  // ship a jury-rig or a foreign yard never could. Done BEFORE mending so the working track can then be
+  // filled to the raised ceiling. A foreign yard leaves soundness untouched (it only patches to it).
+  if (atHome) {
+    const restore = (r.SOUNDNESS_REFIT_PER_DOCK || 0.25) * (1 + (r.REPAIR_SKILL_BONUS || 0) * skill);
+    ship.hullSound = Math.min(1, ship.hullSound + restore);
+    ship.rigSound = Math.min(1, ship.rigSound + restore);
+  }
   const goods = r.REPAIR_GOODS || { hull: 'Wood', rig: 'Fiber' };
   const hull0 = ship.hull;
   mendTrack(world, island, ship, 'hull', goods.hull, r.REPAIR_WOOD_PER_HULL, cap, atHome);
@@ -118,16 +156,59 @@ export function repairAtPort(world, island, ship) {
       `${ship.name || 'A battered ship'} was refitted at ${island.name}.`, { islandId: island.id, shipId: ship.id });
 }
 
-/** Mend one track AT SEA from a good CARRIED ABOARD (no port, no purchase) — capped by `cap` condition. */
-function mendFromHold(ship, track, good, perFull, cap) {
+/** Mend one track from an ISLAND's stock, up to `ceil`, by at most `rate` condition. */
+function mendFromStock(island, ship, track, good, perFull, rate, ceil) {
   const cond = ship[track] != null ? ship[track] : 1;
-  const missing = 1 - cond;
-  if (missing < 0.005 || cap <= 0) return;
-  const want = Math.min(missing, cap);
+  const room = ceil - cond;
+  if (room < 1e-6 || rate <= 0) return;
+  const want = Math.min(room, rate);
+  const mat = Math.min(want * (perFull || 10), island.stock[good] || 0);
+  if (mat < 1e-9) return;
+  island.stock[good] = Math.max(0, (island.stock[good] || 0) - mat);   // the den/port spends its own timber
+  ship[track] = Math.min(ceil, cond + mat / (perFull || 10));
+}
+
+/** GRADUAL dry-dock — a pirate HAVEN mends its raiders (or a guard port its privateers) a small step EACH
+ *  TICK while they lie in its roads, from its own Wood/Fiber, paced by `dDay` (like the food resupply) and
+ *  capped by structural soundness (which, as a real dry-dock, it also slowly rebuilds). Unlike repairAtPort's
+ *  per-dock CHUNK, this mends SMOOTHLY over a day or two — no instant full-heal jump on a ship that never
+ *  visibly stopped. Free to its own; called every substep the ship is in range (the caller gates on combat). */
+export function refitGradual(world, island, ship, dDay) {
+  const r = world.rules;
+  if (!island || !island.stock) return;
+  if (ship.hull == null) ship.hull = 1;
+  if (ship.rig == null) ship.rig = 1;
+  if (ship.hullSound == null) ship.hullSound = 1;
+  if (ship.rigSound == null) ship.rigSound = 1;
+  const skill = skill01(ship.captain, r, 'sea');
+  const rate = (r.HAVEN_MEND_PER_DAY != null ? r.HAVEN_MEND_PER_DAY : 0.6) * (1 + (r.REPAIR_SKILL_BONUS || 0) * skill) * dDay;
+  if (rate <= 0) return;
+  // Rebuild structural soundness slowly (a real dry-dock), then mend the working track up to it.
+  const srate = (r.SOUNDNESS_REFIT_PER_DAY != null ? r.SOUNDNESS_REFIT_PER_DAY : 0.35) * dDay;
+  ship.hullSound = Math.min(1, ship.hullSound + srate);
+  ship.rigSound = Math.min(1, ship.rigSound + srate);
+  const goods = r.REPAIR_GOODS || { hull: 'Wood', rig: 'Fiber' };
+  const hull0 = ship.hull;
+  mendFromStock(island, ship, 'hull', goods.hull, r.REPAIR_WOOD_PER_HULL, rate, ship.hullSound);
+  mendFromStock(island, ship, 'rig', goods.rig, r.REPAIR_FIBER_PER_RIG, rate, ship.rigSound);
+  if (hull0 < 0.5 && ship.hull >= 0.7 && hull0 < ship.hull) // crossed back to seaworthy — a quiet good-news beat, once
+    logEventThrottled(world, 'refit', r.SIM_DAY_SECONDS,
+      `${ship.name || 'A battered ship'} was refitted at ${island.name}.`, { islandId: island.id, shipId: ship.id });
+}
+
+/** Mend one track AT SEA from a good CARRIED ABOARD (no port, no purchase) — `rate` is the condition
+ *  restorable this tick; `ceil` is the hard ceiling a jury-rig can reach (min of structural soundness and
+ *  the track's JURYRIG_REACH). A field patch can never exceed it — that's what keeps a real dry-dock worth
+ *  seeking. */
+function mendFromHold(ship, track, good, perFull, rate, ceil) {
+  const cond = ship[track] != null ? ship[track] : 1;
+  const room = ceil - cond;
+  if (room < 0.005 || rate <= 0) return;
+  const want = Math.min(room, rate);
   const mat = Math.min(want * (perFull || 10), ship.cargo[good] || 0);
-  if (mat < 0.01) return;
+  if (mat < 1e-9) return; // any positive mend applies — jury-rig is called PER SUBSTEP, so it must accumulate small gains (not be rejected as "too tiny" each tick)
   ship.cargo[good] = (ship.cargo[good] || 0) - mat;   // stores consumed (goods aren't conserved)
-  ship[track] = Math.min(1, cond + mat / (perFull || 10));
+  ship[track] = Math.min(ceil, cond + mat / (perFull || 10));
 }
 
 /** A cautious captain lays in SPARE Wood & Fiber for at-sea jury-rigging — but only into hold space left
@@ -165,30 +246,24 @@ export function spareAboard(ship, good, keep) {
 export function renderAid(world, helper, victim) {
   const r = world.rules;
   const goods = r.REPAIR_GOODS || { hull: 'Wood', rig: 'Fiber' };
+  const gpu = r.GOLD_PER_CARGO_UNIT;
   let helped = false;
-  // Spare CANVAS → work the dismasted rig back to making sail.
-  const fib = Math.min(r.RESCUE_FIBER_BATCH || 0, spareAboard(helper, goods.rig, r.RESCUE_KEEP_FIBER));
-  if (fib >= 1 && (victim.rig != null ? victim.rig : 1) < 1) {
-    helper.cargo[goods.rig] -= fib;
-    victim.rig = Math.min(1, (victim.rig != null ? victim.rig : 1) + fib / (r.REPAIR_FIBER_PER_RIG || 8));
-    helped = true;
-  }
-  // Spare TIMBER → shore up the battered hull.
-  const wood = Math.min(r.RESCUE_WOOD_BATCH || 0, spareAboard(helper, goods.hull, r.RESCUE_KEEP_WOOD));
-  if (wood >= 1 && (victim.hull != null ? victim.hull : 1) < 1) {
-    helper.cargo[goods.hull] -= wood;
-    victim.hull = Math.min(1, (victim.hull != null ? victim.hull : 1) + wood / (r.REPAIR_WOOD_PER_HULL || 10));
-    helped = true;
-  }
-  // Spare VICTUALS → get the crew under way again and lift their spirits.
+  // Hand SPARE canvas, timber & victuals into the victim's OWN HOLD — she MENDS HERSELF with them over the
+  // following days (juryRig, in ship.js), rather than being patched whole on the spot: a rescued ship
+  // recovers GRADUALLY at her own hands. Only spare goods change hands (spareAboard), and only what fits.
+  const give = (good, batch, keep) => {
+    const amt = Math.min(batch || 0, spareAboard(helper, good, keep || 0), Math.max(0, victim.capacity - cargoUnits(victim, gpu)));
+    if (amt < 1) return false;
+    helper.cargo[good] = (helper.cargo[good] || 0) - amt;
+    victim.cargo[good] = (victim.cargo[good] || 0) + amt;
+    return true;
+  };
+  // CANVAS → so she can jury-rig her dismasted rig back and make sail; TIMBER → to shore up a holed hull.
+  if ((victim.rig != null ? victim.rig : 1) < soundOf(victim, 'rig') && give(goods.rig, r.RESCUE_FIBER_BATCH, r.RESCUE_KEEP_FIBER)) helped = true;
+  if ((victim.hull != null ? victim.hull : 1) < soundOf(victim, 'hull') && give(goods.hull, r.RESCUE_WOOD_BATCH, r.RESCUE_KEEP_WOOD)) helped = true;
+  // VICTUALS → the crew eats at once and takes heart (food is consumed, not a repair material).
   const foodKeep = (r.CREW_FOOD_PER_DAY || 1) * (r.PROVISION_DAYS || 1);
-  const food = Math.min(r.RESCUE_FOOD_BATCH || 0, spareAboard(helper, 'Food', foodKeep));
-  if (food >= 1) {
-    helper.cargo.Food -= food;
-    victim.cargo.Food = (victim.cargo.Food || 0) + food;
-    victim.morale = Math.min(1, (victim.morale != null ? victim.morale : 0.5) + 0.1);
-    helped = true;
-  }
+  if (give('Food', r.RESCUE_FOOD_BATCH, foodKeep)) { victim.morale = Math.min(1, (victim.morale != null ? victim.morale : 0.5) + 0.1); helped = true; }
   if (!helped) return false;
   awardSeamanshipXp(helper.captain, r.XP_RESCUE || 0);
   awardCommandXp(helper.captain, r.XP_RESCUE || 0);
@@ -211,13 +286,60 @@ export function renderAid(world, helper, victim) {
  *  hold slots a cautious captain gives up to spare timber & canvas (stowRepairKit). No port, no coin —
  *  just the crew, their stores, and the captain's skill; enough to nurse a cripple toward port, not a
  *  full refit. This is what lets a dismasted or storm-battered ship claw its way home. */
-export function juryRig(world, ship, h) {
+export function juryRig(world, ship, h, mult = 1) {
   const r = world.rules;
   const days = h / (r.SIM_DAY_SECONDS || 60);
   const sea = skill01(ship.captain, r, 'sea');
-  const rate = (r.JURYRIG_PER_DAY || 0) * (0.3 + sea) * days; // a master shipwright's hand mends faster
+  const rate = (r.JURYRIG_PER_DAY || 0) * (0.3 + sea) * days * mult; // a master shipwright's hand mends faster; mult>1 when hove-to
   if (rate <= 0) return;
   const goods = r.REPAIR_GOODS || { hull: 'Wood', rig: 'Fiber' };
-  mendFromHold(ship, 'hull', goods.hull, r.REPAIR_WOOD_PER_HULL, rate);
-  mendFromHold(ship, 'rig', goods.rig, r.REPAIR_FIBER_PER_RIG, rate);
+  // The ceiling a field patch can reach: the track's structural soundness, but never above its JURYRIG_REACH
+  // (rig is more jury-riggable than hull — a raider mends its sails to run further than it mends its frame).
+  const hullCeil = Math.min(soundOf(ship, 'hull'), r.JURYRIG_REACH_HULL != null ? r.JURYRIG_REACH_HULL : 0.55);
+  const rigCeil = Math.min(soundOf(ship, 'rig'), r.JURYRIG_REACH_RIG != null ? r.JURYRIG_REACH_RIG : 0.75);
+  mendFromHold(ship, 'hull', goods.hull, r.REPAIR_WOOD_PER_HULL, rate, hullCeil);
+  mendFromHold(ship, 'rig', goods.rig, r.REPAIR_FIBER_PER_RIG, rate, rigCeil);
+}
+
+/** Does a jury-rig still have room to lift a track (soundness/REACH ceiling above current condition)? */
+function juryHelps(ship, r) {
+  const hullCeil = Math.min(soundOf(ship, 'hull'), r.JURYRIG_REACH_HULL != null ? r.JURYRIG_REACH_HULL : 0.55);
+  const rigCeil = Math.min(soundOf(ship, 'rig'), r.JURYRIG_REACH_RIG != null ? r.JURYRIG_REACH_RIG : 0.75);
+  return (ship.hull != null ? ship.hull : 1) < hullCeil - 0.005 || (ship.rig != null ? ship.rig : 1) < rigCeil - 0.005;
+}
+
+/** HEAVE TO and jury-rig (pirates & privateers, driven from their sim loops). A crippled hull with repair
+ *  timber aboard and no dry-dock in reach lies-to DEAD IN THE WATER and patches itself at JURYRIG_HEAVE_MULT
+ *  the passive rate — COMMITTED for HEAVE_COMMIT_SECONDS (`_heaveUntil`): a real "repair vs. run" decision,
+ *  and the latch keeps the sim substep-exact (the move/no-move choice can't flip mid-step) and steadies the
+ *  careen art. It does NOT move the ship, but IS catchable — a modest founder/exposure check runs so a leaky
+ *  hull isn't safest sitting still. Returns true if hove-to THIS tick (the caller then skips its own move and
+ *  checks `ship._sunk`). Kit runs dry → it breaks off. `setAct` is inlined to avoid a repair.js→piracy.js
+ *  import cycle. */
+export function maybeHeaveToRepair(world, ship, h) {
+  const r = world.rules;
+  const latched = world.simTime < (ship._heaveUntil || 0);
+  const goods = r.REPAIR_GOODS || { hull: 'Wood', rig: 'Fiber' };
+  const kitMin = r.HEAVE_KIT_MIN || 3;
+  const hasKit = (ship.cargo[goods.hull] || 0) >= kitMin || (ship.cargo[goods.rig] || 0) >= kitMin;
+  if (latched && !hasKit) { ship._heaveUntil = 0; return false; }           // ran out of timber mid-repair — break off
+  if (!latched && !(hasKit && juryHelps(ship, r))) return false;            // nothing to gain (or no kit) — don't heave to
+  if (!latched) {
+    ship._heaveUntil = world.simTime + (r.HEAVE_COMMIT_SECONDS || 24);
+    // Log the careen beat ONCE per episode via a PER-SHIP gate (logEventThrottled is global-per-kind and
+    // would mute every other ship's careen). tier:'log' keeps it in the ship's Story tab, off the crawl.
+    const day = r.SIM_DAY_SECONDS || 60;
+    if (world.simTime - (ship._careenLoggedAt != null ? ship._careenLoggedAt : -1e9) > day) {
+      ship._careenLoggedAt = world.simTime;
+      logEvent(world, 'careen', `${ship.name || 'A ship'} hove to and jury-rigged her hull and rigging.`,
+        { shipId: ship.id, tier: 'log', x: ship.x, y: ship.y });
+    }
+  }
+  if (!ship._act) ship._act = { k: 'careen', id: null };                    // inline setAct (no piracy.js import → no cycle)
+  else { ship._act.k = 'careen'; ship._act.id = null; }
+  juryRig(world, ship, h, r.JURYRIG_HEAVE_MULT || 2.5);
+  // Dead in the water is not safe: a modest founder check, so heaving-to in a swell with a holed hull
+  // still carries risk (CAREEN_FOUNDER_MULT scales a normal sailing tick's exposure).
+  maybeSink(world, ship, (ship.speed || r.SHIP_SPEED || 0) * h * (r.CAREEN_FOUNDER_MULT != null ? r.CAREEN_FOUNDER_MULT : 1));
+  return true;
 }

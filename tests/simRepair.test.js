@@ -20,9 +20,10 @@ function boat(over = {}) {
   return { id: 's1', homeId: 'i1', type: 'brig', cargo: { Gold: 1000, Food: 50 }, captain: capt(), hull: 1, rig: 1, ...over };
 }
 
-test('initCondition sets a fresh hull and rig to full', () => {
+test('initCondition sets a fresh hull and rig to full — and their soundness ceilings', () => {
   const s = {}; initCondition(s);
   assert.equal(s.hull, 1); assert.equal(s.rig, 1);
+  assert.equal(s.hullSound, 1); assert.equal(s.rigSound, 1);
 });
 
 test('rigMult: a whole rig is neutral (×1); a dismasted hull crawls at the floor, never frozen', () => {

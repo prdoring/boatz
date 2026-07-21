@@ -35,7 +35,7 @@
     "quellReb": "toil", "longpeace": "last", "contract": "last", "contractdone": "last",
     "overreach": "toil", "ambition": "last", "famine": "last", "recover": "last",
     "neworder": "last", "goldenage": "last", "redeemed": "last",
-    "workshop": "last", "derelict": "toil"
+    "workshop": "last", "derelict": "toil", "careen": "toil"
   },
   "repeated": [" — and so it went, time and again", " — and not for the last time", " — as happened more than once", " — the same tale, over and over"],
 

@@ -74,6 +74,14 @@ const ICONS = {
       ctx.moveTo(d * -0.34 * s, 0.12 * s); ctx.lineTo(d * -0.08 * s, 0.40 * s); ctx.stroke();
     }
   },
+  // Shipwright's mallet — a caulking maul (stout head on a handle): careening / at-sea repair.
+  mallet(ctx, s, color) {
+    ctx.strokeStyle = color; ctx.lineCap = 'round';
+    ctx.lineWidth = Math.max(2, 0.34 * s * 2);                       // the head — a thick bar across the top
+    ctx.beginPath(); ctx.moveTo(-0.5 * s, -0.42 * s); ctx.lineTo(0.5 * s, -0.42 * s); ctx.stroke();
+    ctx.lineWidth = Math.max(1.4, 0.16 * s * 2);                     // the handle — down to the base
+    ctx.beginPath(); ctx.moveTo(0, -0.42 * s); ctx.lineTo(0, 0.62 * s); ctx.stroke();
+  },
   // Shield — a rounded crest.
   shield(ctx, s, color) {
     ctx.fillStyle = color;

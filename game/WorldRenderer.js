@@ -46,7 +46,7 @@ const SHIP_LOD_MIN = 5;
 const HEALTHBAR_ZOOM_MIN = 0.7;
 // Ships closer than this (world units, ≈ PIRATE_COMBAT_RANGE) and locked in a fight trade visible broadsides.
 const COMBAT_VIS_RANGE = 175;
-const COMBAT_ACTS = new Set(['hunt', 'defend', 'assault', 'raid', 'flee']);
+const COMBAT_ACTS = new Set(['hunt', 'fight', 'defend', 'assault', 'raid', 'flee']);
 /** Small stable string hash → a per-ship phase offset so broadsides don't fire in lockstep. */
 function hashId(id) { let x = 0; const s = String(id); for (let i = 0; i < s.length; i++) x = (x * 31 + s.charCodeAt(i)) >>> 0; return x; }
 
@@ -595,6 +595,10 @@ export class WorldRenderer {
       else if (s.privateer) this._privateerMark(px, py, Math.max(SHIP_RADIUS * 1.9 * zoom, 12), now);
       // A merchant blown off course & lost at sea — a pale, wallowing distress ring so it's spotted (and watchable).
       else if (s.adrift) this._distressMark(px, py, Math.max(SHIP_RADIUS * 1.9 * zoom, 12), now);
+      // A ship HOVE TO making repairs — an ADDITIVE badge (its own check, not part of the faction chain above)
+      // so a careening pirate keeps its skull AND reads as under repair; drawn warm, to diverge from the
+      // cold 'adrift' distress ring (a workmanlike stop, not a helpless one).
+      if (s.act === 'careen') this._careenMark(px, py, Math.max(SHIP_RADIUS * 1.9 * zoom, 12), now);
       // COMBAT is now attrition over several seconds — SHOW it: a ship locked onto a foe within gun-range
       // trades rolling broadsides (muzzle flash, cannon smoke, shot, hit spark) so a fight reads as a fight,
       // not two hulls touching then one vanishing.
@@ -602,13 +606,18 @@ export class WorldRenderer {
       if (s.act === 'hunt' && s.actId != null) {
         const foe = shipsById[s.actId];
         if (foe && Math.hypot((foe.x || 0) - s.x, (foe.y || 0) - s.y) < COMBAT_VIS_RANGE) this._combatFx(s, foe, now);
+      } else if ((s.act === 'assault' || s.act === 'raid') && s.actId != null) {
+        // Bombarding an ISLAND (a privateer battering a haven, a pirate sacking a port): trade broadsides
+        // with the shore — the boat fires at the walls and the batteries answer (_combatFx draws both ways).
+        const isl = islandsById[s.actId];
+        if (isl && Math.hypot((isl.x || 0) - s.x, (isl.y || 0) - s.y) < COMBAT_VIS_RANGE) this._combatFx(s, isl, now);
       }
       // Hull/rig condition over any ship that's damaged or in a fight — so a battle's toll is legible on the
       // map. Zoomed IN, the full dual bar; zoomed OUT, a single compact damage dot (the two thin bars turn
       // fiddly at speck size), so a hurt ship still reads at a glance either way. Healthy cruisers show nothing.
       if (fighting || (s.hull != null && s.hull < 0.985) || (s.rig != null && s.rig < 0.985)) {
         if (zoom >= HEALTHBAR_ZOOM_MIN) this._healthBar(px, py, r, s, zoom);
-        else this._damageDot(px, py, r, s, zoom, now);
+        else if (s.act !== 'careen') this._damageDot(px, py, r, s, zoom, now); // the careen badge stands in for the dot at LOD
       }
     }
   }
@@ -619,6 +628,7 @@ export class WorldRenderer {
    *  has already vanished from the snapshot and is drawn as a client actor by drawSinkingActors(). */
   _presentationState(id, berth, s, presentation) {
     if (berth) return 'docked';
+    if (s.act === 'careen') return 'careening';                   // hove-to, sails furled, jury-rigging (wins over 'damaged')
     if (presentation && presentation.has(id)) return 'damaged';   // transient hit-flash (scene overlay)
     if (s.hull != null && s.hull < 0.5) return 'damaged';         // persistent — a battered hull wears it
     return s.state || 'sailing';
@@ -910,6 +920,26 @@ export class WorldRenderer {
     ctx.restore();
   }
 
+  /** A ship HOVE TO making repairs — a warm ochre badge (mallet glyph + a solid, steady ring), deliberately
+   *  UNLIKE the cold, dashed, slowly-wallowing 'adrift' distress ring: this is a workmanlike stop, under
+   *  control, not a helpless one. A slow, faint work-glow pulse so it reads as active labour. */
+  _careenMark(wx, wy, r, now) {
+    const { sx, sy } = this.camera.worldToScreen(wx, wy);
+    const ctx = this.ctx;
+    const pulse = 0.5 + 0.5 * Math.sin(now * 0.004);
+    ctx.save();
+    ctx.globalAlpha = 0.16 + 0.1 * pulse;
+    ctx.fillStyle = '#c98a3a';
+    ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 0.9;
+    ctx.strokeStyle = '#e0a24a';       // SOLID ring (distress is dashed) — a steady, deliberate stop
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(sx, sy, r * 0.95, 0, Math.PI * 2); ctx.stroke();
+    ctx.globalAlpha = 0.75 + 0.25 * pulse;
+    drawIcon(ctx, 'mallet', sx, sy - r - 6, Math.max(11, r * 1.05), '#f0cd8a'); // shipwright's maul — making repairs
+    ctx.restore();
+  }
+
   /** A running gunnery duel between two ships (world coords): both trade rolling broadsides so a fight is
    *  visibly a fight over its several seconds — the client cadence mirrors the sim's ~1.2s combat round. */
   _combatFx(hunter, foe, now) {
@@ -979,11 +1009,17 @@ export class WorldRenderer {
     const ctx = this.ctx;
     const hull = Math.max(0, Math.min(1, s.hull != null ? s.hull : 1));
     const rig = Math.max(0, Math.min(1, s.rig != null ? s.rig : 1));
+    const hullSound = Math.max(0, Math.min(1, s.hullSound != null ? s.hullSound : 1));
+    const rigSound = Math.max(0, Math.min(1, s.rigSound != null ? s.rigSound : 1));
     const w = Math.max(15, r * 2 * zoom);
     const x = sx - w / 2, y = sy - Math.max(r * zoom, 8) - 10, bh = 2.6;
     ctx.save();
     ctx.fillStyle = 'rgba(0,0,0,0.55)';
     ctx.fillRect(x - 1, y - 1, w + 2, bh * 2 + 4);
+    // "Lost capacity" wash from soundness→full (only a dry-dock rebuilds it) — drawn under the health fill.
+    ctx.fillStyle = 'rgba(150,72,42,0.7)';
+    if (hullSound < 0.995) ctx.fillRect(x + w * hullSound, y, w * (1 - hullSound), bh);
+    if (rigSound < 0.995) ctx.fillRect(x + w * rigSound, y + bh + 1, w * (1 - rigSound), bh);
     ctx.fillStyle = hull > 0.6 ? '#5fd06a' : hull > 0.3 ? '#e6b84a' : '#e0503a';
     ctx.fillRect(x, y, w * hull, bh);
     ctx.fillStyle = '#6fb8e0';

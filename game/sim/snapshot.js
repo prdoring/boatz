@@ -99,6 +99,8 @@ export function snapshotShipsCold(world) {
       morale: round2(s.morale != null ? s.morale : 1),
       hull: round2(s.hull != null ? s.hull : 1),   // structural integrity 0..1 (panel gauge + damaged art)
       rig: round2(s.rig != null ? s.rig : 1),      // rigging condition 0..1 (panel gauge)
+      hullSound: round2(s.hullSound != null ? s.hullSound : 1), // structural soundness ceiling (panel gauge notch)
+      rigSound: round2(s.rigSound != null ? s.rigSound : 1),    // rig soundness ceiling (panel gauge notch)
       foodDays: round1(foodDaysAboard(world, s)),
       act: s._act ? s._act.k : null,     // what it is DOING right now (blockade/hunt/assault/flee…) — panel activity line
       actId: s._act ? (s._act.id || null) : null, // the island/ship that action concerns (client resolves the name)

@@ -65,6 +65,13 @@ test('an unknown route returns 404', async () => {
   assert.equal(res.status, 404);
 });
 
+test('the sim manual is served through the docs mount (200 HTML)', async () => {
+  const res = await request('/docs/sim-manual.html');
+  assert.equal(res.status, 200);
+  assert.ok(/text\/html/.test(res.headers['content-type'] || ''), 'expected an HTML content-type');
+  assert.ok(res.body.length > 0, 'expected a non-empty body');
+});
+
 test('.backups segment is not served through the data mount (404)', async () => {
   const res = await request('/data/.backups/anything.json');
   assert.equal(res.status, 404);

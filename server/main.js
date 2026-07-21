@@ -35,6 +35,7 @@ const MOUNTS = {
   editors: DIRS.editors,
   data: DIRS.data,
   game: DIRS.game,
+  docs: DIRS.docs,
   assets: path.join(DIRS.root, 'assets'),
   SFX: DIRS.sfx,
   MIDI: DIRS.midi,

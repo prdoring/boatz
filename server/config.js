@@ -35,6 +35,7 @@ export const DIRS = {
   editors: path.join(ROOT, 'editors'),
   data: path.join(ROOT, 'data'),
   game: path.join(ROOT, 'game'),
+  docs: path.join(ROOT, 'docs'),
   sfx: path.join(ROOT, 'assets', 'SFX'),
   midi: path.join(ROOT, 'assets', 'MIDI'),
   // Web root for top-level static files browsers/crawlers fetch by convention

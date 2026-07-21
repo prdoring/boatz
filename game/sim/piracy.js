@@ -201,15 +201,41 @@ export function piracy(world, h) {
     // from. Neutral at average skill, so it adds spread without shifting the baseline.
     const skill = skill01(ship.captain, t);
     const reach = 1 + (skill - 0.5) * (t.PIRATE_SKILL_REACH || 0);
+    const boldness = tr.boldness != null ? tr.boldness : 0.5;
+    // How much punishment a captain bears before he quits the hunt to mend: the bold press on with a
+    // staved-in hull, the timid sheer off at the first serious wound (continuous across boldness).
+    const critHull = (t.PIRATE_FLEE_HULL || 0.4) - (boldness - 0.5) * (t.PIRATE_FLEE_HULL_BOLD || 0);
+    const crippled = (ship.hull != null ? ship.hull : 1) < critHull;
+    const den = nearestHaven(havenList, ship);
+    const nearDen = den && dist(ship, den) <= t.HAVEN_DEFEND_RANGE;
 
-    // A TIMID raider that spots a privateer closing in BREAKS OFF and runs — no prize is worth the noose.
-    if (timid) {
-      const hunter = nearestShip(privGrid, ship.x, ship.y, null, t.PIRATE_FLEE_PRIVATEER_RANGE);
+    // A PIRATE-HUNTER BEARING DOWN — every raider now weighs it (not just the timid): STAND and give
+    // battle to a hunter it can match, or BREAK OFF and run for a haven to mend and shelter. The odds a
+    // captain will accept are set by his character — the bold engage even at a disadvantage, the timid
+    // only a plainly weaker foe; a raider already too mauled to trade blows always runs. (A siege right
+    // off the raider's OWN den is left to HAVEN DEFENCE below, which contests those waters rather than
+    // fleeing them.) This is what makes a hunted pirate decide — turn and fight, or flee — instead of
+    // blindly pressing its own chase while a privateer shoots it to pieces.
+    if (!nearDen) {
+      const hunter = nearestShip(privGrid, ship.x, ship.y, null, t.PIRATE_FLEE_PRIVATEER_RANGE * reach);
       if (hunter) {
-        ship._blockadeId = null; ship._prey = null;
-        setAct(ship, 'flee', hunter.id);
-        const away = awayPoint(hunter.x, hunter.y, ship.x, ship.y, t.PIRATE_HUNT_RANGE);
-        if (sail(world, ship, away.x, away.y, speed, h) === 'sunk') sunk = true;
+        const fightOdds = (t.PIRATE_FIGHTBACK_ODDS || 0.9) + (0.5 - boldness) * (t.PIRATE_FIGHTBACK_BOLD || 0)
+          - (skill - 0.5) * (t.PIRATE_DEFEND_SKILL_EDGE || 0); // bold accept parity/worse; timid want a clear edge
+        const stand = !crippled && combatStrength(world, ship) >= combatStrength(world, hunter) * fightOdds;
+        ship._blockadeId = null;
+        if (stand) { // turn and give battle — close to gun-range, then trade broadsides (attrition, no plunder)
+          ship._prey = null;
+          setAct(ship, 'fight', hunter.id);
+          if (dist(ship, hunter) <= t.PIRATE_COMBAT_RANGE) {
+            if (world.simTime >= (ship._fightCd || 0)) { if (skirmish(world, ship, hunter, false)) sunk = true; }
+            else { const st = standoffPoint(hunter, ship, t.COMBAT_STANDOFF || 80); if (sail(world, ship, st.x, st.y, speed, h) === 'sunk') sunk = true; }
+          } else if (sail(world, ship, hunter.x, hunter.y, speed, h) === 'sunk') sunk = true;
+        } else { // outmatched, timid, or too mauled to fight — run for a haven to mend (or just open water)
+          ship._prey = null;
+          setAct(ship, 'flee', hunter.id);
+          const to = den || awayPoint(hunter.x, hunter.y, ship.x, ship.y, t.PIRATE_HUNT_RANGE);
+          if (sail(world, ship, to.x, to.y, speed, h) === 'sunk') sunk = true;
+        }
         continue;
       }
     }
@@ -220,8 +246,7 @@ export function piracy(world, h) {
     // pirate that can trade blows CHARGES to board; one plainly outgunned SHADOWS the besieger at a menacing
     // distance — ready to pounce if its guns run dry or a consort closes — rather than throwing itself away.
     // Only the BOLD press the attack (pirates skew bold, so most do).
-    const den = nearestHaven(havenList, ship);
-    if (den && dist(ship, den) <= t.HAVEN_DEFEND_RANGE) {
+    if (nearDen) {
       const besieger = nearestShip(privGrid, den.x, den.y, null, t.HAVEN_DEFEND_RANGE);
       if (besieger) {
         ship._blockadeId = null;
@@ -243,6 +268,17 @@ export function piracy(world, h) {
         }
         continue;
       }
+    }
+
+    // SELF-PRESERVATION — a raider mauled past what its captain will bear breaks off the hunt and limps to
+    // its nearest haven to mend, EVEN WITH a fat prize in sight (a wreck takes no prizes — this is what
+    // stops a shot-to-pieces pirate blindly pressing a chase). With no haven to run to it fights on to
+    // survive; the gentler 'battered' valve below still catches a lesser hurt when the seas are quiet.
+    if (crippled && den) {
+      ship._blockadeId = null; ship._prey = null;
+      setAct(ship, 'resupply', den.id);
+      if (dist(ship, den) > t.HAVEN_RESUPPLY_RANGE * 0.5 && sail(world, ship, den.x, den.y, speed, h) === 'sunk') sunk = true;
+      continue;
     }
 
     // HUNGER makes a keener hunter — for a starving crew the prize IS food, so it can't afford to be picky.
@@ -282,7 +318,7 @@ export function piracy(world, h) {
     // survive and a haven grow rich.
     const laden = cargoUnits(ship) > ship.capacity * 0.5 || (ship.cargo[GOLD] || 0) > 150;
     const battered = (ship.hull != null ? ship.hull : 1) < t.REPAIR_HAVEN_HULL; // a mauled raider runs for the den to mend
-    const haven = nearestHaven(havenList, ship);
+    const haven = den; // nearest haven, already found above
     if (haven && (hungry || laden || battered)) {
       ship._blockadeId = null;
       setAct(ship, 'resupply', haven.id);
@@ -450,19 +486,28 @@ function strikes(world, ship) {
       || mor <= (t.STRIKE_MORALE || 0.2) * (1 - 0.5 * grit);
 }
 
-/** Will this ship BREAK OFF (flee) this round? Only when badly outmatched (own strength < foe·BREAKOFF_ODDS)
- *  AND her hull is thinning AND her rig can still run — a rig shot away means she CAN'T flee, and must fight
- *  or strike (the core domino). The fearless (boldness ≥ 0.8) press on regardless. */
-function breaksOff(world, ship, foeStrength) {
+/** FIGHT OR FLEE — the running assessment BOTH combatants make each round (a pirate, a privateer, any
+ *  captain in a duel): keep trading blows, or sheer off while she still can? A captain breaks off only
+ *  when the odds AND his hull have BOTH turned against him — never on either alone (a stout ship trades
+ *  blows even when outgunned; a battered one presses on while it's still winning the exchange). At an
+ *  AVERAGE captain (boldness & skill 0.5) the bars are exactly FLEE_HULL / BREAKOFF_ODDS; character only
+ *  widens the spread: NERVE (rising with boldness & seamanship) lowers both, so the bold & seasoned hold
+ *  on through worse. The FEARLESS (boldness ≥ COMBAT_FEARLESS) never quit; a DISMASTED ship (rig ≤
+ *  RIG_DISTRESS) can't run and must fight on or strike (the core domino). Returns true if `ship` should
+ *  disengage from `foe`. */
+export function assessFlee(world, ship, foe) {
   const t = world.rules;
   const tr = (ship.captain && ship.captain.traits) || {};
   const bold = tr.boldness != null ? tr.boldness : 0.5;
-  if (bold >= 0.8) return false;
-  const hull = ship.hull != null ? ship.hull : 1;
-  if (hull > (t.STRIKE_HULL || 0.3) + 0.2) return false; // still stout enough to trade blows
+  if (bold >= (t.COMBAT_FEARLESS != null ? t.COMBAT_FEARLESS : 0.8)) return false; // the fearless never quit a fight
   const rig = ship.rig != null ? ship.rig : 1;
-  if (rig <= (t.RIG_DISTRESS || 0.12)) return false;     // dismasted — can't run, must fight/strike
-  return combatStrength(world, ship) < foeStrength * (t.BREAKOFF_ODDS || 0.65);
+  if (rig <= (t.RIG_DISTRESS || 0.12)) return false;                               // dismasted — can't run, must fight/strike
+  const skill = skill01(ship.captain, t);
+  const nerve = (bold - 0.5) + (skill - 0.5) * (t.FLEE_SKILL_NERVE || 0);           // steadier the bolder & more seasoned
+  const hull = ship.hull != null ? ship.hull : 1;
+  if (hull > (t.FLEE_HULL || 0.5) - nerve * (t.FLEE_NERVE_HULL || 0)) return false; // still stout enough to trade blows
+  const oddsBar = Math.max(0.1, (t.BREAKOFF_ODDS || 0.65) - nerve * (t.FLEE_NERVE_ODDS || 0)); // the steady fight worse odds
+  return combatStrength(world, ship) < combatStrength(world, foe) * oddsBar;        // ...break off only when truly outmatched
 }
 
 /** A pirate takes a struck merchant as a PRIZE — the hull itself, not just her cargo — manned by a green
@@ -524,7 +569,7 @@ function boardPrize(world, pirate, victim) {
  *  or the raider, hull thinning, may BREAK OFF to run for a haven and repair. Returns true if a hull sank. */
 function resolveCombat(world, pirate, victim) {
   const t = world.rules;
-  const { sB: sV } = exchangeFire(world, pirate, victim); // sV = victim's strength this round (for the break-off test)
+  exchangeFire(world, pirate, victim);
   if (victim.hull <= 0) { // overkill — the merchant founders, her cargo lost
     victim._sunk = true;
     pirate._huntCd = world.simTime + t.PIRATE_HUNT_COOLDOWN; pirate._prey = null;
@@ -542,7 +587,7 @@ function resolveCombat(world, pirate, victim) {
     return true;
   }
   if (strikes(world, victim)) { boardPrize(world, pirate, victim); return false; }
-  if (breaksOff(world, pirate, sV)) { // the raider sheers off to lick its wounds at a haven
+  if (assessFlee(world, pirate, victim)) { // the raider sheers off to lick its wounds at a haven
     pirate._prey = null;
     pirate._huntCd = world.simTime + t.PIRATE_HUNT_COOLDOWN * 0.5;
     victim.morale = Math.min(1, (victim.morale != null ? victim.morale : 0.5) + 0.05);
@@ -552,11 +597,12 @@ function resolveCombat(world, pirate, victim) {
   return false; // trade another broadside next round
 }
 
-/** A HAVEN-DEFENCE skirmish: a pirate trades broadsides with a besieging privateer — a fight for the den,
- *  not a robbery (no plunder). One ROUND per call, paced by _fightCd on BOTH ships (COMBAT_ROUND_SEC) so a
- *  duel plays out over several seconds and antipiracy's hunt doesn't double-resolve the same pair this tick.
- *  Attrition decides it — whoever's hull founders first goes down. Returns true if a hull was sunk. */
-function skirmish(world, pirate, priv) {
+/** A pirate↔privateer SKIRMISH: the two trade broadsides — a fight, not a robbery (no plunder). One ROUND
+ *  per call, paced by _fightCd on BOTH ships (COMBAT_ROUND_SEC) so a duel plays out over several seconds and
+ *  antipiracy's hunt doesn't double-resolve the same pair this tick. Attrition decides it — whoever's hull
+ *  founders first goes down. `atHaven` picks the chronicle voice: a raider DEFENDING its den, or one that
+ *  turned at bay on a hunter in the open sea. Returns true if a hull was sunk. */
+function skirmish(world, pirate, priv, atHaven = true) {
   const t = world.rules;
   const round = t.COMBAT_ROUND_SEC || 1.2;
   pirate._fightCd = world.simTime + round;
@@ -566,14 +612,20 @@ function skirmish(world, pirate, priv) {
     priv._sunk = true;
     awardCombatXp(pirate.captain, t.XP_PER_DEFENSE); // drove off the hunter — a defender's renown
     pirate.morale = Math.min(1, (pirate.morale || 0.6) + 0.08);
-    logEvent(world, 'hunterlost', `${priv.name || 'A privateer'} was beaten off a pirate haven and sunk by ${pirate.name || 'a raider'}.`, { x: priv.x, y: priv.y, shipId: pirate.id });
+    logEvent(world, 'hunterlost', atHaven
+      ? `${priv.name || 'A privateer'} was beaten off a pirate haven and sunk by ${pirate.name || 'a raider'}.`
+      : `${pirate.name || 'A raider'} turned at bay on the privateer ${priv.name || ''} and sent her under — Capt. ${pirate.captain ? pirate.captain.name : 'the master'} beat off the hunter.`,
+      { x: priv.x, y: priv.y, shipId: pirate.id });
     return true;
   }
   if (pirate.hull <= 0) {
     pirate._sunk = true;
-    awardCombatXp(priv.captain, t.XP_PER_KILL); // cut down a raider defending its den
+    awardCombatXp(priv.captain, t.XP_PER_KILL); // cut down a raider
     const paid = payBounty(world, pirate, priv.homeId);
-    logEvent(world, 'hunted', `${priv.name || 'A privateer'} cut down ${pirate.name || 'a raider'} defending its haven${paid ? ` — ${paid}g bounty claimed` : ''}.`, { x: pirate.x, y: pirate.y, shipId: priv.id, data: foeData(world, pirate) });
+    logEvent(world, 'hunted', atHaven
+      ? `${priv.name || 'A privateer'} cut down ${pirate.name || 'a raider'} defending its haven${paid ? ` — ${paid}g bounty claimed` : ''}.`
+      : `The privateer ${priv.name || ''} ran down ${pirate.name || 'a raider'} and sank her${paid ? ` — ${paid}g bounty claimed` : ''}.`,
+      { x: pirate.x, y: pirate.y, shipId: priv.id, data: foeData(world, pirate) });
     return true;
   }
   return false;

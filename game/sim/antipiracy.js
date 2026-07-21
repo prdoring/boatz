@@ -17,7 +17,7 @@ import { logEvent, maybeSink } from './events.js';
 import { makeCaptain, skill01, awardCombatXp, rankOf, regimeData } from './captains.js';
 import { windMult } from './wind.js';
 import { rigMult } from './repair.js';
-import { combatStrength, exchangeFire, setAct, standoffPoint, foeData } from './piracy.js';
+import { combatStrength, exchangeFire, setAct, standoffPoint, foeData, assessFlee } from './piracy.js';
 import { repairAtPort } from './repair.js';
 import { foodDaysAboard } from './crew.js';
 import { payBounty } from './bounty.js';
@@ -132,6 +132,7 @@ export function antipiracy(world, h) {
       ? priv.captain.traits.boldness : 0.5) >= t.PRIVATEER_BOLD_TRAIT;
     const oddsBar = t.PRIVATEER_TIMID_ODDS - (skill - 0.5) * (t.PRIVATEER_SKILL_NERVE || 0); // veterans press harder odds
     if (prey && !bold && combatStrength(world, priv) < combatStrength(world, prey) * oddsBar) prey = null;
+    if (prey && world.simTime < (priv._breakoff || 0)) prey = null; // still breaking off a losing exchange — keep clear a while
     const preyDist = prey ? dist(priv, prey) : Infinity;
 
     // Stand down (pay off the crew, back to honest trade) when the commission lapses, the seas are truly
@@ -317,6 +318,12 @@ function resolveHunt(world, priv, pirate) {
     logEvent(world, 'hunterlost', `The privateer ${priv.name} was lost to ${pirate.name} — Capt. ${pirate.captain.name} beat off the hunter.`, { x: priv.x, y: priv.y, shipId: pirate.id });
     return true;
   }
+  // Neither struck — each captain weighs the fight afresh this round (a running assessment, as at sea).
+  // A hunter getting the worst of a heavily-gunned raider BREAKS OFF for its guard port to refit, and keeps
+  // clear a while so it doesn't just re-acquire and fight to the bottom; a raider outmatched by the hunter
+  // sheers away (its own loop then runs it to a haven). The fearless press on — assessFlee is false for them.
+  if (assessFlee(world, priv, pirate)) { priv._prey = null; priv._breakoff = world.simTime + (t.COMBAT_BREAKOFF_RESPITE || 0); }
+  if (assessFlee(world, pirate, priv)) { pirate._prey = null; pirate._huntCd = world.simTime + (t.PIRATE_HUNT_COOLDOWN || 0) * 0.5; }
   return false;
 }
 

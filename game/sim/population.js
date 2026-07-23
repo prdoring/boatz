@@ -36,7 +36,11 @@ export function population(world, h) {
     // bounds stock and gives every island a reason to keep importing, so gold
     // circulates and single-good exporters can stay solvent.
     for (const good in t.COMFORT_CONSUMPTION) {
-      const need = island.population * t.COMFORT_CONSUMPTION[good] * h;
+      let rate = t.COMFORT_CONSUMPTION[good];
+      // A FESTIVAL burns through luxuries fast — a sustained draw that keeps the port's luxury price
+      // elevated across the celebration, so it stays a hungry buyer and pulls trade in (queries.js).
+      if (island.festival && good === 'LuxuryGoods') rate *= (t.FESTIVAL_DRAW_MULT || 1);
+      const need = island.population * rate * h;
       island.stock[good] = Math.max(0, island.stock[good] - Math.min(need, island.stock[good]));
     }
 

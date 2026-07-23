@@ -297,6 +297,36 @@ function tryPublicWorks(world, isl) {
   return true;
 }
 
+/** FESTIVAL — a magistrate breaks out the port's LUXURIES (and some ale) for a public celebration: the
+ *  active LuxuryGoods demand SINK and a trade/rumour/reputation event. A splendor mayor's signature (a
+ *  grow/order mayor, or any ruler with fragile loyalty, may also feast), gated on luxuries in hand +
+ *  treasury. It lifts mood and declares a transient isl.festival window that sustains a luxury demand
+ *  spike (population.js) and pulls trade by sea (queries.js/intel.js believedFestival). */
+function tryFestival(world, isl, day) {
+  const t = world.rules;
+  const kind = isl.magistrate.ambition && isl.magistrate.ambition.kind;
+  const loy = isl.loyalty != null ? isl.loyalty : 1;
+  if (isl.festival) return false;                                                   // already celebrating
+  if (!(kind === 'splendor' || kind === 'grow' || kind === 'order' || loy < 0.5)) return false;
+  if ((isl.civ || 0) > (t.PUBLIC_WORKS_CIV_MAX || 0.75) && loy > 0.6) return false; // thriving + loyal → no need
+  if ((isl.stock.LuxuryGoods || 0) < (t.FESTIVAL_MIN_LUX || 40)) return false;      // nothing to break out
+  if ((isl.gold || 0) < graftedCost(world, isl, t.FESTIVAL_GOLD) + t.POLICY_TREASURY_RESERVE) return false;
+
+  spendWithGraft(world, isl, t.FESTIVAL_GOLD);                                      // organise the feast (grafted if corrupt)
+  isl.stock.LuxuryGoods = Math.max(0, (isl.stock.LuxuryGoods || 0) - (t.FESTIVAL_LUX_COST || 30)); // break out the luxuries — the sink
+  isl.stock.Ale = Math.max(0, (isl.stock.Ale || 0) - (t.FESTIVAL_ALE_COST || 20));
+  isl.festival = { until: day + (t.FESTIVAL_DAYS || 4) };                           // a transient state ships carry home as a rumour
+  isl.civ = Math.min(1, (isl.civ || 0) + (t.FESTIVAL_CIV_LIFT || 0.03));
+  isl.lawlessness = Math.max(0, (isl.lawlessness || 0) - (t.PUBLIC_WORKS_ORDER || 0.04));
+  isl._approval = clamp((isl._approval || 0) + (t.APPROVAL_FESTIVAL || 0.3), -1, 1);
+  logEvent(world, 'festival', pick(world, [
+    `${isl.name} threw open a great festival — its luxuries broken out, its wharves thronged with revelers and traders.`,
+    `${isl.name} kept a splendid feast-day; casks and finery came out, and word of the merriment ran down the sea-lanes.`,
+    `${isl.name} declared a festival, its harbour bright with lanterns and the hulls of visiting traders.`,
+  ]), { islandId: isl.id, tier: 'news', data: { good: 'LuxuryGoods' } });
+  return true;
+}
+
 /** DEVELOP a new workshop SLOT — an industry/grow mayor whose berths are all full buys +1 capacity (a
  *  big gold sink), so its industry can keep growing past the population-tiered base. */
 function tryDevelopSlot(world, isl) {
@@ -407,6 +437,7 @@ export function policy(world, h) {
   computeFleetByHome(world); // fresh per-home census for the naval-expansion lever (fleetAt)
 
   for (const isl of world.islands) {
+    if (isl.festival && day > isl.festival.until) isl.festival = null; // the celebration ran its course
     if (!isl.magistrate || isl.rebellion || isl.haven) continue; // no lawful policy while aflame or fallen
     updateIdleTimers(isl, industrial);                            // keep the demolish timer accurate every day
     tryTax(world, isl);                                           // continuous fiscal knob (hysteresis-gated, cheap)
@@ -419,6 +450,7 @@ export function policy(world, h) {
     const acted = tryDemolish(world, isl)
       || tryBuild(world, isl, day)
       || tryNaval(world, isl, day)
+      || tryFestival(world, isl, day)
       || tryPublicWorks(world, isl)
       || tryDevelopSlot(world, isl)
       || trySwitch(world, isl, day)

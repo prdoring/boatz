@@ -88,6 +88,7 @@ export function executeStop(world, island, ship, stop) {
   const swing = t.REP_PRICE_SWING;
   const homeId = ship.homeId;
   let volume = 0; // goods moved this stop → drives the reputation gained
+  let festiveVolume = 0; // Luxury/Ale sold to a port mid-FESTIVAL → extra goodwill (supplying the feast)
 
   // EMBARGO — a feud severs the trade line: the port turns the trader away, no goods or coin
   // change hands at any price. Refugees already aboard still land (people, not politics).
@@ -114,6 +115,7 @@ export function executeStop(world, island, ship, stop) {
     const reward = contractPayout(world, island, good, qty); // claim any open contract reward (from escrow)
     if (reward > 0) ship.cargo[GOLD] = (ship.cargo[GOLD] || 0) + reward;
     volume += qty;
+    if (island.festival && (good === 'LuxuryGoods' || good === 'Ale')) festiveVolume += qty;
   }
 
   // OPPORTUNISTIC OFFLOAD: sell any OTHER carried surplus this port actually wants (below
@@ -139,6 +141,7 @@ export function executeStop(world, island, ship, stop) {
     const reward = contractPayout(world, island, good, qty); // an opportunistic drop can fill a contract too
     if (reward > 0) ship.cargo[GOLD] = (ship.cargo[GOLD] || 0) + reward;
     volume += qty;
+    if (island.festival && (good === 'LuxuryGoods' || good === 'Ale')) festiveVolume += qty;
   }
 
   // BUY leg: island SELLS the requested goods to the ship at its ask (rep-adjusted; a
@@ -185,4 +188,9 @@ export function executeStop(world, island, ship, stop) {
 
   // A completed trade builds diplomacy (and shifts every third party's view — blocs).
   if (volume > 0) recordTrade(world, island, homeId, volume);
+  // Supplying a port's FESTIVAL (its luxuries/ale) earns the trader extra goodwill beyond the plain sale —
+  // so festivals build lasting blocs between splendor ports and their suppliers.
+  if (festiveVolume > 0 && homeId !== island.id) {
+    bumpRep(world, island.id, homeId, (t.REP_FESTIVAL_GAIN || 0) * Math.min(1, festiveVolume / (t.REP_VOLUME_NORM || 60)));
+  }
 }

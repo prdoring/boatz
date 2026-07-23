@@ -20,18 +20,22 @@ export function produceBase(world, h) {
   }
 }
 
-/** Resolve a recipe input to a concrete resource: for anyOf, prefer a locally
- *  produced raw, else the one the island has most of. */
+/** Resolve a recipe input to a concrete resource: for anyOf, prefer a locally produced raw; else the
+ *  highest-YIELD option the island actually holds (a premium raw like Meat is used before plain Grain —
+ *  what gives Meat genuine import demand as "the good food-raw"); else the one it has most of. */
 function resolveInput(island, input) {
   if (input.all) return input.all;
   const opts = input.anyOf;
-  let best = opts[0], bestStock = -1, localPick = null;
+  const yields = input.yield || null;
+  let best = opts[0], bestStock = -1, localPick = null, held = null, heldY = -1;
   for (const res of opts) {
     if (producesRaw(island, res)) { localPick = localPick || res; }
     const s = island.stock[res] || 0;
     if (s > bestStock) { bestStock = s; best = res; }
+    const y = yields && yields[res] ? yields[res] : 1;
+    if (s > 1 && y > heldY) { heldY = y; held = res; }  // a premium raw on hand is preferred to a plainer one
   }
-  return localPick || best;
+  return localPick || held || best;
 }
 
 /** Goods production for one island's recipes. Iterates the CANONICAL `island.workshops` (not the
@@ -61,9 +65,11 @@ export function produceGoods(world, h) {
       // on-hand stock (so more output demands more imports). Also never exceed what
       // is on hand this step.
       const resolved = [];
+      let yieldMult = 1; // a premium raw (e.g. Meat) yields MORE output per unit than a plain one
       for (const input of recipe.inputs) {
         const res = resolveInput(island, input);
         resolved.push([res, input.qty]);
+        if (input.yield && input.yield[res]) yieldMult *= input.yield[res];
         const localRate = effectiveRate(island, res, t);
         const capByInput = localRate > 0
           ? (t.GOODS_MAX_INPUT_FRACTION * localRate) / input.qty
@@ -87,9 +93,9 @@ export function produceGoods(world, h) {
 
       const made = rate * h;
       for (const [res, qty] of resolved) {
-        island.stock[res] = Math.max(0, island.stock[res] - made * qty);
+        island.stock[res] = Math.max(0, island.stock[res] - made * qty); // inputs consumed at raw rate...
       }
-      island.stock[out] = clamp(island.stock[out] + made, 0, outCap);
+      island.stock[out] = clamp(island.stock[out] + made * yieldMult, 0, outCap); // ...output scaled by yield
     }
   }
 }

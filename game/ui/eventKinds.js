@@ -14,7 +14,7 @@ export const EVENT_CATEGORY = {
   ally: 'trade', rival: 'trade', betray: 'trade', embargo: 'trade', aid: 'trade', rescue: 'trade',
   boom: 'trade', launch: 'trade', migrate: 'trade', reroute: 'trade', shun: 'trade',
   lost: 'trade', contract: 'trade', contractdone: 'trade', refit: 'trade', refitshort: 'trade',
-  maiden: 'trade', voyages: 'trade', goldenage: 'trade', popmilestone: 'trade', longpeace: 'trade',
+  maiden: 'trade', voyages: 'trade', goldenage: 'trade', popmilestone: 'trade', longpeace: 'trade', festival: 'trade',
   // Rule — governance, loyalty, crews, uprisings, magistrate policy (industry/fiscal)
   mutiny: 'rule', defect: 'rule', quell: 'rule', unrest: 'rule',
   rebellion: 'rule', overthrow: 'rule', quellReb: 'rule', ambition: 'rule', overreach: 'rule',
@@ -53,6 +53,7 @@ export const EVENT_COLOR = {
   brokeoff: '#566b78', sunk: '#9a2028', refit: '#2f7d45', refitshort: '#b5601e', careen: '#a8722e',
   prize: '#96601e', recovered: '#2f7d45',
   maiden: '#1f7f8c', voyages: '#1f7f8c', goldenage: '#9a7d16', popmilestone: '#1f7f8c', longpeace: '#2f7d45',
+  festival: '#b98a1c',
   promotion: '#3a5f9a', neworder: '#5f47a0',
 };
 
@@ -83,7 +84,7 @@ const KIND_ICON = {
   raidfail: 'sabres', hunted: 'sabres', bounty: 'sabres', privateer: 'sabres', assault: 'sabres', redeemed: 'sabres', battery: 'sabres',
   sunk: 'skull', brokeoff: 'chevronDown', prize: 'skull', recovered: 'shield', careen: 'mallet',
   ally: 'chevronUp', rival: 'chevronDown', betray: 'chevronDown',
-  boom: 'spark', goldenage: 'spark', ambition: 'coin', aid: 'coin', rescue: 'shield',
+  boom: 'spark', goldenage: 'spark', festival: 'spark', ambition: 'coin', aid: 'coin', rescue: 'shield',
   maiden: 'anchor', voyages: 'anchor', popmilestone: 'chevronUp', longpeace: 'shield',
   promotion: 'chevronUp', neworder: 'pennant', workshop: 'spark', derelict: 'warning',
   taxup: 'coin', taxcut: 'coin', corruption: 'warning', graftseized: 'coin', publicworks: 'sprout', tariff: 'coin',

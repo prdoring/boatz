@@ -5,7 +5,7 @@
 import { bidAsk } from './pricing.js';
 import { repPriceMult, isEmbargoed } from './reputation.js';
 import { beliefMid, currentDay } from './beliefs.js';
-import { believedDanger, believedHaven } from './intel.js';
+import { believedDanger, believedHaven, believedFestival } from './intel.js';
 import { nearestIsland } from './grid.js';
 import { tradeables } from './resources.js';
 
@@ -104,7 +104,10 @@ export function findBestPartner(world, island, good, mode, travelMult = 1) {
       const margin = bid - myAsk;
       // A port with an open CONTRACT for this good is a draw — its reward makes the run worth more.
       const contractPull = (p.contract && p.contract.good === good && p.contract.reward > 0) ? t.CONTRACT_ROUTE_BONUS : 0;
-      const score = margin - travel - peril + contractPull;
+      // A port holding a FESTIVAL we've HEARD of is a draw for luxuries/ale — feast-goers pay well, and
+      // the rumour reached us by sea (believedFestival), so only ships with word of it divert.
+      const festivalPull = ((good === 'LuxuryGoods' || good === 'Ale') && believedFestival(world, island, p.id, day)) ? (t.FESTIVAL_ROUTE_BONUS || 0) : 0;
+      const score = margin - travel - peril + contractPull + festivalPull;
       if (score > bestScore) { bestScore = score; best = { partner: p, unitPrice: bid, dist: d, margin }; }
     }
   }

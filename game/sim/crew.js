@@ -52,6 +52,15 @@ function aleBoost(world, ship) {
   const r = world.rules;
   return r.MORALE_ALE_PER_DAY * (1 + skill01(ship.captain, r, 'cmd') * r.ALE_SKILL_BOOST);
 }
+// Slops — the crew's issued clothing. A tighter ship makes them last a touch longer (same skill cut
+// as food/ale); a modest morale lift when the crew is decently clothed (flat, well under grog).
+function slopsRate(world, ship) {
+  const r = world.rules;
+  return (r.CREW_SLOPS_PER_DAY || 0) * (1 - skill01(ship.captain, r, 'cmd') * r.CONSUME_SKILL_CUT);
+}
+function slopsBoost(world, ship) {
+  return world.rules.MORALE_SLOPS_PER_DAY || 0;
+}
 
 /** Days of crew food currently aboard, at this crew's eating rate. */
 export function foodDaysAboard(world, ship) {
@@ -102,6 +111,16 @@ export function provisionCrew(world, island, ship) {
       if (!atHome) transfer(ship.cargo, GOLD, island, 'gold', Math.min(ship.cargo[GOLD] || 0, moved * ask));
     }
   }
+  // Slops — the captain re-issues the crew's clothing, like grog (free from home, bought abroad if he can pay).
+  const slopsWant = slopsRate(world, ship) * (r.PROVISION_SLOPS_DAYS || 0) - (ship.cargo.Clothing || 0);
+  if (slopsWant >= 0.5 && (island.stock.Clothing || 0) > 0) {
+    const ask = bidAsk(island.price.Clothing.mid, r.SPREAD).ask;
+    const take = Math.min(slopsWant, spare('Clothing'), atHome ? Infinity : (ask > 0 ? (ship.cargo[GOLD] || 0) / ask : 0));
+    if (take >= 0.5) {
+      const moved = transfer(island.stock, 'Clothing', ship.cargo, 'Clothing', take);
+      if (!atHome) transfer(ship.cargo, GOLD, island, 'gold', Math.min(ship.cargo[GOLD] || 0, moved * ask));
+    }
+  }
 }
 
 /** SIM system: run the crew of every at-sea ship — consume stores, move morale, starve, and
@@ -126,6 +145,8 @@ export function crew(world, h) {
     ship.cargo.Food = Math.max(0, (ship.cargo.Food || 0) - ate);
     let drank = 0;
     if ((ship.cargo.Ale || 0) > 0) { drank = Math.min(ship.cargo.Ale, aleRate(world, ship) * dDay); ship.cargo.Ale -= drank; }
+    let wore = 0;
+    if ((ship.cargo.Clothing || 0) > 0) { wore = Math.min(ship.cargo.Clothing, slopsRate(world, ship) * dDay); ship.cargo.Clothing -= wore; } // slops wear (a Clothing sink)
 
     // 2) MORALE
     let dm;
@@ -137,6 +158,7 @@ export function crew(world, h) {
         : r.MORALE_RECOVER_RATE * (r.MORALE_STEADY - ship.morale); // ease toward steady
     }
     if (drank > 0) dm += aleBoost(world, ship);
+    if (wore > 0) dm += slopsBoost(world, ship);
     // Sea fatigue: even a fed crew wearies on a long haul and pines for port — a steady drag a
     // seasoned captain (and a cask of grog) keeps at bay. Shore leave at home resets it. This is
     // the always-present pressure that makes provisioning + morale an ongoing job, not a one-off.

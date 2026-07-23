@@ -97,5 +97,18 @@ export function upkeep(world, h) {
       const st = island.stock;
       for (const k in st) { const v = st[k]; if (v > 0) st[k] = v - v * spoil; }
     }
+
+    // GARRISON DRILL — a lawful armed port's militia musters and keeps order, burning a powder trickle
+    // from the armoury each day whether or not a raider is near (Weapons' peacetime demand floor; combat +
+    // shore fire are the wartime sinks). Scales with population and DISORDER; never drains the armoury
+    // below a working minimum (so the shore batteries stay armed). A haven/rebelling port musters no militia.
+    if (!haven && !island.rebellion) {
+      const floor = t.MILITIA_MIN_WEAPONS || 0;
+      const have = island.stock.Weapons || 0;
+      if (have > floor) {
+        const use = (t.MILITIA_POWDER_PER_DAY || 0) * pop * (1 + (t.MILITIA_LAWLESS_MULT || 0) * (island.lawlessness || 0)) * perDay;
+        island.stock.Weapons = Math.max(floor, have - use);
+      }
+    }
   }
 }

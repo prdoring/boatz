@@ -5,7 +5,7 @@
   "goods": ["Food", "Ale", "Clothing", "Weapons", "LuxuryGoods", "Ships"],
 
   "recipes": [
-    { "out": "Food",        "inputs": [{ "anyOf": ["Grain", "Meat"], "qty": 1 }] },
+    { "out": "Food",        "inputs": [{ "anyOf": ["Grain", "Meat"], "qty": 1, "yield": { "Meat": 1.25 } }] },
     { "out": "Ale",         "inputs": [{ "all": "Grain", "qty": 1 }, { "all": "Wood", "qty": 1 }] },
     { "out": "Clothing",    "inputs": [{ "all": "Fiber", "qty": 1 }] },
     { "out": "Weapons",     "inputs": [{ "all": "Iron", "qty": 1 }, { "all": "Wood", "qty": 1 }] },
@@ -232,6 +232,10 @@
     "MORALE_NOFOOD_PER_DAY": 1.5,
     "MORALE_ALE_PER_DAY": 0.55,
     "ALE_SKILL_BOOST": 0.6,
+    "_doc_slops": "SLOPS — the crew's issued clothing, a second minor comfort good like grog (provisionCrew/crew in crew.js). Worn down slowly at sea (CREW_SLOPS_PER_DAY, well under the ale draw), re-issued at port from Clothing stock (free from home, bought abroad at ask), and giving a small morale lift when aboard (MORALE_SLOPS_PER_DAY). This is Clothing's demand sink beyond population comfort — it scales with fleet size and voyage length.",
+    "CREW_SLOPS_PER_DAY": 0.5,
+    "PROVISION_SLOPS_DAYS": 4.0,
+    "MORALE_SLOPS_PER_DAY": 0.15,
     "MORALE_SEA_DRAG": 0.42,
     "SEA_DRAG_SKILL": 0.4,
 
@@ -597,6 +601,18 @@
     "POLICY_W_SATURATION": 0.5,
     "POLICY_W_DIVERSITY": 0.3,
 
+    "_doc_festival": "FESTIVAL (policy.js tryFestival) — a magistrate breaks out the port's LUXURIES (and some ale) for a public celebration: LuxuryGoods' active demand SINK and a trade/rumour/reputation event. A splendor mayor's signature (a grow/order mayor, or any ruler with fragile loyalty, may also feast), gated on LuxuryGoods >= FESTIVAL_MIN_LUX and treasury. On declaration it spends FESTIVAL_GOLD (grafted if corrupt), consumes FESTIVAL_LUX_COST luxuries + FESTIVAL_ALE_COST ale, lifts civ (FESTIVAL_CIV_LIFT) and approval (APPROVAL_FESTIVAL), and sets isl.festival={until} for FESTIVAL_DAYS. WHILE it runs, luxury comfort-consumption is multiplied by FESTIVAL_DRAW_MULT (population.js) — a sustained drain that keeps the port's luxury price ELEVATED so it becomes a hungry BUYER. TRADE PULL: a merchant that has HEARD of the festival (believedFestival — a rumour carried by sea via intel.js, no omniscience) scores the host +FESTIVAL_ROUTE_BONUS when choosing where to sell Luxury/Ale (queries.js). REPUTATION: selling Luxury/Ale to a festive port earns the supplier extra goodwill (REP_FESTIVAL_GAIN, trade.js) — festivals build blocs between splendor ports and their luxury suppliers.",
+    "FESTIVAL_GOLD": 300,
+    "FESTIVAL_LUX_COST": 30,
+    "FESTIVAL_ALE_COST": 20,
+    "FESTIVAL_DAYS": 4,
+    "FESTIVAL_DRAW_MULT": 3,
+    "FESTIVAL_MIN_LUX": 40,
+    "FESTIVAL_CIV_LIFT": 0.03,
+    "APPROVAL_FESTIVAL": 0.3,
+    "FESTIVAL_ROUTE_BONUS": 4,
+    "REP_FESTIVAL_GAIN": 0.05,
+
     "_doc_fiscal": "FISCAL POLICY + POPULACE REACTION (Phase 3). TAX — the magistrate sets island.tax (0..TAX_MAX); upkeep income is scaled ·(1 + tax·TAX_INCOME_W), so tax funds ambition/defence, but it ALSO raises lawlessness (LAWLESS_TAX·tax, closing the gold→civ→loyalty back-door so tax has an interior optimum, not a dead 'always max' setting) and pushes APPROVAL down. The magistrate nudges tax by TAX_STEP/day within a HYSTERESIS band — cut only if loyalty < TAX_CUT_LOYALTY, raise only if loyalty > TAX_RAISE_LOYALTY (else hold, so _approval decays to 0 in normal operation and no limit-cycle forms). APPROVAL — island._approval is a signed, decaying (·(1−APPROVAL_DECAY)/day) memory of recent policy that biases the loyalty attractor by _approval·APPROVAL_LOYALTY_W (kept ≤0.10 so a saturated unpopular streak alone can't push a healthy port under REBEL_LOYALTY). Tax hikes/graft push it down; tax cuts/public works push it up.",
     "TAX_MIN": 0,
     "TAX_MAX": 0.4,
@@ -627,6 +643,10 @@
     "APPROVAL_PUBLICWORKS": 0.25,
     "GARRISON_WEAPONS_TARGET": 80,
     "GARRISON_DANGER": 0.3,
+    "_doc_militia": "MILITIA — a lawful armed port's garrison musters and drills, burning a powder trickle from its armoury (stock.Weapons) each day whether or not a raider is in the roads: Weapons' peacetime demand floor (combat + shore fire are the wartime sinks). Scales with population and DISORDER (a lawless port spends more keeping the peace — Weapons tied to the order layer), and never drains below MILITIA_MIN_WEAPONS (a working minimum that keeps the shore batteries armed). Billed in upkeep.js; the GARRISON lever above sets the stock TARGET trade keeps refilling.",
+    "MILITIA_POWDER_PER_DAY": 0.04,
+    "MILITIA_LAWLESS_MULT": 2.0,
+    "MILITIA_MIN_WEAPONS": 3,
     "TARIFF_MAX": 0.3,
     "TARIFF_STEP": 0.05
   }

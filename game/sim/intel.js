@@ -37,6 +37,7 @@ export function liveFact(world, island, day) {
     foodDays: foodDays(island, world.rules),
     civ: island.civ || 0,
     lawless: island.lawlessness || 0,
+    festival: island.festival ? island.festival.until : 0, // a celebration in progress (its end-day) — carried home as a rumour
   };
 }
 
@@ -126,6 +127,15 @@ export function believedHaven(world, island, subjectId, day) {
   if (!rec || !rec.haven) return false;
   const forget = world.rules.INTEL_HAVEN_FORGET || 25;
   return (day - rec.day) <= forget;
+}
+
+/** Whether `island` has heard `subjectId` is holding a FESTIVAL right now — a rumour a ship carried
+ *  home (liveFact.festival = the celebration's end-day). Trusted until that end-day, then it's over.
+ *  Unknown → false (a port only diverts to a feast it has had word of; no omniscience). */
+export function believedFestival(world, island, subjectId, day) {
+  const rec = island.intel && island.intel[subjectId];
+  if (!rec || !rec.festival) return false;
+  return day <= rec.festival;
 }
 
 /** Believed food-security (in days) of `subjectId`. Unknown → a large safe number: an island

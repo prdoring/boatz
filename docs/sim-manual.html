@@ -272,7 +272,7 @@ flowchart TB
     <thead><tr><th>Actor</th><th>Trigger</th><th>Chief decisions</th><th>Owns / mutates</th></tr></thead>
     <tbody>
       <tr><td class="actorcell">Port / Island</td><td>every substep</td><td>produce (via mutable workshops), price, spend income, post contracts</td><td>stock, gold, price, population, workshops, targets</td></tr>
-      <tr><td class="actorcell">Magistrate</td><td>substep + daily</td><td>set ambition (retargets demand); run a daily <b>policy loop</b> over 5 levers — build/switch/demolish/repair workshops, set tax &amp; tariff, garrison, public works &amp; naval expansion, export holds; skim a corrupt hoard; hold or lose loyalty</td><td>loyalty, lawlessness, grievance, workshops, tax, tariff, development, _approval, hoard, targets</td></tr>
+      <tr><td class="actorcell">Magistrate</td><td>substep + daily</td><td>set ambition (retargets demand); run a daily <b>policy loop</b> over 5 levers — build/switch/demolish/repair workshops, set tax &amp; tariff, garrison, public works, festivals &amp; naval expansion, export holds; skim a corrupt hoard; hold or lose loyalty</td><td>loyalty, lawlessness, grievance, workshops, tax, tariff, development, _approval, hoard, targets</td></tr>
       <tr><td class="actorcell">Populace</td><td>every substep</td><td>eat, grow/starve, migrate, rebel</td><td>population, civ score</td></tr>
       <tr><td class="actorcell">Merchant Captain</td><td>when ship idle</td><td>plan the whole voyage basket (food→aid→exports→migration→scout)</td><td>ship.voyage, cargo plan</td></tr>
       <tr><td class="actorcell">Ship</td><td>every substep</td><td>sail, steer round land, dock, flee, shelter, tack, heave-to &amp; jury-rig (if stranded &amp; hurt), render aid (supplies)</td><td>x/y/heading, state, hull, rig, hullSound/rigSound, _heaveUntil</td></tr>
@@ -296,7 +296,7 @@ flowchart TB
   <div class="decides"><b>Decides:</b> what a port makes, what it charges, and whether its people eat or breed. Runs blind (no will) — pure functions of stock and population.</div>
   <ul class="tight">
     <li><b>Produce.</b> Each island mines its primary raw at <code>10/s</code> and secondary at <code>×0.25</code>, with a logistic taper toward a <code>2000</code> stockpile cap <span class="ref">production.js:17</span>. Recipe goods scale to population (<code>0.07 × pop</code>) but are clamped so ≥25% of any local raw survives as exportable surplus — this is what <em class="term">forces trade</em> <span class="ref">production.js:46-62</span>. Finished <em class="term">industrial</em> goods (Weapons, Clothing, Luxury, Ships) now flow from <b>mutable workshops</b> — their output is further scaled by each workshop's <code>condition × staffing</code>, so a squeezed port's manufacturing visibly rots (see §V). <b>Food and Ale are excluded</b> — survival goods stay always-on, never workshop-gated, so a poor port can never starve itself into a famine spiral <span class="ref">production.js:37-56</span>.</li>
-    <li><b>Consume.</b> Population eats <code>0.011 food/head</code>, plus comfort goods (Ale, Clothing, Weapons, Luxury) burned as demand sinks so every port keeps importing <span class="ref">population.js:28-41</span>.</li>
+    <li><b>Consume.</b> Population eats <code>0.011 food/head</code>, plus comfort goods (Ale, Clothing, Weapons, Luxury) burned as demand sinks so every port keeps importing <span class="ref">population.js:28-41</span>. On top of comfort, four goods gain a <em class="term">second, demand-scaling sink</em> so none merely piles to its cap: <b>Clothing</b> is issued as crew <b>slops</b> (worn at sea, re-issued at port like grog) <span class="ref">crew.js</span>; <b>Weapons</b> feed a standing <b>garrison militia</b> that drills daily — scaled by disorder — even in peacetime <span class="ref">upkeep.js</span>; <b>Luxury</b> (with some ale) is broken out at magistrate <b>festivals</b> (see §V) <span class="ref">policy.js · population.js</span>; and <b>Meat</b> is now a <em class="term">premium food raw</em> (a higher Food yield than Grain, so importers prefer it) rather than a pure Grain substitute <span class="ref">production.js · economy.json</span>.</li>
     <li><b>Live or die.</b> Starvation deaths are rate-bounded and floored at <code>pop 5</code>; growth is <em class="term">gated on food security</em> (2+ days stored) so population can never outrun its larder <span class="ref">population.js:44-57</span>. There is no true death-spiral here.</li>
     <li><b>Price.</b> Mid price = <code>base × clamp((target÷stock)^1, 0.33, 3.0)</code>, eased toward target by a non-overshooting 10%/s limiter; bid/ask are ±5% <span class="ref">pricing.js:13-26</span>.</li>
     <li><b>Bank.</b> Income = <code>2.4 × pop × (0.4 + 0.6·civ)</code>, scaled by <code>(1 + tax·TAX_INCOME_W)</code>; sinks are ship upkeep + a <b>per-workshop upkeep</b> bill (<code>WORKSHOP_UPKEEP_PER_DAY·pop</code> each — this <em>replaces</em> the old flat <code>PROD_UPKEEP</code> aggregate, so a farm with no industrial works now pays zero factory upkeep), and any gold above <code>40 × pop</code> overflows and is destroyed. A corrupt magistrate also <b>skims</b> a slice of income into a hidden hoard here. <b>Gold is deliberately not conserved</b> <span class="ref">upkeep.js:25-92</span>.</li>
@@ -331,6 +331,7 @@ flowchart LR
 
   <div class="note warn"><span class="tag">Trap</span><p><b>Food is spoiled twice per substep.</b> <code>population</code> decays Food by <code>0.0003·h</code> and then <code>upkeep</code> decays <em>all</em> stock — Food included — by another <code>0.0004·h</code> <span class="ref">population.js:32 · upkeep.js:45</span>. Food loses ~2.3× the decay rate of every other good, tightening the very margin that drives the "starving tail."</p></div>
   <div class="note ok"><span class="tag">Sound</span><p>Starvation is floored and growth is food-gated, so no runaway death-spiral. Every good/gold trade move goes through the conserved <code>transfer</code> primitive — the <em>only</em> sanctioned gold source/sink is <code>upkeep</code> (plus development &amp; contract escrow).</p></div>
+  <div class="note ok"><span class="tag">Sinks</span><p><b>Every trade good now has a genuine demand sink, not just background spoilage.</b> Raws drain into recipes (plus Wood/Fiber into ship repair and Wood/Iron into hulls); <b>Food</b> → population, crew rations, raids, aid; <b>Ale</b> → comfort + crew grog + festivals; <b>Clothing</b> → comfort + crew slops; <b>Weapons</b> → comfort + combat/shore fire + garrison militia; <b>Luxury</b> → comfort + festivals (which finally pull its one-consumer input <b>PreciousMetal</b> through the chain); <b>Ships</b> → fleet purchases (producer-throttled at <code>SHIP_STOCK_CAP</code>). Meat is a demanded premium raw rather than a redundant Grain substitute. So no good sits inert at its cap.</p></div>
 </section>
 
 <!-- ============ 4. BUYING HULLS ============ -->
@@ -439,10 +440,11 @@ flowchart TB
   ONE --> A1["① DEMOLISH a workshop idle/derelict ≥ 8d&lt;br/&gt;(free slot, stop the bleed)"]
   A1 --> A2["② BUILD best good into an open slot&lt;br/&gt;(800g + 30 Wood + 15 Iron; staffing ≥ 0.8)"]:::good
   A2 --> A3["③ NAVAL — commission a hull (fleet-ambition)"]
-  A3 --> A4["④ PUBLIC WORKS 600g → +civ −lawless +approval"]
-  A4 --> A5["⑤ DEVELOP +1 slot 1500g (full &amp; industrial)"]
-  A5 --> A6["⑥ SWITCH worst workshop to a much better good"]
-  A6 --> A7["⑦ REPAIR a below-0.4 workshop it can crew (250g)"]
+  A3 --> AF["④ FESTIVAL — break out luxuries&lt;br/&gt;+approval +civ, draws trade (splendor)"]:::good
+  AF --> A4["⑤ PUBLIC WORKS 600g → +civ −lawless +approval"]
+  A4 --> A5["⑥ DEVELOP +1 slot 1500g (full &amp; industrial)"]
+  A5 --> A6["⑦ SWITCH worst workshop to a much better good"]
+  A6 --> A7["⑧ REPAIR a below-0.4 workshop it can crew (250g)"]
   A2 -. "scoreGood via BELIEFS/INTEL&lt;br/&gt;profit + 0.9·ambition − saturation" .-> BEL["stale reports only —&lt;br/&gt;the governor can be wrong"]:::good
   classDef actor fill:#123c3f,stroke:#4fcdd4,color:#d6faf9,stroke-width:1.4px;
   classDef good fill:#173226,stroke:#63b98a,color:#cdeed9;
@@ -455,8 +457,27 @@ flowchart TB
     <li><b>Taxation</b> — <code>island.tax ∈ [0, 0.4]</code> scales income <code>×(1 + tax)</code>, but also raises lawlessness (<code>LAWLESS_TAX·tax</code>, closing the gold→civ back-door so tax has an <em>interior</em> optimum) and sours <code>_approval</code>. Nudged ±0.05 inside a hysteresis band (cut below loyalty 0.35, raise above 0.6) so no approval limit-cycle forms.</li>
     <li><b>Garrison</b> — a fortify/order mayor, or any port in dangerous waters, lifts its Weapons target to <code>GARRISON_WEAPONS_TARGET(80)</code> so trade imports guns for the shore batteries.</li>
     <li><b>Infrastructure</b> — buy a <code>+1</code> slot (<code>1500g</code>), or fund <b>public works</b> (<code>600g</code> → <code>+0.05</code> civ, <code>−0.04</code> lawlessness/grievance, <code>+0.25</code> approval) — the welfare spend a flush grow/order mayor makes, and the emergent relief path for the small-port tail (#2).</li>
+    <li><b>Festival</b> — a splendor mayor's signature (a grow/order mayor, or any fragile-loyalty ruler, may also feast): break out the port's <b>Luxury</b> (and some ale) for a public celebration — <code>300g</code> + <code>30</code> luxuries → <code>+0.3</code> approval, <code>+civ</code>, and a transient <code>isl.festival</code> window (<code>4</code> days). It is Luxury's <em>active</em> demand <b>sink</b> (comfort consumption ×<code>3</code> through the feast keeps its price high) <b>and</b> a trade event: the port becomes a hungry buyer, the festival travels <b>by sea as a rumour</b> (<code>believedFestival</code> — no omniscience), ships that have heard of it divert to sell luxuries (a <code>FESTIVAL_ROUTE_BONUS</code> in partner-scoring), and supplying the feast earns the trader extra <b>reputation</b>, so festivals build blocs between splendor ports and their luxury suppliers. It also pulls the one-consumer <b>PreciousMetal → Luxury</b> chain through. See Fig. Vc <span class="ref">policy.js (tryFestival) · population.js · intel.js · queries.js · trade.js</span>.</li>
     <li><b>Trade</b> — set a <b>tariff</b> (<code>0..0.3</code> duty the host adds to a foreign trader's ask via <code>tariffMult</code>, composed alongside reputation, fleet-mates exempt); add strategic <b>export holds</b> (withhold Food/Weapons in distress); and steer the good the port <b>contracts</b> for toward its ambition's key input.</li>
   </ul>
+
+  <div class="chart">
+<pre class="mermaid" id="fig5c">
+%%{init:{'theme':'base','themeVariables':{'fontSize':'14px','primaryColor':'#15303a','primaryTextColor':'#e7eff1','primaryBorderColor':'#3c6f7c','lineColor':'#5f8a97','clusterBkg':'#0e2029','clusterBorder':'#295059','edgeLabelBackground':'#0e2029'}}}%%
+flowchart LR
+  DEC["Splendor mayor + luxuries in hand&lt;br/&gt;tryFestival"]:::actor --> FEST["Declare FESTIVAL&lt;br/&gt;spend gold + break out Luxury/Ale"]
+  FEST --> MOOD["+approval +civ −lawless&lt;br/&gt;(a Luxury/Ale SINK)"]:::good
+  FEST --> DRAW["×3 luxury draw through the feast&lt;br/&gt;→ stock low → price HIGH"]
+  DRAW --> RUM["Rumour by sea: docking ships note it&lt;br/&gt;believedFestival (no omniscience)"]
+  RUM --> PULL["Ships that HEARD divert to sell&lt;br/&gt;+FESTIVAL_ROUTE_BONUS"]:::good
+  PULL --> SUP["Supplying the feast → +reputation&lt;br/&gt;(bumpRep beyond the plain sale)"]
+  SUP --> BLOC["Blocs form: splendor ports ↔ luxury suppliers"]:::good
+  PULL -. "imports feed the ×3 draw" .-> DRAW
+  classDef actor fill:#123c3f,stroke:#4fcdd4,color:#d6faf9,stroke-width:1.4px;
+  classDef good fill:#173226,stroke:#63b98a,color:#cdeed9;
+</pre>
+  </div>
+  <p class="chart-cap">Fig. Vc — the festival loop: a Luxury <em>sink</em> that becomes a trade-and-reputation event. The price spike and the by-sea rumour pull merchants in; the imports they bring feed the ongoing draw, and supplying the feast builds lasting blocs.</p>
 
   <h3>Taxation, approval &amp; corruption</h3>
   <p>Corruption is now a concrete <em>flow</em>, not just a static integrity penalty. A low-integrity magistrate <b>skims</b> <code>max(0, 0.5 − integrity)·SKIM_RATE·income</code> each substep into a hidden <code>magistrate.hoard</code> (bounded ≤30% of gross, so the income floor still protects civ) — starving the treasury, so gold → civ → loyalty all sag under the leak. Every policy spend is <b>grafted</b> <code>×(1 + (0.5 − integrity)·GRAFT_RATE)</code>, the excess pocketed, so a corrupt regime gets less per gold <span class="ref">upkeep.js:56 · policy.js:36-50</span>. Meanwhile <code>island._approval</code> — a signed, daily-decaying memory of recent policy — biases the loyalty attractor by <code>_approval·0.09</code> (kept small so an unpopular streak alone can't manufacture a rebellion); tax hikes and exposed graft push it down, tax cuts and public works push it up.</p>

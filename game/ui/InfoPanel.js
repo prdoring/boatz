@@ -408,6 +408,7 @@ export class InfoPanel extends Panel {
     if (isl.plague) this._banner(ctx, 'Plague — population dying', '#8a3d9c', c, 'skull');
     if (isl.danger > 0.25) this._banner(ctx, `Pirate danger — ${dangerWord(isl.danger)} waters`, '#c0392b', c, 'pennant');
     if (isl.contract) this._banner(ctx, `WANTED: ${isl.contract.good} · ${fmt(isl.contract.reward)} g reward`, '#97781a', c, 'scroll');
+    if (isl.festival) this._banner(ctx, 'FESTIVAL — the port keeps a feast-day', '#b98a1c', c, 'spark');
 
     // Magistrate + the populace's loyalty — or, for a fallen port, its Pirate Lord (the dark mirror).
     if (isl.magistrate) this._magistrate(ctx, isl, ctxt, c);
@@ -735,6 +736,8 @@ export class InfoPanel extends Panel {
     this._kv(ctx, 'Provisions', `${days.toFixed(1)} days of food`, c, days < 1 ? PALETTE.bad : PALETTE.panelText);
     const ale = Math.round((s.cargo && s.cargo.Ale) || 0);
     if (ale > 0) this._kv(ctx, 'Grog', `${ale} Ale (lifts morale)`, c, '#7a4f1e');
+    const slops = Math.round((s.cargo && s.cargo.Clothing) || 0);
+    if (slops > 0) this._kv(ctx, 'Slops', `${slops} Clothing issued`, c, '#5a6b7a');
     this._kv(ctx, 'Mood', st.label, c, st.color);
   }
 

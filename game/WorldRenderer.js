@@ -172,6 +172,8 @@ export class WorldRenderer {
       if (isl.haven) this._havenMark(sx, sy, Math.max(R * 1.35, 18), now);
       // Pirate-haunted waters — a faint crimson haze that deepens with the danger.
       if (isl.danger > 0.25) this._dangerHaze(sx, sy, Math.max(R * 1.7, 24), isl.danger, now);
+      // A port keeping a FESTIVAL — a warm glow and a ring of twinkling lanterns.
+      if (isl.festival) this._festivalMark(sx, sy, Math.max(R * 1.25, 16), now, isl.id);
 
       if (zoom > 0.32) this._label(isl.name, sx, sy, R);
     }
@@ -374,6 +376,31 @@ export class WorldRenderer {
       ctx.lineTo(tx, ty);
       ctx.lineTo(sx + Math.cos(a + wob) * r, sy + Math.sin(a + wob) * r);
       ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  /** A warm festive glow and a ring of twinkling lanterns around a port keeping a feast-day. */
+  _festivalMark(sx, sy, r, now, seed) {
+    const ctx = this.ctx;
+    const h = ((typeof seed === 'string' ? seed.charCodeAt(1) : seed) | 0) * 0.9;
+    const pulse = 0.6 + 0.4 * Math.sin(now * 0.004 + h);
+    ctx.save();
+    // warm glow over the port
+    ctx.globalAlpha = 0.20 * pulse;
+    ctx.fillStyle = '#ffcf5a';
+    ctx.shadowColor = '#ffdf7a'; ctx.shadowBlur = r * 0.8;
+    ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+    // a ring of twinkling lanterns (warm reds/golds), each winking on its own phase
+    const lanterns = 10;
+    for (let i = 0; i < lanterns; i++) {
+      const a = (i / lanterns) * Math.PI * 2 + now * 0.0006;
+      const tw = 0.5 + 0.5 * Math.sin(now * 0.008 + i * 1.7 + h);
+      const lx = sx + Math.cos(a) * r, ly = sy + Math.sin(a) * r;
+      ctx.globalAlpha = 0.45 + 0.55 * tw;
+      ctx.fillStyle = i % 3 === 0 ? '#ff8a3a' : (i % 3 === 1 ? '#ffd24a' : '#ff5a7a');
+      ctx.beginPath(); ctx.arc(lx, ly, 1.5 + 0.9 * tw, 0, Math.PI * 2); ctx.fill();
     }
     ctx.restore();
   }

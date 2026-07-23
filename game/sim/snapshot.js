@@ -192,6 +192,7 @@ export function snapshotEconomy(world) {
       embargoes: embargoBy[isl.id] || [], // ports this island has severed trade with → blocs overlay
 
       contract: isl.contract ? { good: isl.contract.good, reward: Math.round(isl.contract.reward) } : null, // open WANTED posting
+      festival: isl.festival ? { until: isl.festival.until } : null, // a celebration in progress → panel banner + map lights + trade draw
       // Mutable industry. An INDUSTRIAL workshop carries its 0..1 condition + a precomputed status
       // byte (0 running / 1 idle / 2 derelict) so the client never re-thresholds; a survival good
       // (Food/Ale) carries only its identity. The client re-derives `produces` from ALL of these

@@ -47,6 +47,13 @@ for (const seed of [1337, 7, 42]) {
         const total = w.islands.reduce((a, i) => a + i.population, 0);
         assert.ok(total > 0.35 * K, `population collapsed to ${total.toFixed(0)} day ${day}`);
         assert.ok(total <= K * 1.05, `population exceeded capacity: ${total.toFixed(0)} day ${day}`);
+        // GROUP-COMBAT self-limiting: a coordinated wolfpack must not run the piracy cap away nor wipe the
+        // trading fleet. Pirates stay near their fleet-fraction budget (lift-capped), and traders persist.
+        const live = w.ships.filter((s) => !s._sunk);
+        const pirates = live.filter((s) => s.pirate).length;
+        const traders = live.filter((s) => !s.pirate && !s.privateer).length;
+        assert.ok(pirates <= 0.35 * live.length + 3, `piracy ran away (wolfpack cap breach) day ${day}: ${pirates}/${live.length}`);
+        assert.ok(traders > 0.2 * live.length, `trading fleet wiped by wolfpacks day ${day}: ${traders}/${live.length}`);
       }
     }
 

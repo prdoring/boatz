@@ -403,7 +403,9 @@ export class InfoPanel extends Panel {
     this._subtitle(ctx, `${cap(isl.type)} · ${isl.primary || '?'}${isl.secondary ? ' / ' + isl.secondary : ''}`, c);
 
     // Active afflictions.
-    if (isl.haven) this._banner(ctx, `PIRATE HAVEN — grip ${Math.round((isl.haven.strength || 0) * 100)}%`, '#b0242e', c, 'skull');
+    // A fallen port's grip is headlined by its PIRATE LORD block (the "BLACK FLAG — grip" banner); only
+    // show a top-of-panel haven banner as a fallback when no lord block will render it (so it isn't doubled).
+    if (isl.haven && !isl.pirateLord) this._banner(ctx, `PIRATE HAVEN — grip ${Math.round((isl.haven.strength || 0) * 100)}%`, '#b0242e', c, 'skull');
     if (isl.blight) this._banner(ctx, `Blight — ${isl.blight} crippled`, '#a86a1c', c, 'wheat');
     if (isl.plague) this._banner(ctx, 'Plague — population dying', '#8a3d9c', c, 'skull');
     if (isl.danger > 0.25) this._banner(ctx, `Pirate danger — ${dangerWord(isl.danger)} waters`, '#c0392b', c, 'pennant');

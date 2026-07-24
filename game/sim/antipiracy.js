@@ -17,7 +17,7 @@ import { logEvent, maybeSink } from './events.js';
 import { makeCaptain, skill01, awardCombatXp, rankOf, regimeData } from './captains.js';
 import { windMult } from './wind.js';
 import { rigMult } from './repair.js';
-import { combatStrength, exchangeFire, setAct, standoffPoint, foeData, assessFlee, inPortSafe } from './piracy.js';
+import { exchangeFire, setAct, standoffPoint, foeData, assessFlee, inPortSafe, balanceOfForce } from './piracy.js';
 import { refitGradual, maybeHeaveToRepair } from './repair.js';
 import { foodDaysAboard } from './crew.js';
 import { payBounty } from './bounty.js';
@@ -70,6 +70,11 @@ export function antipiracy(world, h) {
   // replaces the per-island pirate scan in `threatened` (the O(N·P) wall) and the per-privateer
   // `nearestPirate` scan. Havens are few → the haven proximity test stays a small list scan.
   const pirateGrid = buildShipGrid(world, pirates);
+  world._strengthCache = new Map(); // per-substep combatStrength memo for privateer group-force sums (derived)
+  // FOCUS-FIRE tally for the navy: how many privateers already mark each pirate (keyed by the SERIALISED
+  // _prey id, so it reconstructs exactly on replay) → a hunter prefers a raider a consort already engages.
+  world._preyClaimsPriv = new Map();
+  for (const s of world.ships) if (s.privateer && !s._sunk && s._prey) world._preyClaimsPriv.set(s._prey, (world._preyClaimsPriv.get(s._prey) || 0) + 1);
   const threatened = (isl) => anyShipInRange(pirateGrid, isl.x, isl.y, t.PRIVATEER_THREAT_RANGE)
     || havenList.some((hv) => hv !== isl && dist(hv, isl) < t.PRIVATEER_THREAT_RANGE); // a nearby haven is a standing threat
 
@@ -131,7 +136,13 @@ export function antipiracy(world, h) {
     if (!prey || dist(priv, prey) > t.PRIVATEER_HUNT_RANGE * reach) {
       // A raider berthed/idle in a haven's roads is safe like any docked ship — a besieger bombards the
       // DEN (assaultHaven below), it doesn't pick off hulls at the wharf. Only a raider under way is prey.
-      prey = nearestShip(pirateGrid, priv.x, priv.y, (p) => !inPortSafe(p), t.PRIVATEER_HUNT_RANGE * reach)
+      // FOCUS-FIRE: prefer a raider a CONSORT is already engaging (gang up on one) — but only up to
+      // GROUP_STRIKER_CAP hunters on the same hull, so the navy concentrates without leaving other pirates
+      // unchecked (whack-a-mole). Falls through to the plain nearest raider, then one menacing the guard port.
+      const cap = t.GROUP_STRIKER_CAP || Infinity;
+      const claimed = (p) => { const c = (world._preyClaimsPriv.get(p.id) || 0) - (priv._prey === p.id ? 1 : 0); return !inPortSafe(p) && c > 0 && c < cap; };
+      prey = nearestShip(pirateGrid, priv.x, priv.y, claimed, t.PRIVATEER_HUNT_RANGE * reach)
+          || nearestShip(pirateGrid, priv.x, priv.y, (p) => !inPortSafe(p), t.PRIVATEER_HUNT_RANGE * reach)
           || (guard && nearestShip(pirateGrid, guard.x, guard.y, (p) => !inPortSafe(p), t.PRIVATEER_WATCH_RANGE * reach));
       priv._prey = prey ? prey.id : null;
     }
@@ -142,7 +153,14 @@ export function antipiracy(world, h) {
     const bold = ((priv.captain && priv.captain.traits && priv.captain.traits.boldness) != null
       ? priv.captain.traits.boldness : 0.5) >= t.PRIVATEER_BOLD_TRAIT;
     const oddsBar = t.PRIVATEER_TIMID_ODDS - (skill - 0.5) * (t.PRIVATEER_SKILL_NERVE || 0); // veterans press harder odds
-    if (prey && !bold && combatStrength(world, priv) < combatStrength(world, prey) * oddsBar) prey = null;
+    // GROUP-AWARE: a cautious hunter that alone would hold off a heavily-gunned raider COMMITS once a consort
+    // is near (the odds shift the code already anticipated), and won't throw itself alone at a pirate pack.
+    // Bold hunters still charge (skip the check). Lone privateer vs lone pirate → identical to the old 1-v-1.
+    if (prey && !bold) {
+      const bal = balanceOfForce(world, priv, world._privGrid, pirateGrid, t.GROUP_RALLY_RANGE, { foe: prey });
+      const bar = Math.max(0.1, oddsBar - (t.GROUP_ODDS_PER_ALLY || 0) * Math.max(0, bal.nAlly - bal.nFoe));
+      if (bal.ally < bal.foe * bar) prey = null;
+    }
     if (prey && world.simTime < (priv._breakoff || 0)) prey = null; // still breaking off a losing exchange — keep clear a while
     const preyDist = prey ? dist(priv, prey) : Infinity;
 
@@ -191,7 +209,7 @@ export function antipiracy(world, h) {
       setAct(priv, 'hunt', prey.id);
       if (world.simTime >= (priv._fightCd || 0)) {
         priv._fightCd = world.simTime + (t.COMBAT_ROUND_SEC || 1.2);
-        if (resolveHunt(world, priv, prey)) sunk = true;
+        if (resolveHunt(world, priv, prey, pirateGrid)) sunk = true;
         if (prey._sunk || priv._sunk) priv._prey = null;
       } else {
         // Reloading in gun-range: hold a broadside gap off the raider (sea-room to see the shots) rather
@@ -323,7 +341,7 @@ function tryRecoverPrize(world, priv, pirate, paidBounty) {
  *  (attrition); whoever's HULL founders first goes down. Well-armed and paid, the hunter usually prevails —
  *  but a heavily-gunned raider can shoot it to pieces. A privateer losing the exchange breaks off via the
  *  loop's odds check (its strength falls with its hull), so it isn't obliged to fight to the bottom. */
-function resolveHunt(world, priv, pirate) {
+function resolveHunt(world, priv, pirate, pirateGrid = null) {
   const t = world.rules;
   exchangeFire(world, priv, pirate);
   if (pirate.hull <= 0) {
@@ -344,8 +362,10 @@ function resolveHunt(world, priv, pirate) {
   // A hunter getting the worst of a heavily-gunned raider BREAKS OFF for its guard port to refit, and keeps
   // clear a while so it doesn't just re-acquire and fight to the bottom; a raider outmatched by the hunter
   // sheers away (its own loop then runs it to a haven). The fearless press on — assessFlee is false for them.
-  if (assessFlee(world, priv, pirate)) { priv._prey = null; priv._breakoff = world.simTime + (t.COMBAT_BREAKOFF_RESPITE || 0); }
-  if (assessFlee(world, pirate, priv)) { pirate._prey = null; pirate._huntCd = world.simTime + (t.PIRATE_HUNT_COOLDOWN || 0) * 0.5; }
+  // Group-aware break-off: each captain weighs the whole local force (its consorts vs the other side's) — a
+  // hunter winning 3-v-1 holds on, one losing 1-v-3 sheers off sooner. Lone duel → the old 1-v-1 assessment.
+  if (assessFlee(world, priv, pirate, world._privGrid, pirateGrid)) { priv._prey = null; priv._breakoff = world.simTime + (t.COMBAT_BREAKOFF_RESPITE || 0); }
+  if (assessFlee(world, pirate, priv, pirateGrid, world._privGrid)) { pirate._prey = null; pirate._huntCd = world.simTime + (t.PIRATE_HUNT_COOLDOWN || 0) * 0.5; }
   return false;
 }
 

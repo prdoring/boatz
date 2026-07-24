@@ -103,6 +103,46 @@ export function combatStrength(world, ship) {
   return Math.max(0.05, s * cmult * hullFactor);
 }
 
+/** combatStrength MEMOISED for the current substep. Each combat system (`ship`/`piracy`/`antipiracy`)
+ *  resets world._strengthCache at its start; summing a neighbourhood's strength (balanceOfForce) then
+ *  scores each hull once instead of once per neighbour. A hull created mid-pass (a fresh prize) is
+ *  simply absent and falls back to a live compute; with no cache set (a bare unit test) it is a
+ *  straight combatStrength. Deterministic — one snapshot per substep, fixed request order; DERIVED and
+ *  never serialised. (exchangeFire still reads combatStrength LIVE, so a duel's own maths is exact.) */
+export function shipStrength(world, ship) {
+  const cache = world._strengthCache;
+  if (!cache) return combatStrength(world, ship);
+  let v = cache.get(ship.id);
+  if (v === undefined) { v = combatStrength(world, ship); cache.set(ship.id, v); }
+  return v;
+}
+
+/** LOCAL BALANCE OF FORCE — the group-aware building block under every fight/flee choice. Sums allied
+ *  vs hostile combatStrength within `radius` of `self`. `self` seeds the ally side and `opts.foe` (the
+ *  specific antagonist) seeds the foe side, so with NULL grids it returns exactly
+ *  {ally: str(self), foe: str(foe)} — identical to the old 1-v-1 (backward-compatible). A docked foe is
+ *  no threat (inPortSafe skip, mirroring every hunter's prey scan). Head-counts are capped by
+ *  GROUP_MAX_ALLIES/GROUP_MAX_FOES so a big melee stays O(1)-bounded. Deterministic (pure sum over a
+ *  fixed grid iteration order, no RNG) and O(local) — only the ships in the radius cells are visited.
+ *  Callers pass grids chosen to respect the pass's grid-validity invariant (see grid.js). */
+export function balanceOfForce(world, self, allyGrid, foeGrid, radius, opts = {}) {
+  const t = world.rules;
+  const foe = opts.foe || null;
+  const maxA = t.GROUP_MAX_ALLIES || 6, maxF = t.GROUP_MAX_FOES || 6;
+  let ally = shipStrength(world, self), nAlly = 1;
+  let foeSum = foe ? shipStrength(world, foe) : 0, nFoe = foe ? 1 : 0;
+  if (allyGrid) eachShipInRange(allyGrid, self.x, self.y, radius, (s) => {
+    if (s === self || s._sunk || nAlly >= maxA) return;
+    ally += shipStrength(world, s); nAlly++;
+  });
+  if (foeGrid) eachShipInRange(foeGrid, self.x, self.y, radius, (s) => {
+    if (s === self || s === foe || s._sunk || nFoe >= maxF) return;
+    if (inPortSafe(s)) return;                 // a docked foe is no threat
+    foeSum += shipStrength(world, s); nFoe++;
+  });
+  return { ally, foe: foeSum, nAlly, nFoe };
+}
+
 /** The ONE pirate budget (FM #5): the base fleet-fraction cap, LIFTED while pirate HAVENS stand (each den
  *  can sustain a few raiders). Haven-built raiders, sea-risen rogues, and captured prizes ALL draw from
  *  this single budget — reconciling the old split between the haven build-cap and the global rogue cap. */
@@ -204,8 +244,16 @@ export function piracy(world, h) {
   world._merchGrid = buildShipGrid(world, world.ships.filter((s) => !s.pirate && !s._sunk));
   world._shipsById = new Map(world.ships.map((s) => [s.id, s]));
   // Privateers hunt pirates; a timid raider needs to see one bearing down to run. Few in number and
-  // fixed for this pass (antipiracy runs later), so one small grid covers the flee check.
-  const privGrid = buildShipGrid(world, world.ships.filter((s) => s.privateer && !s._sunk));
+  // fixed for this pass (antipiracy runs later), so one small grid covers the flee check. HOISTED to the
+  // world so balanceOfForce can read it as the pirate's FOE-side, and antipiracy can reuse it as the
+  // privateer ALLY-side (privateers haven't moved since this build) — a derived, per-substep index.
+  world._privGrid = buildShipGrid(world, world.ships.filter((s) => s.privateer && !s._sunk));
+  world._strengthCache = new Map(); // memoise combatStrength for this substep's group-force sums (derived)
+  // FOCUS-FIRE tally: how many raiders already mark each target hull, keyed by the SERIALISED _prey id
+  // (so it reconstructs exactly on replay). A shared claim is inherently local — every claimer of an id
+  // is converging on the same physical hull — so nearby consorts pile onto the same prize (a wolfpack).
+  world._preyClaims = new Map();
+  for (const s of world.ships) if (s.pirate && !s._sunk && s._prey) world._preyClaims.set(s._prey, (world._preyClaims.get(s._prey) || 0) + 1);
   const day = Math.floor(world.simTime / t.SIM_DAY_SECONDS);
   let sunk = false;
   for (const ship of world.ships) {
@@ -243,11 +291,16 @@ export function piracy(world, h) {
       // turns back toward its blockade/prey (or, if crippled, halts to careen), re-enters the radius, and
       // flees again — the per-substep "running pirate flip-flop".
       const fleeRange = t.PIRATE_FLEE_PRIVATEER_RANGE * reach * (ship._fleeing ? (t.FLEE_DISENGAGE || 1.6) : 1);
-      const hunter = nearestShip(privGrid, ship.x, ship.y, null, fleeRange);
+      const hunter = nearestShip(world._privGrid, ship.x, ship.y, null, fleeRange);
       if (hunter) {
         const fightOdds = (t.PIRATE_FIGHTBACK_ODDS || 0.9) + (0.5 - boldness) * (t.PIRATE_FIGHTBACK_BOLD || 0)
           - (skill - 0.5) * (t.PIRATE_DEFEND_SKILL_EDGE || 0); // bold accept parity/worse; timid want a clear edge
-        const stand = !crippled && combatStrength(world, ship) >= combatStrength(world, hunter) * fightOdds;
+        // GROUP-AWARE: weigh the raider's consorts against the hunter's pack, not 1-v-1 — three raiders TURN on
+        // a lone hunter where one alone would flee, and a raider caught by two hunters runs even at even guns.
+        // The captain's odds bar is unchanged; a clear head-count edge only eases it a touch (per surplus consort).
+        const bal = balanceOfForce(world, ship, world._pirateGrid, world._privGrid, t.GROUP_RALLY_RANGE, { foe: hunter });
+        const bar = Math.max(0.1, fightOdds - (t.GROUP_ODDS_PER_ALLY || 0) * Math.max(0, bal.nAlly - bal.nFoe));
+        const stand = !crippled && bal.ally >= bal.foe * bar;
         ship._blockadeId = null;
         if (stand) { // turn and give battle — close to gun-range, then trade broadsides (attrition, no plunder)
           ship._fleeing = false; ship._prey = null;
@@ -278,12 +331,14 @@ export function piracy(world, h) {
     // distance — ready to pounce if its guns run dry or a consort closes — rather than throwing itself away.
     // Only the BOLD press the attack (pirates skew bold, so most do).
     if (nearDen) {
-      const besieger = nearestShip(privGrid, den.x, den.y, null, t.HAVEN_DEFEND_RANGE);
+      const besieger = nearestShip(world._privGrid, den.x, den.y, null, t.HAVEN_DEFEND_RANGE);
       if (besieger) {
         ship._blockadeId = null;
         setAct(ship, 'defend', den.id);
         const oddsBar = t.PIRATE_DEFEND_ODDS - (skill - 0.5) * (t.PIRATE_DEFEND_SKILL_EDGE || 0); // the seasoned press closer fights
-        const matched = combatStrength(world, ship) >= combatStrength(world, besieger) * oddsBar;
+        // GROUP-AWARE: rally the den's other defenders against the besieging line before charging to board.
+        const bal = balanceOfForce(world, ship, world._pirateGrid, world._privGrid, t.GROUP_RALLY_RANGE, { foe: besieger });
+        const matched = bal.ally >= bal.foe * oddsBar;
         if (bold && matched) {
           ship._prey = besieger.id;
           if (dist(ship, besieger) <= t.PIRATE_COMBAT_RANGE) {
@@ -334,12 +389,20 @@ export function piracy(world, h) {
     // prey range to the snap to stay on station rather than chase distant traffic. A HUNGRY pirate does
     // NEITHER: it never rests, ranges to its full reach even off a blockaded port, and scorns no prize,
     // however lean (dropping the greedy captain's minimum). That's what sends a starving raider after ships.
-    const resting = !hungry && world.simTime < (ship._huntCd || 0);
+    // BLINDNESS FIX (opportunistic preemption) — a valid prize RIGHT ALONGSIDE overrides the raider's
+    // lower-priority goals. If an exposed merchant sits within PACK_PREEMPT_RANGE and the raider (with any
+    // consorts near) holds the balance of force over the local hunters, it neither lies resting on its
+    // plunder cooldown nor lets a greedy captain scorn a lean hull — it pounces. This is what stops a fed or
+    // greedy pirate sailing blindly past a trader that is sitting in pot-shot range.
+    const nearPrey = nearestShip(world._merchGrid, ship.x, ship.y, (s) => !s.privateer && !s._sunk && !inPortSafe(s), t.PACK_PREEMPT_RANGE);
+    const packBal = nearPrey ? balanceOfForce(world, ship, world._pirateGrid, world._privGrid, t.GROUP_RALLY_RANGE, { foe: nearPrey }) : null;
+    const packAdvantage = !!(packBal && !crippled && packBal.ally >= packBal.foe); // enough guns nearby to strike safely NOW
+    const resting = !hungry && !packAdvantage && world.simTime < (ship._huntCd || 0);
     const holding = !wander && ship._blockadeId && world.simTime < (ship._blockadeUntil || 0);
     const preyRange = (holding && !hungry ? t.PIRATE_BLOCKADE_SNAP : t.PIRATE_HUNT_RANGE) * reach;
     let prey = null;
     if (!resting && ship._prey) { const p = world._shipsById.get(ship._prey); if (p && !p.pirate && !p._sunk && dist(ship, p) <= preyRange && !(dist(ship, p) > t.PIRATE_COMBAT_RANGE && shelteredAtPort(world, p))) prey = p; }
-    if (!resting && !prey) { prey = nearestPrey(world, ship, preyRange, (hungry || needsTimber) ? 0 : minPrize, needsTimber); ship._prey = prey ? prey.id : null; }
+    if (!resting && !prey) { prey = nearestPrey(world, ship, preyRange, (hungry || needsTimber || packAdvantage) ? 0 : minPrize, needsTimber); ship._prey = prey ? prey.id : null; }
 
     if (prey) {
       setAct(ship, 'hunt', prey.id);
@@ -452,21 +515,29 @@ function shelteredAtPort(world, s) {
   return dist(s, isl) <= islandLandRadius(isl, t) + (t.SHIP_ISLAND_CLEARANCE || 0) + (t.PORT_SHELTER_MARGIN || 70);
 }
 
-/** Nearest merchant (non-pirate, at sea) within `range` — the fatter the prize the better. Visits
- *  only the ships the merchant grid holds within range (grid excludes pirates); keeps the exact
- *  in-port skip and prize scoring. `minPrize` lets a greedy captain scorn a near-empty hull. */
+/** Nearest merchant (non-pirate, non-privateer, at sea) within `range` — the fatter the prize the better,
+ *  and the more a nearby CONSORT already marks a hull the more tempting she is (wolfpack focus-fire), up
+ *  until GROUP_STRIKER_CAP raiders are on her (then the surplus spread to other prey, so a pack doesn't
+ *  wipe one lane or gridlock waiting on each other). A privateer is NEVER plunder-prey — a warship is
+ *  fought through the fight-or-flight rung, not boarded for cargo — so it is skipped here even though the
+ *  merchant grid (built `!s.pirate`) carries it. `minPrize` lets a greedy captain scorn a near-empty hull. */
 function nearestPrey(world, ship, range, minPrize = 0, timberWant = false) {
   const t = world.rules;
+  const claims = world._preyClaims;                 // consorts already marking each hull (this substep)
+  const cap = t.GROUP_STRIKER_CAP || Infinity;
   let best = null, bestScore = -Infinity;
   eachShipInRange(world._merchGrid, ship.x, ship.y, range, (s) => {
-    if (s._sunk || inPortSafe(s)) return; // docked / trading / sheltered — safe in harbour, never a target
+    if (s._sunk || s.privateer || inPortSafe(s)) return; // a warship is no plunder-prize; docked/sheltered = safe in harbour
     const prize = (s.cargo[GOLD] || 0) + cargoUnits(s) * 10; // rough worth of the haul
     if (prize < minPrize) return; // not worth a greedy captain's powder
     if (dist(ship, s) > t.PIRATE_COMBAT_RANGE && shelteredAtPort(world, s)) return; // a ship UNDER WAY that reached a port's guns — can't be chased onto the wharf
+    const others = claims ? (claims.get(s.id) || 0) - (ship._prey === s.id ? 1 : 0) : 0; // raiders on her, minus self
+    if (others >= cap) return; // enough consorts already on this hull — spread out (no dogpile-wipe / standoff)
     // A timber-starved raider values a hull carrying Wood/Fiber above a fatter but drier prize (it needs the
     // spars & canvas to jury-rig back into the fight, not just coin).
     const timberBonus = timberWant ? ((s.cargo.Wood || 0) + (s.cargo.Fiber || 0)) * (t.PIRATE_TIMBER_PRIZE_BONUS || 0) : 0;
-    const score = prize + timberBonus - dist(ship, s) * 2; // near + rich (+ timber, when needed) preferred
+    const dogpile = prize * (t.PACK_DOGPILE_BONUS || 0) * Math.min(others, t.PACK_DOGPILE_MAX || 0); // pile onto a marked prize
+    const score = prize + timberBonus + dogpile - dist(ship, s) * 2; // near + rich (+ timber / consorts) preferred
     if (score > bestScore) { bestScore = score; best = s; }
   });
   return best;
@@ -543,9 +614,12 @@ function strikes(world, ship) {
  *  AVERAGE captain (boldness & skill 0.5) the bars are exactly FLEE_HULL / BREAKOFF_ODDS; character only
  *  widens the spread: NERVE (rising with boldness & seamanship) lowers both, so the bold & seasoned hold
  *  on through worse. The FEARLESS (boldness ≥ COMBAT_FEARLESS) never quit; a DISMASTED ship (rig ≤
- *  RIG_DISTRESS) can't run and must fight on or strike (the core domino). Returns true if `ship` should
- *  disengage from `foe`. */
-export function assessFlee(world, ship, foe) {
+ *  RIG_DISTRESS) can't run and must fight on or strike (the core domino). When `allyGrid`/`foeGrid` are
+ *  supplied the odds are weighed across the LOCAL FORCE (allied vs hostile strength summed near `ship`)
+ *  rather than 1-v-1 — so a hunter winning 3-v-1 doesn't sheer off and one losing 1-v-3 breaks sooner;
+ *  with the grids left null it is byte-identical to the old self-vs-foe test. Returns true if `ship`
+ *  should disengage from `foe`. */
+export function assessFlee(world, ship, foe, allyGrid = null, foeGrid = null) {
   const t = world.rules;
   const tr = (ship.captain && ship.captain.traits) || {};
   const bold = tr.boldness != null ? tr.boldness : 0.5;
@@ -557,7 +631,8 @@ export function assessFlee(world, ship, foe) {
   const hull = ship.hull != null ? ship.hull : 1;
   if (hull > (t.FLEE_HULL || 0.5) - nerve * (t.FLEE_NERVE_HULL || 0)) return false; // still stout enough to trade blows
   const oddsBar = Math.max(0.1, (t.BREAKOFF_ODDS || 0.65) - nerve * (t.FLEE_NERVE_ODDS || 0)); // the steady fight worse odds
-  return combatStrength(world, ship) < combatStrength(world, foe) * oddsBar;        // ...break off only when truly outmatched
+  const bal = balanceOfForce(world, ship, allyGrid, foeGrid, t.GROUP_RALLY_RANGE, { foe }); // null grids ⇒ self-vs-foe (unchanged)
+  return bal.ally < bal.foe * oddsBar;                                             // ...break off only when the local force is outmatched
 }
 
 /** A pirate takes a struck merchant as a PRIZE — the hull itself, not just her cargo — manned by a green
@@ -641,7 +716,9 @@ function resolveCombat(world, pirate, victim) {
     return true;
   }
   if (strikes(world, victim)) { boardPrize(world, pirate, victim); return false; }
-  if (assessFlee(world, pirate, victim)) { // the raider sheers off to lick its wounds at a haven
+  // Group-aware: a raider with consorts dogpiling the same prize presses harder (ally side rises); the lone
+  // victim is the only foe (no merchant convoys), so a lone raider's break-off is unchanged.
+  if (assessFlee(world, pirate, victim, world._pirateGrid, null)) { // the raider sheers off to lick its wounds at a haven
     pirate._prey = null;
     pirate._huntCd = world.simTime + t.PIRATE_HUNT_COOLDOWN * 0.5;
     victim.morale = Math.min(1, (victim.morale != null ? victim.morale : 0.5) + 0.05);

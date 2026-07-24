@@ -15,7 +15,7 @@ import { makeCaptain, skill01, awardVoyageXp, awardSeamanshipXp, navProfile, def
 import { provisionCrew, deviationTarget } from './crew.js';
 import { shipName } from './naming.js';
 import { computeFleetByHome, fleetAt } from './fleet.js';
-import { setAct, combatStrength } from './piracy.js';
+import { setAct, balanceOfForce } from './piracy.js';
 import { steerAroundIslands, islandLandRadius } from './navigation.js';
 import { rigMult, repairAtPort, juryRig, maybeHeaveToRepair, stowRepairKit, inDistress, renderAid, spareAboard } from './repair.js';
 import { bumpRep } from './reputation.js';
@@ -366,7 +366,12 @@ function fleeTarget(world, ship) {
     // shoot away the pursuer's rig to cover the run (defensive fire, resolved when the chase closes to gun-range)
     // rather than standing to be worn down and boarded. So arming buys a covered retreat, not a licence to slug.
     const raider = nearestShip(world._pirateGrid, ship.x, ship.y, null, detect);
-    const canStand = !raider || combatStrength(world, ship) >= combatStrength(world, raider) * (t.MERCHANT_STAND_ODDS || 0.8);
+    // GROUP-AWARE: a lone armed trader still runs a single weak raider's blockade, but FLEES a PACK whose
+    // summed guns clear the bar (three raiders off the bow, no consorts of her own — she doesn't stand). Ally
+    // side is self only (aggressors-only scope: merchants don't convoy); foes are the raiders in the evade
+    // bubble. `armed` above stays a hard precondition — numbers never lend a cargo hull teeth it lacks.
+    const bal = balanceOfForce(world, ship, null, world._pirateGrid, detect, { foe: raider });
+    const canStand = bal.foe <= 0 || bal.ally >= bal.foe * (t.MERCHANT_STAND_ODDS || 0.8);
     if (canStand) {
       const grit = 0.6 * bnd + 0.4 * skill; // steadier nerve → hold the run until the raider is closer
       const runClear = t.PIRATE_COMBAT_RANGE * (engaged ? 3.5 : 2.5) * (1.35 - 0.6 * grit);
@@ -669,6 +674,7 @@ export function ship(world, h) {
   // so one O(P) grid replaces the per-merchant full-fleet pirate scans in fleeTarget/armForDefence
   // (the O(S²) wall). Stored on the world so the deep-nested voyage machine can read it.
   world._pirateGrid = buildShipGrid(world, world.ships.filter((s) => s.pirate && !s._sunk));
+  world._strengthCache = new Map(); // per-substep combatStrength memo for a merchant's group-force flee test (derived)
   // Ships in DISTRESS (dismasted / adrift) are few — one small grid lets a passing ally spot and aid them
   // (aidTarget), the sea's mercy valve. Merchants only: pirates/privateers ride their own storms.
   world._distressGrid = buildShipGrid(world, world.ships.filter((s) => !s._sunk && !s.pirate && !s.privateer && inDistress(s, world.rules)));

@@ -466,6 +466,16 @@
     "MERCHANT_RUN_BLOCKADE_TRAIT": 0.7,
     "MERCHANT_STAND_ODDS": 0.8,
 
+    "_doc_group": "LOCAL BALANCE OF FORCE (balanceOfForce, piracy.js) — fight/flee is no longer 1-v-1. Every stand/engage/run decision sums ALLIED combatStrength vs HOSTILE combatStrength within GROUP_RALLY_RANGE, so pirates gang up on a trader (and privateers on a pirate) when consorts are near, and a lone ship flees a pack it would have fought one-on-one. The captain's own nerve bar (boldness+skill) is UNCHANGED — it now just weighs the whole local force, so a cautious captain still wants clear numerical superiority and a bold one commits near parity; GROUP_ODDS_PER_ALLY optionally eases that bar a touch per SURPLUS consort (nAlly-nFoe), 0 = pure sum-vs-sum. GROUP_MAX_ALLIES/FOES cap the head-counts so a big melee stays O(1)-bounded. GROUP_STRIKER_CAP caps how many raiders commit to ONE victim at once — surplus strikers fall through to other prey, which SPREADS predation (no trader-wipe) and breaks the 'everyone waits for allies' gridlock (a lower-index striker is always free to go first). PACK_* drives deterministic wolfpack FOCUS-FIRE (no squadron object): a raider prefers a hull a nearby consort already marked (_prey), +PACK_DOGPILE_BONUS×prize per claimer up to PACK_DOGPILE_MAX; PACK_PREEMPT_RANGE lets an enemy right alongside preempt a resting/greedy pirate's lower-priority goal so it stops sailing blindly past pot-shot range. Defaults are chosen so a LONE attacker reproduces the old behaviour; the group only bites when consorts are actually near.",
+    "GROUP_RALLY_RANGE": 760,
+    "GROUP_MAX_ALLIES": 6,
+    "GROUP_MAX_FOES": 6,
+    "GROUP_ODDS_PER_ALLY": 0.06,
+    "GROUP_STRIKER_CAP": 3,
+    "PACK_PREEMPT_RANGE": 320,
+    "PACK_DOGPILE_BONUS": 0.5,
+    "PACK_DOGPILE_MAX": 3,
+
     "_doc_haven": "PIRATE HAVENS — a failed island whose LAWLESSNESS stays maxed falls to the black flag: a stronghold that HARBOURS pirates (they resupply food + fence plundered loot there), BUILDS new pirate ships from that fenced wealth (nothing free), and which PRIVATEERS assault to REDEEM back into a lawful port. Grows from the lawlessness stat (see mayoral-goals), self-limiting via privateer suppression + a hard cap. HAVEN_PRESSURE_RECOVER — a port on the brink recovers its civic order SLOWLY (pressure builds +1/failing-day but eases only this much per relief-day), so a genuinely-failed island still tips over even through the odd good day. HAVEN_FIRST_BUILD_GRACE_DAYS — how soon after falling a haven can lay its first hull. An assault lands at most ONCE PER DAY per haven (see havens.js), so breaking a den takes a privateer holding station for days — during which the haven builds/harbours pirates (the drama).",
     "HAVEN_MAX_FRAC": 0.08,
     "HAVEN_LAWLESS": 0.58,

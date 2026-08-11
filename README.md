@@ -1,200 +1,334 @@
-# Pat_Engine
+# BOATZ
 
-![Pat_Engine](docs/screenshots/banner.png)
+*A deep economic simulation of a pirate-age archipelago. Hundreds of islands, ships, captains and
+crews, all running on their own decisions, in a browser, with no build step.*
 
-> Hi, I'm Pat. I like to make fun little games for my own enjoyment and to share with my
-> friends. After a few of these I started building tooling I could reuse for new ones,
-> and polished those tools into this engine. It will keep evolving as I make more stuff.
+![A busy port in BOATZ: hulls berthed alongside, others under way, the world ticker running](docs/screenshots/boatz-hero.jpg)
 
-A no-build 2D engine for the browser. Art is vector JSON drawn on Canvas2D, sound is
-Web-Audio synthesis, music is JSON note patterns: a game's creative content is a folder
-of data files, not a folder of binaries. Every format has a built-in browser editor, and
-because it's all documented JSON, the engine is agent-forward: an AI coding agent can
-author assets and gameplay the same way you do ([AGENTS.md](AGENTS.md) ships in the repo
-for exactly that).
+> Hi, I'm Pat. This started as an idea for an online Sid Meier's Pirates style game. Before
+> building any of the game part, I wanted a world that was actually worth sailing around in:
+> ports that live or die by their own decisions, and pirates who exist because the economy
+> made them. I never did get to the gameplay. I have been having far too much fun adding
+> layers to the simulation instead, and it keeps growing.
 
-![The Pat_Engine editor suite: art, music, soundboard, and sequence editors](docs/screenshots/hero-editors.png)
+BOATZ is a living archipelago economy that runs in a browser. A few hundred islands farm, mine,
+manufacture, price their goods, and send named captains out to trade. Nothing in it is scripted.
+Famines, boom towns, trade blocs, embargoes, mutinies, rebellions, piracy, and the naval response
+to piracy are all downstream of ordinary actors making local decisions with bad information.
 
-## Getting started
+There is no player yet. What exists is the world, a nautical chart to watch it on, and a written
+history of everything that has ever happened in it.
 
-The engine isn't an npm dependency. There's no package to depend on and no version to
-track: it's a small, readable runtime you copy into your project, and from then on it's
-yours to edit.
+If you want to run it right now: `npm install && npm start`, then open <http://localhost:6970>.
+Prerequisites, configuration and the headless runners are in [Run it](#run-it) further down.
 
-You need three things installed, all of which you likely have:
+## What you are looking at
 
-- [Node.js](https://nodejs.org) 20.11 or newer (npm comes with it).
-- git, to clone the repo.
-- Any current browser. No build tools, no global installs.
+Click any island or ship and the chart tells you everything it knows about it. Every screenshot in
+this README is the same sea (seed 11) on day 25 of its life.
 
-Pull the repo and explore the example game first:
+![The port inspector: magistrate, loyalty, tax, workshops, relations and market](docs/screenshots/boatz-port.jpg)
+
+**A port.** Warden Ulric Harrow, a Reeve with a taste for Wealth, ruling a loyal but restive
+population on 40% tax and a 30% tariff. Four workshops running, three allies, three rivals, and a
+market with real stock and spreads. "58 known, 13 fresh" is how much of the world's prices this
+island currently believes it knows, because that is how many reports have physically reached it.
+
+![A captain's card: portrait, skill facets, personality, crew morale, voyage and hold](docs/screenshots/boatz-captain.jpg)
+
+**A captain.** Gideon the Merciless, Seasoned and Bold: Seamanship 77%, Gunnery 0%, Command 77%. His
+crew is at 90% morale with two days of food aboard, he is carrying 1,161 gold and 17 of his 64 hold,
+and his voyage runs Woolhold to Pearlpeak to Anchorwick and home, with the current leg lit.
+
+## The rules I hold myself to
+
+Everything below follows from these five. They are the actual project; the systems are what happens
+when you take them seriously.
+
+- **No omniscient actor.** Every decision is made locally, by a named agent, from information that
+  agent could plausibly have. If a system needs a global scan of truth to work, it is wrong.
+- **Layers, not content.** New behaviour is a system that reacts to existing state, never a scripted
+  event. Piracy has to fall out of hunger and lawlessness. Havens have to fall out of failed ports.
+- **Determinism.** No `Date.now`, no `Math.random` anywhere in `game/sim/`. All randomness comes from
+  named, seeded streams, so a seed reproduces a world exactly, and the world serializes cleanly.
+- **Balance is data.** `data/economy.json` holds 554 tuned constants (production rates, morale decay,
+  combat weights, haven thresholds, policy scoring weights). Tuning the world is editing data, not
+  code.
+- **The engine never knows what game it runs.** No game noun appears anywhere under `engine/` or
+  `editors/`. See [Built on Pat_Engine](#built-on-pat_engine).
+
+## What the simulation models
+
+Every one of these is a system that other systems can feel. The interesting part is not any single
+layer, it is what happens where they touch.
+
+### The economy
+
+**Ports.** Six raw resources (Grain, Wood, Meat, Fiber, Iron, Precious Metal) and six manufactured
+goods (Food, Ale, Clothing, Weapons, Luxury Goods, Ships). Islands mine a primary and a secondary
+raw against a logistic stockpile cap, then refine goods through recipes. Manufacturing runs out of
+**mutable workshops** that occupy population-gated slots, need staffing, and rot with condition, so a
+squeezed port visibly loses its industry. Recipe output is clamped so a quarter of every local raw
+survives as exportable surplus, which is what forces trade to exist at all. Food and Ale are
+deliberately exempt from the workshop gate so no port can starve itself into an unrecoverable spiral.
+
+**Prices.** Local, from scarcity, with elasticity, a bid/ask spread, smoothing and per-good targets.
+Nobody consults a global market price, because there is no such thing here.
+
+### Ships, captains and crews
+
+**Ships and captains.** Sloops, brigs and galleons, each a real trade-off in capacity, speed, gun
+capacity, upkeep and armour. Every hull is run by a named captain with three skill facets that
+advance separately (Seamanship, Gunnery, Command) and three personality traits (boldness,
+wanderlust, greed) that decide what they actually do. Two captains of equal skill run their ships
+very differently: the greedy one holds out for a fat margin, the bold one sails into worse odds and
+ranges farther, the wanderer scouts. Captains climb six ranks from Novice to Legendary by earning
+experience, and each one has a procedurally drawn ink portrait composed from a deterministic gene.
+
+**Voyages.** A captain plans a whole multi-stop basket rather than a single hop: relieve famine,
+answer an ally's aid request, carry exports, move migrants, scout stale prices. Ships steer around
+land, keep clear of each other under a starboard give-way rule, tack against a headwind if the
+captain is good enough to know how, and wait out a foul wind if they are patient enough.
+
+**Wear and repair.** Hull and rig degrade separately. A wrecked rig costs speed, a holed hull risks
+foundering. Repairs consume real Wood and Fiber out of a port's stock. A ship caught stranded and
+hurt at sea will heave to and jury-rig, careen, or be found adrift by a passing hull that diverts to
+render aid. Ships that never arrive are eventually presumed lost by an outstanding-voyage ledger.
+
+**Crews.** Ships provision food, ale and slops for a voyage, then eat through them. Morale falls
+with hunger, time at sea and no grog. Broken morale becomes a mutiny, a desertion, or a crew that
+turns pirate, and whether the captain can hold them together is a Command check.
+
+### Power, piracy, and the response to it
+
+**Magistrates.** Each island is governed by a named magistrate with an ambition (grow, industry,
+wealth, fortify, splendor, order) and a daily policy loop across five levers: build, switch,
+demolish and repair workshops; set tax and tariff rates; fund a garrison; pay for public works;
+throw festivals and buy hulls. They skim a private hoard, which can be exposed. Their populace has
+loyalty, approval, and a lasting grievance that remembers being put down by force. The crew machine
+and the populace machine are deliberately the same machine at two scales: morale to mutiny gated by
+Command, loyalty to rebellion gated by the magistrate's skill.
+
+**Piracy.** Piracy is not spawned as content, it is produced by the economy. A hungry crew under a
+bold, greedy captain leads a rogue turn (the captain keeps their ship and their hand in the logbook)
+or gets seized out from under them by the crew. Pirates hunt in packs, focus fire on a consort's
+mark, blockade ports, raid for food and gold, take prizes instead of sinking them, and break off to
+mend when they are losing. Failed islands fall to the black flag and become **havens**, which
+entrench, fence plunder, build raiders and are run by a **Pirate Lord**: a dark mirror of the
+magistrate that runs its own war-economy loop and converts derelict civilian workshops into gun
+foundries.
+
+![A pirate standing off against a privateer, with the ship's own logbook of its turn to piracy](docs/screenshots/boatz-pirate.jpg)
+
+A hull that changed hands twice in two days, told by its own logbook in three different hands:
+launched by Bosunwatch, seized out from under her master ("her lawful master would not see reason,
+so we saw him off"), shelled by a port's shore batteries, then run down by the hunter now sitting off
+her bow and handed to a new master to bring back to honest trade. None of that is a scripted quest.
+It is a hungry crew, a bold captain, a bounty, and a privateer commission, all resolving.
+
+**The navy.** Piracy generates its own antibodies. Plunder raises a danger score on sea routes,
+which reroutes merchants and raises bounties. Treasuries buy privateer commissions in proportion to
+the threat. Privateers patrol, hunt, besiege havens, and can redeem a fallen island. Armed ports
+shell loiterers with shore batteries. Merchants arm themselves by their captain's own judgment,
+never enough to become warships, and fight defensively by chain-shotting a pursuer's rig so they can
+run.
+
+### The world, and what it knows about itself
+
+**Diplomacy.** A full reputation matrix between islands, warmed by trade volume and cooled by time
+and competition, which resolves into allied blocs, rivalries, embargoes with real price
+consequences, aid convoys to starving friends, and outright betrayal.
+
+**Weather.** Seasons swing production. A global wind vector drifts and pulls seasonally, and it is
+the same wind that ships tack against. Named storms spawn, travel, damage hulls and rigs, scatter
+ships off their bearings, and sink some of them.
+
+**Information travels by sea.** This is my favourite layer. No island is omniscient. A port knows
+prices only because a ship carried a report home, and that report goes stale and is eventually
+forgotten. Captains reason from beliefs that can be wrong, scout when their picture gets too old,
+and magistrates set policy off the same imperfect intel. A remote island genuinely is a remote
+island.
+
+**History.** Seventy-one kinds of event are recorded to a durable per-sea SQLite chronicle, which is
+strictly write-only from the simulation's side so it can never affect determinism. The inspector's
+Story tab renders that history as a **first-person logbook handed keeper to keeper**: each captain
+and magistrate writes in one of 24 assigned prose voices, in their own handwriting font, with a
+handover note when a regime changes.
+
+![The Story tab: a port's history written as a first-person logbook in the keeper's own hand](docs/screenshots/boatz-logbook.jpg)
+
+The same port as above, reading its own history back: alliances forged, aid arriving from a friend
+during a famine, the day they laid the foundations of a shipyard, the day they broke ground on a
+gun-foundry. It closes the way its keeper would close it: "Inner Glimmergate endures under my
+administration, 179 souls, duly counted."
+
+## Reading the whole sea
+
+Individual ports are one thing. The reason the overlays exist is that with a few hundred islands you
+need to see the shape of the whole thing at once.
+
+![Wealth per capita as an auto-ranged heatmap across the whole ocean](docs/screenshots/boatz-overlay.jpg)
+
+**Overlays** (`o`) put any island metric on the map as an auto-ranged heatmap: wealth, treasury, tax
+burden, prosperity, population, loyalty, public mood, food security, lawlessness, grievance, exposed
+corruption, rebel pressure, pirate danger, haven risk, fleet strength, and how far each port's price
+intelligence actually reaches.
+
+![Alliances, rivalries and embargoes drawn as edges between islands](docs/screenshots/boatz-blocs.jpg)
+
+**Relational overlays** (`l`) draw the links instead: alliances in green, rivalries in red, embargoes
+where trade has been cut off entirely, plus live trade lanes, aid convoys and active hunts. None of
+it is authored. It is the residue of who has been trading with whom, and who stopped.
+
+![The world almanac: aggregate stats and best-and-worst leaderboards](docs/screenshots/boatz-almanac.jpg)
+
+**The almanac** (`m`) gives world totals and a best-and-worst leaderboard for whichever metric is up,
+with click-to-fly-there. On this day the sea holds 219kg of gold, 515 ships, 24,500 people and three
+pirates at large.
+
+![The world history browser reading from the durable chronicle](docs/screenshots/boatz-history.jpg)
+
+**The history browser** (`h`) reads back the durable chronicle: every recorded event in this world,
+newest first, filterable by war, trade, rule or doom. Rebellions and their aftermath, prizes taken,
+food sent to a famine-struck neighbour, ships that never came home.
+
+Everything the chart does:
+
+| Input | What it does |
+|---|---|
+| `WASD` / arrows, scroll | Pan and zoom the chart |
+| Click an island or ship | Open the inspector (Stats / Log / Story) |
+| `space`, `1` to `5` | Pause, and set speed (0.5x, 1x, 3x, 10x, 20x) |
+| `o` | Scalar overlay, `l` relational overlay |
+| `m` | World almanac, `h` the world history browser |
+
+## How it is built
+
+The browser never simulates. The server owns the world, and the client is a renderer that draws
+interpolated snapshots of somebody else's truth.
+
+```
+server/simHost.js       20 Hz authoritative tick, WebSocket broadcast
+  └─ game/sim/world.js  fixed 0.05s substeps, one ordered system pipeline
+       ├─ weather → wind → production → population → pricing
+       ├─ dispatch → ship → piracy → antipiracy → shore batteries → separation
+       ├─ crew → upkeep → reputation → events
+       └─ governance → policy → havens → contracts → voyage ledger
+game/                   the browser: renderers, chart UI, panels, portraits
+data/economy.json       every tuning constant the world runs on
+```
+
+Time scale never changes the physics. `dtSim` sets the *number* of fixed substeps, never the step
+size, so 20x fast-forward is literally twenty 1x steps: identical dynamics and identical determinism
+at every speed. Hot ship positions stream at about 10 Hz, bulk panel data and the economy at about
+1 Hz, with backpressure handling for clients that fall behind.
+
+The simulation itself (`game/sim/`, 44 modules and roughly 8,000 lines) is pure: no engine import, no
+network, no clock, no filesystem. That is what lets it run headless in a benchmark script, run
+deterministically in tests, and serialize.
+
+### Tests
+
+`npm test` runs the suite on Node's built-in test runner through a small loader remap, with zero dev
+dependencies. Ninety-four test files, roughly half of them on the simulation: stability across seeds
+over 30 sim-days, serialization determinism, pricing, production, trade, combat, flight, group
+combat, crews, governance, policy, havens, weapons, repair, soundness, steering, separation,
+scouting, intel, beliefs, reputation, contracts, weather, wind, naming, and the field manual itself.
+
+The stability test is the headline one: it asserts that with no intervention at all, across several
+seeds, the economy neither collapses nor flatlines. `npm run smoke` boots every page in a real
+headless Chrome and fails on any console error. CI runs both.
+
+### Scale
+
+The default sea is 250 islands. The economy is tuned against a 60-island reference, and both the
+ocean and the count-dependent caps scale from there so island density and travel times hold constant
+as the world grows (250 islands come with a roughly 19600 x 13900 ocean). `scripts/bench-sim.mjs`
+times world construction, one substep, both broadcast projections and a full serialize across 60,
+250, 500 and 1000 islands, which is how the super-linear costs get found. A lazily built spatial
+index and a cached reputation summary bought about 7.9x on the substep.
+
+## Run it
 
 ```sh
-git clone https://github.com/prdoring/Pat_Engine.git
-cd Pat_Engine
-npm install          # installs the engine's one dependency (ws)
-npm start
+git clone https://github.com/prdoring/boatz.git
+cd boatz
+npm install     # one dependency (ws)
+npm start       # http://localhost:6970
 ```
 
-Or skip the manual steps and paste this into your coding agent (Claude Code, Cursor,
-Codex, whatever you use):
+Node 22.5 or newer (the world chronicle uses the built-in `node:sqlite`), and any current browser.
+There is no build step, no bundler and no framework: the browser loads ES modules straight off disk
+and JSON via import attributes. Every boot rolls a fresh sea, so no two runs are the same world.
 
-```text
-Clone https://github.com/prdoring/Pat_Engine.git, run npm install (needs Node 20.11+),
-then npm start, and verify http://localhost:6970/ and http://localhost:6970/editor both
-load with no console errors. Then read AGENTS.md at the repo root: it is the guide for
-building games and assets on this engine.
-```
+Configuration is environment variables: `ISLANDS` (default 250), `PORT` (6970), `HOST`
+(loopback by default), `CHRONICLE_DB` (set `off` to disable the history database),
+`EDITOR_PASSWORD` (gates the asset editors).
 
-- **Game:** <http://localhost:6970/>. Click the ground to spawn critters, click a
-  critter to pet it, `space` to scare, `x` to despawn, `WASD`/arrows to pan, scroll to
-  zoom.
-- **Editor suite:** <http://localhost:6970/editor>. See the **[Editor Guide](docs/EDITORS.md)**.
-- **Shot harness:** <http://localhost:6970/shots>. Renders predefined game states to
-  images (see [Built for agents](#built-for-agents)).
+You can also run the simulation with no browser at all:
 
 ```sh
-npm test        # unit + parity tests (Node --test, no dev-dependencies)
-npm run smoke   # boots every page in a headless system Chrome/Edge; fails on console errors
+node game/sim/run-headless.mjs 200 1337     # 200 sim-days of balance metrics to stdout
+node scripts/bench-sim.mjs 60,250,500,1000  # per-substep cost as the sea grows
+node scripts/gen-roster.mjs 7               # preview the sea a given seed produces
 ```
 
-The smoke test uses whatever Chrome or Edge is already on your machine (set `BROWSER=/path/to/chrome`
-to point it somewhere specific) and skips itself if it can't find one. Nothing extra to install.
+## The field manual
 
-When you're ready to build your own game, the scaffold script copies the engine baseline
-(with the example game as a starting point) into a fresh folder, renames the package, and
-inits git:
+The one document worth opening if you only open one:
+**[docs/sim-manual.html](docs/sim-manual.html)**, a fifteen-chapter field manual with eighteen
+flowcharts covering every actor's decision path, from how a port sets a price to how a captain
+decides whether to run. It also keeps a standing register of the bugs and fragile spots I know
+about and have not fixed yet. It is served at `/docs/sim-manual.html` while the app is running.
 
-```sh
-./new-game.sh MyGame              # creates ../MyGame next to the engine
-./new-game.sh /path/to/MyGame     # or an explicit path
-# flags: --no-install  --no-git  --force
-```
-```powershell
-.\new-game.ps1 MyGame             # creates ..\MyGame next to the engine
-.\new-game.ps1 C:\Games\MyGame    # or an explicit path
-# flags: -NoInstall  -NoGit  -Force
-```
+The rest of the documentation is inherited from the engine underneath:
 
-Then make it yours:
+| Doc | What it covers |
+|---|---|
+| [AGENTS.md](AGENTS.md) | The full guide to building on the engine |
+| [ENGINE.md](ENGINE.md) | Terse engine architecture and API cheat-sheet |
+| [docs/EDITORS.md](docs/EDITORS.md) | User guide to the browser asset editors |
+| [docs/PAT_ENGINE.md](docs/PAT_ENGINE.md) | The engine's own README |
 
-1. Replace `data/*.json` with your own content (or author it in `/editor`).
-2. Point `data/editor-manifest.json` at your art collections + preview entities.
-3. Replace `game/` with your scenes and entities, wiring engine services in
-   `game/main.js`.
+## Built on Pat_Engine
 
-See [AGENTS.md](AGENTS.md) §8 for the full new-game recipe.
+BOATZ runs on [Pat_Engine](https://github.com/prdoring/Pat_Engine), my no-build 2D browser engine,
+which ships in this repo under `engine/` and `editors/`. Art is vector JSON drawn on Canvas2D, VFX
+and sequences are data, sound is Web Audio synthesis, and every format has a browser editor at
+`/editor`. The hard rule is that the engine never knows what game it runs: no game noun appears in
+`engine/` or `editors/`, and BOATZ talks to it only through data and injected services. That rule
+has held completely: `git log -- engine/` on this repo returns exactly one commit, the initial
+scaffold. Everything since, including combat, sieges, shore batteries and pirate havens, was built
+on top without touching it.
 
-## Vectors and synthesis, not asset folders
-
-Pat_Engine avoids binary assets wherever it can. Art is JSON interpreted on a Canvas2D,
-drawn live at any resolution and zoom; VFX are data, not sprite sheets; sound is
-synthesized (sample files are supported but optional); music is JSON note patterns played
-by synth instruments. A game's entire creative content ends up as a few human-readable
-JSON files, so assets show up in pull requests as reviewable diffs, and anything that can
-edit JSON can author them.
-
-## Built for agents
-
-Things in the repo that assume an agent may be doing some of the work:
-
-- **[AGENTS.md](AGENTS.md):** the complete guide to the layering rules, the
-  sequence-first orchestration pattern, signal callbacks, and every authoring schema.
-  Scaffolded projects carry it along.
-- **Data-first formats:** art, VFX, sound, music, and sequences are all documented
-  JSON, so an agent can author or tune any asset by editing data. No image or audio
-  tooling required.
-- **The shot harness:** `data/shots.json` declares named game states and `/shots`
-  renders them to real canvas images, so an agent can edit art or scene code, reload,
-  and check the actual pixels (programmatically via `window.__shots`, or as a contact
-  sheet of every state).
-
-![Shot harness contact sheet](docs/screenshots/shots-contact-sheet.png)
-
-## Built with Pat_Engine
-
-<table>
-<tr>
-<th align="left"><a href="https://patssubgame.com/">Sub Game</a></th>
-<th align="left"><a href="https://marklikey.patssubgame.com/">Mark Likey</a></th>
-</tr>
-<tr>
-<td width="50%">A multiplayer PVPVE extraction game: outfit a modular submarine, dive for salvage among NPC drones and rival crews, and get out before the surge. Crew mechanics let friends run one boat together.</td>
-<td width="50%">A fantasy-themed Jackbox-style party game about knowing how well you can read your friends' likes: build a courtier, then guess how much the Marky adores each answer.</td>
-</tr>
-<tr>
-<td><img src="docs/screenshots/example-subgame.png" alt="Sub Game: the submarine loadout screen"></td>
-<td><img src="docs/screenshots/example-marklikey.png" alt="Mark Likey: the Reckoning, where guesses meet the Marky's true rating"></td>
-</tr>
-</table>
-
-## What's in the box
-
-- **Vector art:** Canvas2D art interpreter + editor (shapes, per-state overrides,
-  keyframe animation).
-- **VFX:** effects interpreter + editor (phased effects, particle clouds, trails,
-  beams).
-- **Sequences:** a runner + timeline editor that orchestrates sound, VFX, and
-  game-state changes together from a single JSON definition.
-- **Sound:** Web-Audio synth/sample engine + soundboard editor.
-- **Music:** adaptive-music director (synchronized synth tracks crossfaded by
-  intensity tier) + mixing-console editor with a live piano-roll MIDI editor and
-  ABC/MIDI import.
-- **Core:** game loop, scenes, camera (pan/zoom), parallax background, sprite/text
-  caches, ship physics + collision.
-- **Editor suite:** all of the above in one tabbed browser app with a file-based
-  save/backup pipeline. See the **[Editor Guide](docs/EDITORS.md)**.
-- **Critter Garden:** a tiny example game that exercises every subsystem except the
-  optional net module. Its only binary assets are two small `.wav` samples and one
-  `.mid` score:
-
-<img src="docs/screenshots/shot-garden-busy.png" alt="Critter Garden example game" width="640">
-
-## Networking (optional)
-
-`engine/net/` is a client-server scaffold for multiplayer games, unused by the example.
-It covers two shapes: **authoritative real-time** (a fixed-timestep `ServerLoop` on Node,
-snapshot interpolation via `StateBuffer`, and a reconnecting `NetworkClient` in the
-browser) and **room/party games** (`RoomServer`: short-code rooms, reconnect tokens, host
-role, heartbeat, with your game logic injected per room). Message types are defined in
-your game via `defineMessageTypes`; the single-player core has zero dependency on the
-module. Wiring sketches for both shapes: [engine/net/README.md](engine/net/README.md).
-
-## Configuration (env vars)
-
-- `PORT`: HTTP port (default `6970`).
-- `HOST`: bind address (default `127.0.0.1`, loopback only). Set `HOST=0.0.0.0` to
-  expose on the LAN.
-- `EDITOR_PASSWORD`: when set, the `/editor` suite and the editor write APIs require
-  login. Unset by default (open), which is safe because the server binds localhost only
-  unless you change `HOST`.
-
-The save API only writes allowlisted data files and keeps rotated backups under
-`data/.backups/` (details in the [Editor Guide](docs/EDITORS.md)).
+Ship hulls, island relief, workshops and captain portraits are all drawn procedurally from that
+vector pipeline (a captain's face is composed from 107 parts across 12 collections), which is why an
+island can visibly change as its fortunes do.
 
 ## Layout
 
 ```
-engine/   game-agnostic runtime (render, audio, fx, physics, core loop, optional net). No game code in here, ever.
-editors/  game-agnostic editor suite, driven by data/editor-manifest.json.
-data/     project content: art/vfx/sfx/music/sequence JSON + the manifest. Edited by the editors.
-game/     the game: scenes, entities, bootstrap. The only place you write gameplay code.
-server/   the host: static serving + editor save API.
-assets/   binary assets (SFX samples + MIDI scores).
-docs/     the editor guide + screenshots.
+game/sim/     the simulation. Pure, deterministic, dependency-free. 44 modules.
+game/         the browser client: chart renderer, sea, portraits, overlays (game/ui/ is the HUD).
+server/       authoritative host: WebSocket sim server, static serving, SQLite chronicle.
+data/         economy.json (all tuning) plus art, VFX, sound, sequence and voice JSON.
+engine/       game-agnostic runtime (Pat_Engine). No game code in here, ever.
+editors/      game-agnostic browser editor suite.
+tests/        94 test files, Node --test, no dev dependencies.
+docs/         the simulation field manual and the editor guide.
 ```
 
-The one hard rule: **the engine never knows what game it runs.** `engine/` and `editors/`
-contain no game nouns; games talk to the engine through data and injected services.
+## Status
 
-## Documentation
+The simulation is the project. There is no player, no controls beyond watching, and no win
+condition. The intent behind all of it is still an online Sid Meier's Pirates style game, and the
+seams for it exist (a player-intent system sits first in the pipeline, ship ownership is already
+modelled, and the network layer supports authoritative multiplayer), but the fun so far has been in
+the world itself.
 
-| Doc | What it covers |
-|---|---|
-| [docs/EDITORS.md](docs/EDITORS.md) | User guide to every editor tool, with screenshots |
-| [ENGINE.md](ENGINE.md) | Terse architecture + API cheat-sheet for the runtime |
-| [AGENTS.md](AGENTS.md) | The full guide to building a game on this engine. Written for AI coding agents, useful to anyone. |
-| [engine/net/README.md](engine/net/README.md) | The optional multiplayer module + wiring sketches |
+Rough order of what I would like to add next: closing out the known issues in the field manual's
+register, sparse reputation and belief updates for a 1000-island sea, ambient audio, and eventually
+letting somebody take the helm of a single ship in a world that was never built around them.
 
 ## License
 

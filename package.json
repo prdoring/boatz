@@ -1,7 +1,7 @@
 {
   "name": "boatz",
   "version": "0.1.0",
-  "description": "A reusable, data-driven 2D game engine (vector art, VFX, sequences, sound, editors). No build step — runs directly in the browser. Ships with the Critter Garden example game.",
+  "description": "A deep economic simulation of a pirate-age archipelago: hundreds of islands, ships, captains and crews, all running on their own decisions. Server-authoritative, deterministic, no build step. Built on Pat_Engine.",
   "license": "MIT",
   "author": "Patrick <prdoring@gmail.com>",
   "type": "module",

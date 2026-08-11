@@ -1,21 +1,24 @@
 name: Bug report
-description: Something broken in the engine, editors, or example game
+description: Something broken in the simulation, the chart, the editors, or the server
 labels: [bug]
 body:
   - type: input
     id: where
     attributes:
       label: Where
-      description: Which page or subsystem (game, an editor tab, /shots, server, a specific engine module)?
-      placeholder: e.g. Art editor keyframe timeline
+      description: Which subsystem (a sim module, the map/HUD, an editor tab, /shots, the server)?
+      placeholder: e.g. game/sim/piracy.js, or the island inspector panel
     validations:
       required: true
   - type: textarea
     id: repro
     attributes:
       label: Steps to reproduce
+      description: >
+        If it is a simulation bug, the world seed makes it reproducible: the sea seed is
+        logged at server start, or run `node game/sim/run-headless.mjs <days> <simSeed> <rosterSeed>`.
       placeholder: |
-        1. npm start, open /editor
+        1. npm start (sea #12345), let it run to day 40 at 20x
         2. ...
     validations:
       required: true

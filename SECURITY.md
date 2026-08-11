@@ -4,7 +4,7 @@
 
 Please report vulnerabilities privately via GitHub:
 **Security tab → Report a vulnerability** on this repo
-([direct link](https://github.com/prdoring/Pat_Engine/security/advisories/new)).
+([direct link](https://github.com/prdoring/boatz/security/advisories/new)).
 Do not open a public issue for security reports.
 
 This is a solo-maintained project; expect an acknowledgment within a week.
@@ -18,3 +18,7 @@ This is a solo-maintained project; expect an acknowledgment within a week.
   `data/.backups/`, which are never served over HTTP.
 - The engine uses no `eval` or `new Function`; art angle expressions go through a small
   arithmetic parser, so a strict CSP is safe.
+- The simulation is server-authoritative: a browser client can request only a clock change
+  (pause / speed), gated by `world.controls.allowTimeScale`. It cannot mutate the world.
+- The world chronicle (`node:sqlite`) is written by the server and read back only by the
+  public, read-only `/api/history` endpoint. It stores world events, no user data.
